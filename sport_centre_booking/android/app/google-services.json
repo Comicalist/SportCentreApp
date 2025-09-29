@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "853313490143",
+    "project_id": "sportcentreapp",
+    "storage_bucket": "sportcentreapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:853313490143:android:6ef26bedb8e6803ac1ad6a",
+        "android_client_info": {
+          "package_name": "com.example.sport_centre_booking"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDXo9zB1VQ239vCgzWpwhwcuwEfV5YwNMU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
