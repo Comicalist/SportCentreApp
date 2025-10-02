@@ -17,7 +17,7 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isLoggedIn => _firebaseUser != null;
-  bool get isAnonymous => !isLoggedIn;
+  bool get isAnonymous => _firebaseUser?.isAnonymous == true;
 
   AuthProvider() {
     _initAuthListener();
@@ -27,7 +27,7 @@ class AuthProvider extends ChangeNotifier {
   void _initAuthListener() {
     AuthService.authStateChanges.listen((User? user) async {
       _firebaseUser = user;
-      
+
       if (user != null) {
         // User is signed in, load user data
         await _loadUserData(user.uid);
@@ -36,24 +36,74 @@ class AuthProvider extends ChangeNotifier {
         // User is signed out
         _appUser = null;
       }
-      
+
       notifyListeners();
     });
   }
 
-  /// Load user data from Firestore
+  /// Load user data from Firestore (create it if missing)
   Future<void> _loadUserData(String uid) async {
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .get();
-      
+      final docRef = FirebaseFirestore.instance.collection('users').doc(uid);
+
+      // 1) Forcer un aller-serveur (pas seulement le cache local)
+      var doc = await docRef.get(const GetOptions(source: Source.server));
+
+      // 2) Si le doc n'existe pas (race sign-up), le créer sur le champ
+      if (!doc.exists) {
+        final fUser = FirebaseAuth.instance.currentUser;
+
+        await docRef.set({
+          'uid': uid,
+          'email': fUser?.email ?? '',
+          'displayName': fUser?.displayName ?? '',
+          'createdAt': FieldValue.serverTimestamp(),
+          'lastLoginAt': FieldValue.serverTimestamp(),
+          'role': 'user',
+          'isActive': true,
+          'totalPoints': 0,
+          'availablePoints': 0,
+          'lifetimePointsEarned': 0,
+          'isMember': false,
+          'membershipType': null,
+          'membershipExpiry': null,
+        }, SetOptions(merge: true));
+
+        // Relecture en forçant le serveur (évite un cache vide)
+        doc = await docRef.get(const GetOptions(source: Source.server));
+      }
+
       if (doc.exists) {
         _appUser = AppUser.fromFirestore(doc);
+        return;
+      }
+
+      // 3) Fallback minimal si, pour une raison X, on n'a toujours rien
+      final fUser = FirebaseAuth.instance.currentUser;
+      if (fUser != null) {
+        _appUser = AppUser(
+          uid: fUser.uid,
+          email: fUser.email ?? '',
+          displayName: fUser.displayName ?? (fUser.email?.split('@').first ?? 'User'),
+          createdAt: DateTime.now(),
+          lastLoginAt: DateTime.now(),
+        );
+        return;
       }
     } catch (e) {
-      print('Error loading user data: $e');
+      // En cas d'erreur (souvent règles Firestore), on trace et on met un fallback
+      debugPrint('Error loading user data: $e');
+
+      final fUser = FirebaseAuth.instance.currentUser;
+      if (fUser != null) {
+        _appUser = AppUser(
+          uid: fUser.uid,
+          email: fUser.email ?? '',
+          displayName: fUser.displayName ?? (fUser.email?.split('@').first ?? 'User'),
+          createdAt: DateTime.now(),
+          lastLoginAt: DateTime.now(),
+        );
+      }
     }
   }
 
@@ -68,7 +118,13 @@ class AuthProvider extends ChangeNotifier {
   /// Register new user
   Future<bool> register(String email, String password, String displayName) async {
     return await _performAuthAction(() async {
-      await AuthService.registerWithEmail(email, password, displayName);
+      final cred =
+          await AuthService.registerWithEmail(email, password, displayName);
+      final uid = cred?.user?.uid;
+      if (uid != null) {
+        await _loadUserData(uid);
+        await AuthService.updateLastLogin();
+      }
       return true;
     });
   }

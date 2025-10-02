@@ -45,10 +45,9 @@ class AuthService {
         password: password,
       );
 
-      // Update display name
       await result.user?.updateDisplayName(displayName.trim());
+      await result.user?.reload(); // <-- important pour actualiser currentUser
 
-      // Create user document in Firestore
       if (result.user != null) {
         await _createUserDocument(result.user!, displayName.trim());
       }
@@ -93,10 +92,10 @@ class AuthService {
     }
   }
 
-  /// Create user document in Firestore
+  /// Create user document in Firestore with default values
   static Future<void> _createUserDocument(User user, String displayName) async {
     final userDoc = _firestore.collection('users').doc(user.uid);
-    
+
     await userDoc.set({
       'uid': user.uid,
       'email': user.email,
@@ -105,7 +104,15 @@ class AuthService {
       'lastLoginAt': FieldValue.serverTimestamp(),
       'role': 'user', // Default role
       'isActive': true,
-    });
+
+      // Champs par défaut pour éviter les nulls
+      'totalPoints': 0,
+      'availablePoints': 0,
+      'lifetimePointsEarned': 0,
+      'isMember': false,
+      'membershipType': null,
+      'membershipExpiry': null,
+    }, SetOptions(merge: true));
   }
 
   /// Update user's last login time
