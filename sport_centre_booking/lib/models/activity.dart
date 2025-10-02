@@ -8,9 +8,12 @@ class Activity {
   final String time;
   final String timeCategory; // morning, afternoon, evening
   final String location;
-  final double price;
+  final double price; // Default guest price for backward compatibility
+  final double guestPrice;
+  final double memberPrice;
   final int pointsReward;
   final int capacity;
+  final int bookedCount; // New field for tracking bookings
   final int spotsLeft;
   final String imageUrl;
   final List<String> requirements;
@@ -26,12 +29,16 @@ class Activity {
     required this.timeCategory,
     required this.location,
     required this.price,
+    double? guestPrice,
+    double? memberPrice,
     required this.pointsReward,
     required this.capacity,
+    this.bookedCount = 0, // Default to 0 bookings
     required this.spotsLeft,
     required this.imageUrl,
     this.requirements = const [],
-  });
+  }) : guestPrice = guestPrice ?? price,
+       memberPrice = memberPrice ?? (price * 0.8); // 20% discount for members
 
   factory Activity.fromJson(Map<String, dynamic> json) {
     return Activity(
@@ -45,8 +52,11 @@ class Activity {
       timeCategory: json['timeCategory'],
       location: json['location'],
       price: json['price'].toDouble(),
+      guestPrice: json['guestPrice']?.toDouble(),
+      memberPrice: json['memberPrice']?.toDouble(),
       pointsReward: json['pointsReward'],
       capacity: json['capacity'],
+      bookedCount: json['bookedCount'] ?? 0, // Default to 0 if not present
       spotsLeft: json['spotsLeft'],
       imageUrl: json['imageUrl'],
       requirements: List<String>.from(json['requirements'] ?? []),
@@ -65,8 +75,11 @@ class Activity {
       'timeCategory': timeCategory,
       'location': location,
       'price': price,
+      'guestPrice': guestPrice,
+      'memberPrice': memberPrice,
       'pointsReward': pointsReward,
       'capacity': capacity,
+      'bookedCount': bookedCount,
       'spotsLeft': spotsLeft,
       'imageUrl': imageUrl,
       'requirements': requirements,
