@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 import 'widgets/category_tabs.dart';
 import 'widgets/advanced_filters.dart';
 import 'widgets/activities_grid.dart';
@@ -76,23 +78,29 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Build title and welcome message
   Widget _buildTitle() {
-    return const Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Club Activities',
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-        ),
-        SizedBox(height: 8),
-        Text(
-          'Welcome back, Sarah Johnson!',
-          style: TextStyle(fontSize: 16, color: Colors.grey),
-        ),
-      ],
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Club Activities',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              authProvider.isLoggedIn 
+                  ? 'Welcome back, ${authProvider.userFirstName}!'
+                  : 'Discover amazing activities',
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+          ],
+        );
+      },
     );
   }
 

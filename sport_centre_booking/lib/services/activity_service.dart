@@ -181,6 +181,7 @@ class ActivityService {
         price: 15.0,
         pointsReward: 50,
         capacity: 15,
+        bookedCount: 10, // 10 people already booked
         spotsLeft: 5,
         imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=200&fit=crop',
         requirements: ['Yoga mat', 'Water bottle'],
@@ -198,6 +199,7 @@ class ActivityService {
         price: 18.0,
         pointsReward: 55,
         capacity: 12,
+        bookedCount: 12, // Full class
         spotsLeft: 0, // Full class
         imageUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=300&h=200&fit=crop',
         requirements: ['Yoga mat', 'Blanket'],
@@ -215,6 +217,7 @@ class ActivityService {
         price: 20.0,
         pointsReward: 65,
         capacity: 10,
+        bookedCount: 7, // 7 people already booked
         spotsLeft: 3,
         imageUrl: 'https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?w=300&h=200&fit=crop',
         requirements: ['Yoga mat', 'Towel'],
@@ -234,6 +237,7 @@ class ActivityService {
         price: 20.0,
         pointsReward: 75,
         capacity: 12,
+        bookedCount: 9, // 9 people already booked
         spotsLeft: 3,
         imageUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=200&fit=crop',
         requirements: ['Towel', 'Water bottle'],
@@ -251,6 +255,7 @@ class ActivityService {
         price: 25.0,
         pointsReward: 85,
         capacity: 8,
+        bookedCount: 6, // 6 people already booked
         spotsLeft: 2,
         imageUrl: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=300&h=200&fit=crop',
         requirements: ['Athletic shoes', 'Water bottle'],
@@ -268,6 +273,7 @@ class ActivityService {
         price: 22.0,
         pointsReward: 80,
         capacity: 15,
+        bookedCount: 7, // 7 people already booked
         spotsLeft: 8,
         imageUrl: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=300&h=200&fit=crop',
         requirements: ['Gym gloves', 'Towel'],
@@ -544,7 +550,28 @@ class ActivityService {
     ];
 
     for (Activity activity in sampleActivities) {
-      await addActivity(activity);
+      // Calculate bookedCount if it's not explicitly set
+      final activityWithBookedCount = Activity(
+        id: activity.id,
+        name: activity.name,
+        description: activity.description,
+        category: activity.category,
+        club: activity.club,
+        date: activity.date,
+        time: activity.time,
+        timeCategory: activity.timeCategory,
+        location: activity.location,
+        price: activity.price,
+        guestPrice: activity.guestPrice,
+        memberPrice: activity.memberPrice,
+        pointsReward: activity.pointsReward,
+        capacity: activity.capacity,
+        bookedCount: activity.capacity - activity.spotsLeft, // Calculate from capacity and spotsLeft
+        spotsLeft: activity.spotsLeft,
+        imageUrl: activity.imageUrl,
+        requirements: activity.requirements,
+      );
+      await addActivity(activityWithBookedCount);
     }
   }
 

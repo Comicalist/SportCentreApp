@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../../models/activity.dart';
 import '../../utils/activity_helpers.dart';
 import '../../utils/constants.dart';
+import '../../providers/auth_provider.dart';
+import '../../screens/auth/login_screen.dart';
+import '../../screens/booking/booking_details_screen.dart';
 
 /// Reusable activity card widget for displaying activity information
 class ActivityCard extends StatelessWidget {
@@ -274,32 +278,102 @@ class ActivityCard extends StatelessWidget {
 
   /// Build centered book now button
   Widget _buildBookButton() {
-    return Center(
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: () => _handleBooking(),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.teal,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
+    return Builder(
+      builder: (context) {
+        return Center(
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => _handleBooking(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
+                ),
+              ),
+              child: const Text(
+                'Book Now',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
             ),
           ),
-          child: const Text(
-            'Book Now',
-            style: TextStyle(fontWeight: FontWeight.w600),
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 
   /// Handle booking button press
-  void _handleBooking() {
-    // TODO: Implement booking functionality
-    // This would typically navigate to a booking screen or show a dialog
-    print('Booking ${activity.name}...');
+  void _handleBooking(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    if (!authProvider.isLoggedIn) {
+      // Show login dialog for non-authenticated users
+      _showLoginPrompt(context);
+      return;
+    }
+
+    // User is authenticated, navigate to booking details
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BookingDetailsScreen(activity: activity),
+      ),
+    );
+  }
+
+  /// Show login prompt for non-authenticated users
+  void _showLoginPrompt(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Sign In Required'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.lock_outline,
+                size: 48,
+                color: Colors.grey,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'You need to sign in to book "${activity.name}".',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Join us to access exclusive member rates and earn rewards!',
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Maybe Later'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const LoginScreen(isSignUp: false),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Sign In'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
