@@ -147,18 +147,11 @@ class BookingProvider extends ChangeNotifier {
 
     try {
       final success = await BookingService.cancelBooking(bookingId, reason: reason);
-      
-      if (success) {
-        await _refreshUserBookings();
-        _setLoading(false);
-        return true;
-      } else {
-        _setError('Failed to cancel booking. Please try again.');
-        _setLoading(false);
-        return false;
-      }
+      _setLoading(false);
+      return success;
     } catch (e) {
-      _setError('Cancellation failed: ${e.toString()}');
+      print('BookingProvider: Error cancelling booking: $e');
+      _setError('Failed to cancel booking: ${e.toString()}');
       _setLoading(false);
       return false;
     }

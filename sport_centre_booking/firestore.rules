@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Activities - public read, restricted write
+    match /activities/{activityId} {
+      // Everyone can read activities (including anonymous users)
+      allow read: if true;
+      
+      // Admin can write all fields
+      allow write: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      
+      // Authenticated users can update only booking-related fields
+      allow update: if request.auth != null &&
+        request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['bookedCount', 'spotsLeft']);
+    }
+    
+    // User-specific data
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // User bookings
+    match /bookings/{bookingId} {
+      // Allow creating new bookings if the userId in the data matches the authenticated user
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.userId;
+      
+      // Allow reading and updating existing bookings if user owns them
+      allow read, update: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+      
+      // Allow deleting bookings if user owns them
+      allow delete: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+    }
+    
+    // User booking references in subcollections
+    match /users/{userId}/bookings/{bookingId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

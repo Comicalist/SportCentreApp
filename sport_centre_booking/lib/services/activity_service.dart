@@ -51,7 +51,34 @@ class ActivityService {
     bool onlyAvailable = false,
   }) {
     return getActivities().map((activities) {
+      final now = DateTime.now();
+      
       return activities.where((activity) {
+        // Filter out past activities - only show future activities
+        try {
+          // Parse time string (format: "HH:mm")
+          final timeParts = activity.time.split(':');
+          if (timeParts.length != 2) return true; // If time format is invalid, show the activity
+          
+          final hour = int.parse(timeParts[0]);
+          final minute = int.parse(timeParts[1]);
+          
+          final activityDateTime = DateTime(
+            activity.date.year,
+            activity.date.month,
+            activity.date.day,
+            hour,
+            minute,
+          );
+          
+          if (activityDateTime.isBefore(now)) {
+            return false;
+          }
+        } catch (e) {
+          // If there's any error parsing the time, show the activity
+          print('Error parsing time for activity ${activity.name}: $e');
+        }
+
         // Category filter
         if (category != null && category != 'All' && activity.category != category) {
           return false;

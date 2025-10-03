@@ -1,1 +1,49 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"sportcentreapp","appId":"1:853313490143:android:6ef26bedb8e6803ac1ad6a","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"sportcentreapp","configurations":{"android":"1:853313490143:android:6ef26bedb8e6803ac1ad6a"}}}}}}
+{
+  "firestore": {
+   {
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "sportcentreapp",
+          "appId": "1:853313490143:android:6ef26bedb8e6803ac1ad6a",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "sportcentreapp",
+          "configurations": {
+            "android": "1:853313490143:android:6ef26bedb8e6803ac1ad6a"
+          }
+        }
+      }
+    }
+  }
+}"rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "sportcentreapp",
+          "appId": "1:853313490143:android:6ef26bedb8e6803ac1ad6a",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "sportcentreapp",
+          "configurations": {
+            "android": "1:853313490143:android:6ef26bedb8e6803ac1ad6a"
+          }
+        }
+      }
+    }
+  }
+}"flutter":{"platforms":{"android":{"default":{"projectId":"sportcentreapp","appId":"1:853313490143:android:6ef26bedb8e6803ac1ad6a","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"sportcentreapp","configurations":{"android":"1:853313490143:android:6ef26bedb8e6803ac1ad6a"}}}}}}

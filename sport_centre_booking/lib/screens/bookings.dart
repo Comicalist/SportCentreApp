@@ -405,22 +405,37 @@ class _BookingsScreenState extends State<BookingsScreen> {
               Navigator.of(context).pop();
               
               try {
-                await Provider.of<BookingProvider>(context, listen: false)
+                final success = await Provider.of<BookingProvider>(context, listen: false)
                     .cancelBooking(booking.id);
                 
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Booking cancelled successfully'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
+                if (!mounted) return;
+                
+                if (success) {
+                  if (mounted && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Booking cancelled successfully'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } else {
+                  if (mounted && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Failed to cancel booking. Please try again.'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 }
               } catch (e) {
-                if (mounted) {
+                if (!mounted) return;
+                
+                if (mounted && context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Failed to cancel booking: $e'),
+                      content: Text('Error: ${e.toString().replaceAll('Exception: ', '')}'),
                       backgroundColor: Colors.red,
                     ),
                   );

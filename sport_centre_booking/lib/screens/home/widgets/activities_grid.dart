@@ -105,14 +105,15 @@ class ActivitiesGrid extends StatelessWidget {
             style: const TextStyle(fontSize: 18),
           ),
           const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () => _addSampleActivities(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.teal,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Add Sample Activities'),
-          ),
+          // TODO: Uncomment for development
+          // ElevatedButton(
+          //   onPressed: () => _addSampleActivities(context),
+          //   style: ElevatedButton.styleFrom(
+          //     backgroundColor: Colors.teal,
+          //     foregroundColor: Colors.white,
+          //   ),
+          //   child: const Text('Add Sample Activities'),
+          // ),
         ],
       ),
     );
