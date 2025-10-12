@@ -3,6 +3,7 @@ import '../../models/activity.dart';
 import '../../models/booking.dart';
 import '../../models/user_profile.dart';
 import '../../services/activity_service.dart';
+import 'activity_management_screen.dart'; 
 
 class AdminPanel extends StatelessWidget {
   final ActivityService _activityService = ActivityService();
@@ -58,37 +59,7 @@ class AdminPanel extends StatelessWidget {
                     color: Colors.blue,
                   ),
                   
-                  _AdminTile(
-                    icon: Icons.bookmark,
-                    title: 'View All Bookings',
-                    subtitle: 'See all user bookings and analytics',
-                    onTap: () => _navigateToBookingsManagement(context),
-                    color: Colors.green,
-                  ),
                   
-                  _AdminTile(
-                    icon: Icons.people,
-                    title: 'User Management',
-                    subtitle: 'Manage users and permissions',
-                    onTap: () => _navigateToUserManagement(context),
-                    color: Colors.orange,
-                  ),
-                  
-                  _AdminTile(
-                    icon: Icons.analytics,
-                    title: 'Analytics',
-                    subtitle: 'View app usage statistics',
-                    onTap: () => _navigateToAnalytics(context),
-                    color: Colors.purple,
-                  ),
-                  
-                  _AdminTile(
-                    icon: Icons.settings,
-                    title: 'App Configuration',
-                    subtitle: 'Manage app settings and features',
-                    onTap: () => _navigateToAppConfig(context),
-                    color: Colors.grey,
-                  ),
                 ],
               ),
             ),
@@ -99,8 +70,12 @@ class AdminPanel extends StatelessWidget {
   }
 
   void _navigateToActivityManagement(BuildContext context) {
-    // Navigate to activity management screen
-    // Navigator.push(context, MaterialPageRoute(builder: (context) => ActivityManagementScreen()));
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ActivityManagementScreen(),
+      ),
+    );
   }
   
   void _navigateToBookingsManagement(BuildContext context) {
