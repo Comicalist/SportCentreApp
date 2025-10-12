@@ -36,6 +36,7 @@ class ActivityHelpers {
 
   /// Get color for spots availability
   static Color getSpotsColor(int spotsLeft) {
+    if (spotsLeft <= 0) return Colors.red[700]!; // Darker red for sold out
     if (spotsLeft <= 1) return Colors.red;
     if (spotsLeft <= 3) return Colors.orange;
     return Colors.green;

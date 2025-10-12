@@ -214,84 +214,62 @@ class BookingService {
     if (user == null) throw Exception('User must be authenticated');
 
     try {
-      return await _firestore.runTransaction<bool>((transaction) async {
-        // Get booking
-        final bookingRef = _firestore.collection('bookings').doc(bookingId);
-        final bookingDoc = await transaction.get(bookingRef);
+      // First, get the booking to validate and get activity info
+      final bookingDoc = await _firestore.collection('bookings').doc(bookingId).get();
+      
+      if (!bookingDoc.exists) {
+        throw Exception('Booking not found');
+      }
 
-        if (!bookingDoc.exists) {
-          throw Exception('Booking not found');
-        }
+      final booking = Booking.fromFirestore(bookingDoc);
 
-        final booking = Booking.fromFirestore(bookingDoc);
+      // Check if user owns this booking
+      if (booking.userId != user.uid) {
+        throw Exception('Unauthorized to cancel this booking');
+      }
 
-        // Check if user owns this booking
-        if (booking.userId != user.uid) {
-          throw Exception('Unauthorized to cancel this booking');
-        }
+      // Check if booking can be cancelled
+      if (!booking.canBeCancelled) {
+        throw Exception('This booking cannot be cancelled (current status: ${booking.status})');
+      }
 
-        // Check if booking can be cancelled
-        if (!booking.canBeCancelled) {
-          throw Exception('This booking cannot be cancelled');
-        }
+      // Step 1: Update booking status
+      await _firestore.collection('bookings').doc(bookingId).update({
+        'status': 'cancelled',
+        'cancellationReason': reason,
+        'cancelledAt': Timestamp.fromDate(DateTime.now()),
+      });
 
-        // Update booking status
-        transaction.update(bookingRef, {
-          'status': BookingStatus.cancelled.value,
-          'cancellationReason': reason,
-          'cancelledAt': Timestamp.fromDate(DateTime.now()),
-        });
-
-        // Update activity/time slot capacity
+      // Step 2: Update activity capacity separately
+      try {
         final activityRef = _firestore.collection('activities').doc(booking.activityId);
-        final activityDoc = await transaction.get(activityRef);
-
+        final activityDoc = await activityRef.get();
+        
         if (activityDoc.exists) {
           final activityData = activityDoc.data()!;
-          Map<String, dynamic> updateData = {};
-
-          if (booking.timeSlotId == null) {
-            // General activity booking
-            final bookedCount = activityData['bookedCount'] ?? 0;
-            updateData['bookedCount'] = (bookedCount - booking.participantCount).clamp(0, double.infinity);
-          } else {
-            // Specific time slot booking
-            final timeSlots = List<Map<String, dynamic>>.from(
-              activityData['timeSlots'] ?? []
-            );
+          
+          // Safely get numeric values with defaults
+          final currentBookedCount = (activityData['bookedCount'] as num?)?.toInt() ?? 0;
+          final capacity = (activityData['capacity'] as num?)?.toInt() ?? 0;
+          
+          if (capacity > 0) {
+            // Restore spots by reducing booked count
+            final newBookedCount = (currentBookedCount - booking.participantCount).clamp(0, capacity);
+            final newSpotsLeft = capacity - newBookedCount;
             
-            final timeSlotIndex = timeSlots.indexWhere(
-              (slot) => slot['id'] == booking.timeSlotId
-            );
-            
-            if (timeSlotIndex != -1) {
-              final timeSlot = timeSlots[timeSlotIndex];
-              final bookedCount = timeSlot['bookedCount'] ?? 0;
-              timeSlots[timeSlotIndex]['bookedCount'] = 
-                  (bookedCount - booking.participantCount).clamp(0, double.infinity);
-              updateData['timeSlots'] = timeSlots;
-            }
+            await activityRef.update({
+              'bookedCount': newBookedCount,
+              'spotsLeft': newSpotsLeft,
+            });
           }
-
-          transaction.update(activityRef, updateData);
         }
+      } catch (e) {
+        // Don't throw here - the booking cancellation succeeded
+      }
 
-        // Update user booking reference
-        final userBookingRef = _firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('bookings')
-            .doc(bookingId);
-        
-        transaction.update(userBookingRef, {
-          'status': BookingStatus.cancelled.value,
-        });
-
-        return true;
-      });
+      return true;
     } catch (e) {
-      print('Error cancelling booking: $e');
-      return false;
+      rethrow;
     }
   }
 

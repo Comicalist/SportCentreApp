@@ -43,6 +43,8 @@ class BookingProvider extends ChangeNotifier {
   void startBooking(Activity activity, AuthProvider authProvider) {
     print('Starting booking for activity: ${activity.name}, user logged in: ${authProvider.isLoggedIn}');
     
+    // Clear any previous booking result
+    _lastCreatedBooking = null;
     _selectedActivity = activity;
     
     // Initialize booking details with default values
@@ -147,18 +149,11 @@ class BookingProvider extends ChangeNotifier {
 
     try {
       final success = await BookingService.cancelBooking(bookingId, reason: reason);
-      
-      if (success) {
-        await _refreshUserBookings();
-        _setLoading(false);
-        return true;
-      } else {
-        _setError('Failed to cancel booking. Please try again.');
-        _setLoading(false);
-        return false;
-      }
+      _setLoading(false);
+      return success;
     } catch (e) {
-      _setError('Cancellation failed: ${e.toString()}');
+      print('BookingProvider: Error cancelling booking: $e');
+      _setError('Failed to cancel booking: ${e.toString()}');
       _setLoading(false);
       return false;
     }
@@ -203,10 +198,16 @@ class BookingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Clear the last created booking result
+  void clearLastCreatedBooking() {
+    _lastCreatedBooking = null;
+    notifyListeners();
+  }
+
   void _clearBookingFlow() {
     _currentBookingDetails = null;
     _selectedActivity = null;
-    _lastCreatedBooking = null;
+    // Don't clear _lastCreatedBooking here - keep it for the success screen
   }
 
   /// Calculate price based on activity and user status

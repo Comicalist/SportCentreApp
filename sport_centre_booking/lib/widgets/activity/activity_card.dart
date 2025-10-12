@@ -256,6 +256,8 @@ class ActivityCard extends StatelessWidget {
 
   /// Build availability badge
   Widget _buildAvailabilityBadge() {
+    final bool isFullyBooked = activity.spotsLeft <= 0;
+    
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: 8,
@@ -266,7 +268,7 @@ class ActivityCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        '${activity.spotsLeft} left',
+        isFullyBooked ? 'Sold Out' : '${activity.spotsLeft} left',
         style: const TextStyle(
           color: Colors.white,
           fontSize: 11,
@@ -278,26 +280,58 @@ class ActivityCard extends StatelessWidget {
 
   /// Build centered book now button
   Widget _buildBookButton() {
+    // Check if activity is fully booked
+    final bool isFullyBooked = activity.spotsLeft <= 0;
+    
     return Builder(
       builder: (context) {
         return Center(
           child: SizedBox(
             width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => _handleBooking(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.teal,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
-                ),
-              ),
-              child: const Text(
-                'Book Now',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
+            child: isFullyBooked
+                ? ElevatedButton(
+                    onPressed: null, // Disabled
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey[300],
+                      foregroundColor: Colors.grey[600],
+                      disabledBackgroundColor: Colors.grey[300],
+                      disabledForegroundColor: Colors.grey[600],
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.event_busy,
+                          size: 16,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Fully Booked',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  )
+                : ElevatedButton(
+                    onPressed: () => _handleBooking(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
+                      ),
+                    ),
+                    child: const Text(
+                      'Book Now',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
           ),
         );
       },
