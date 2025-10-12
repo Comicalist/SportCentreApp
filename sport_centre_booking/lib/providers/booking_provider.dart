@@ -43,6 +43,8 @@ class BookingProvider extends ChangeNotifier {
   void startBooking(Activity activity, AuthProvider authProvider) {
     print('Starting booking for activity: ${activity.name}, user logged in: ${authProvider.isLoggedIn}');
     
+    // Clear any previous booking result
+    _lastCreatedBooking = null;
     _selectedActivity = activity;
     
     // Initialize booking details with default values
@@ -196,10 +198,16 @@ class BookingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Clear the last created booking result
+  void clearLastCreatedBooking() {
+    _lastCreatedBooking = null;
+    notifyListeners();
+  }
+
   void _clearBookingFlow() {
     _currentBookingDetails = null;
     _selectedActivity = null;
-    _lastCreatedBooking = null;
+    // Don't clear _lastCreatedBooking here - keep it for the success screen
   }
 
   /// Calculate price based on activity and user status

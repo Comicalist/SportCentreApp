@@ -6,7 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/booking_provider.dart';
 import '../../utils/activity_helpers.dart';
 import '../../utils/constants.dart';
-import 'booking_confirmation_screen.dart';
+import 'booking_success_screen.dart';
 
 /// Screen for booking activity details and participant selection
 class BookingDetailsScreen extends StatefulWidget {
@@ -212,6 +212,10 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           'Available spots',
           '${widget.activity.spotsLeft} of ${widget.activity.capacity}',
         ),
+        if (widget.activity.requirements.isNotEmpty) ...[
+          const SizedBox(height: AppConstants.mediumSpacing),
+          _buildRequirementsSection(),
+        ],
       ],
     );
   }
@@ -246,6 +250,67 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 ),
               ),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Build requirements section
+  Widget _buildRequirementsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(
+              Icons.info_outline,
+              size: 20,
+              color: Colors.teal,
+            ),
+            const SizedBox(width: AppConstants.mediumSpacing),
+            Text(
+              'Requirements',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          margin: const EdgeInsets.only(left: 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: widget.activity.requirements.map((requirement) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '• ',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.teal,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        requirement,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.black87,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
           ),
         ),
       ],
@@ -752,13 +817,14 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           _isLoading = false;
         });
 
-        if (success) {
-          // Navigate to confirmation screen
+        if (success && bookingProvider.lastCreatedBooking != null) {
+          // Navigate directly to success screen since booking is already confirmed
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => BookingConfirmationScreen(
+              builder: (context) => BookingSuccessScreen(
                 activity: widget.activity,
+                booking: bookingProvider.lastCreatedBooking!,
               ),
             ),
           );
@@ -767,9 +833,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                bookingProvider.errorMessage ?? 'Booking failed. Please try again.',
+                success 
+                  ? 'Booking was created but details are unavailable. Please check My Bookings.'
+                  : (bookingProvider.errorMessage ?? 'Booking failed. Please try again.'),
               ),
-              backgroundColor: Colors.red,
+              backgroundColor: success ? Colors.orange : Colors.red,
               behavior: SnackBarBehavior.floating,
             ),
           );

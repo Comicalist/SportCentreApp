@@ -3,6 +3,11 @@ import 'package:intl/intl.dart';
 import '../../models/booking.dart';
 import '../../models/activity.dart';
 import '../../utils/constants.dart';
+import '../home/home_screen.dart';
+import 'bookings.dart';
+import '../rewards.dart';
+import '../profile/profile_screen.dart';
+import '../../widgets/auth/auth_wrapper.dart' as auth;
 
 class BookingSuccessScreen extends StatelessWidget {
   final Booking booking;
@@ -295,21 +300,16 @@ class BookingSuccessScreen extends StatelessWidget {
             const SizedBox(height: 16),
             _buildStepItem(
               '1',
-              'Check your email for confirmation details',
-              Icons.email,
-            ),
-            _buildStepItem(
-              '2',
               'Arrive 15 minutes early for check-in',
               Icons.access_time,
             ),
             _buildStepItem(
-              '3',
+              '2',
               'Bring this confirmation or show it on your phone',
               Icons.qr_code,
             ),
             _buildStepItem(
-              '4',
+              '3',
               'Payment will be collected at the venue',
               Icons.payment,
             ),
@@ -449,14 +449,77 @@ class BookingSuccessScreen extends StatelessWidget {
   }
 
   void _navigateToMyBookings(BuildContext context) {
-    // Navigate to My Bookings tab (index 1)
-    Navigator.of(context).popUntil((route) => route.isFirst);
-    // This would ideally set the bottom navigation to index 1
-    // For now, just pop to the main screen
+    // Navigate back to main app and show bookings tab
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (context) => const MainAppWithBookingsTab(),
+      ),
+      (route) => false,
+    );
   }
 
   void _navigateToActivities(BuildContext context) {
     // Navigate back to Activities tab (index 0)
-    Navigator.of(context).popUntil((route) => route.isFirst);
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (context) => const auth.AuthWrapper(),
+      ),
+      (route) => false,
+    );
+  }
+}
+
+/// Custom wrapper that opens the main app on the bookings tab
+class MainAppWithBookingsTab extends StatefulWidget {
+  const MainAppWithBookingsTab({super.key});
+
+  @override
+  State<MainAppWithBookingsTab> createState() => _MainAppWithBookingsTabState();
+}
+
+class _MainAppWithBookingsTabState extends State<MainAppWithBookingsTab> {
+  int _selectedIndex = 1; // Start on bookings tab
+
+  final List<Widget> _screens = [
+    const HomeScreen(), // Activities screen
+    const BookingsScreen(), // My Bookings
+    const RewardsScreen(), // Rewards
+    const ProfileScreen(), // Profile/Auth
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _screens[_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        selectedItemColor: Colors.teal,
+        unselectedItemColor: Colors.grey,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.sports_soccer),
+            label: 'Activities',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today),
+            label: 'My Bookings',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.card_giftcard),
+            label: 'Rewards',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
+      ),
+    );
   }
 }

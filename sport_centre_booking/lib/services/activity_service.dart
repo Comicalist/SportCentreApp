@@ -58,7 +58,7 @@ class ActivityService {
         try {
           // Parse time string (format: "HH:mm")
           final timeParts = activity.time.split(':');
-          if (timeParts.length != 2) return true; // If time format is invalid, show the activity
+          if (timeParts.length != 2) return true;
           
           final hour = int.parse(timeParts[0]);
           final minute = int.parse(timeParts[1]);
@@ -76,7 +76,6 @@ class ActivityService {
           }
         } catch (e) {
           // If there's any error parsing the time, show the activity
-          print('Error parsing time for activity ${activity.name}: $e');
         }
 
         // Category filter

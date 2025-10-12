@@ -214,8 +214,6 @@ class BookingService {
     if (user == null) throw Exception('User must be authenticated');
 
     try {
-      print('Starting cancellation for booking: $bookingId');
-      
       // First, get the booking to validate and get activity info
       final bookingDoc = await _firestore.collection('bookings').doc(bookingId).get();
       
@@ -224,7 +222,6 @@ class BookingService {
       }
 
       final booking = Booking.fromFirestore(bookingDoc);
-      print('Booking loaded: ${booking.activityTitle}, Status: ${booking.status}');
 
       // Check if user owns this booking
       if (booking.userId != user.uid) {
@@ -236,16 +233,13 @@ class BookingService {
         throw Exception('This booking cannot be cancelled (current status: ${booking.status})');
       }
 
-      print('Step 1: Updating booking status to cancelled...');
       // Step 1: Update booking status
       await _firestore.collection('bookings').doc(bookingId).update({
         'status': 'cancelled',
         'cancellationReason': reason,
         'cancelledAt': Timestamp.fromDate(DateTime.now()),
       });
-      print('✅ Booking status updated successfully');
 
-      print('Step 2: Updating activity capacity...');
       // Step 2: Update activity capacity separately
       try {
         final activityRef = _firestore.collection('activities').doc(booking.activityId);
@@ -258,40 +252,23 @@ class BookingService {
           final currentBookedCount = (activityData['bookedCount'] as num?)?.toInt() ?? 0;
           final capacity = (activityData['capacity'] as num?)?.toInt() ?? 0;
           
-          print('Activity data: bookedCount=${activityData['bookedCount']}, capacity=${activityData['capacity']}');
-          print('Parsed values: currentBookedCount=$currentBookedCount, capacity=$capacity');
-          print('Booking participant count: ${booking.participantCount}');
-          
           if (capacity > 0) {
             // Restore spots by reducing booked count
             final newBookedCount = (currentBookedCount - booking.participantCount).clamp(0, capacity);
             final newSpotsLeft = capacity - newBookedCount;
             
-            print('New capacity will be: $newBookedCount/$capacity, Spots left: $newSpotsLeft');
-            
             await activityRef.update({
               'bookedCount': newBookedCount,
               'spotsLeft': newSpotsLeft,
             });
-            
-            print('✅ Activity capacity updated successfully');
-          } else {
-            print('Warning: Activity has invalid capacity ($capacity), skipping capacity update');
           }
-        } else {
-          print('Warning: Activity not found: ${booking.activityId}');
         }
       } catch (e) {
-        print('⚠️ Warning: Failed to update activity capacity: $e');
-        print('Booking was cancelled successfully, but capacity may be inconsistent');
         // Don't throw here - the booking cancellation succeeded
       }
 
-      print('✅ Cancellation completed successfully');
       return true;
     } catch (e) {
-      print('Error cancelling booking: $e');
-      print('Error type: ${e.runtimeType}');
       rethrow;
     }
   }

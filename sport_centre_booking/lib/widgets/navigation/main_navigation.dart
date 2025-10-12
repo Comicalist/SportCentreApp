@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../screens/home/home_screen.dart';
-import '../../screens/bookings.dart';
+import '../../screens/booking/bookings.dart';
 import '../../screens/rewards.dart';
-import '../../screens/profile.dart';
+import '../../screens/profile/profile_screen.dart';
 
 /// Main navigation widget with bottom navigation bar
 class MainNavigation extends StatefulWidget {

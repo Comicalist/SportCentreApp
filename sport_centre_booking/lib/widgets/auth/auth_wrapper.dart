@@ -4,7 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/profile/profile_screen.dart';
-import '../../screens/bookings.dart';
+import '../../screens/booking/bookings.dart';
 
 /// Widget that wraps the app and handles authentication routing
 class AuthWrapper extends StatelessWidget {
