@@ -7,6 +7,7 @@ class UserProfile {
   final List<String> upcomingBookings;
   final String profileImageUrl;
   final DateTime joinDate;
+  final String role;
 
   UserProfile({
     required this.id,
@@ -17,6 +18,7 @@ class UserProfile {
     required this.upcomingBookings,
     this.profileImageUrl = '',
     required this.joinDate,
+    this.role = 'user'
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -29,8 +31,12 @@ class UserProfile {
       upcomingBookings: List<String>.from(json['upcomingBookings'] ?? []),
       profileImageUrl: json['profileImageUrl'] ?? '',
       joinDate: DateTime.parse(json['joinDate']),
+      role: json['role'] ?? 'user',
     );
   }
+
+  // Checker for Admin
+  bool get isAdmin => role == 'admin';
 
   Map<String, dynamic> toJson() {
     return {
@@ -42,6 +48,7 @@ class UserProfile {
       'upcomingBookings': upcomingBookings,
       'profileImageUrl': profileImageUrl,
       'joinDate': joinDate.toIso8601String(),
+      'role' : role,
     };
   }
 }

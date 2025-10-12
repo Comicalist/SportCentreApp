@@ -9,7 +9,6 @@ import 'widgets/auth/auth_wrapper.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize Firebase only for supported platforms
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -17,7 +16,6 @@ void main() async {
     print('Firebase initialized successfully');
   } catch (e) {
     print('Firebase initialization failed: $e');
-    // Continue without Firebase for now
   }
   
   runApp(const MyApp());
@@ -45,5 +43,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-

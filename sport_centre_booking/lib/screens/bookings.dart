@@ -31,16 +31,30 @@ class _BookingsScreenState extends State<BookingsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer<AuthProvider>(
-      builder: (context, authProvider, child) {
-        // Show auth required screen if not logged in
-        if (!authProvider.isLoggedIn) {
-          return const AuthRequiredScreen(
-            title: 'My Bookings',
-            message: 'Sign in to view your bookings and manage your activities.',
-          );
-        }
+Widget build(BuildContext context) {
+  return Consumer<AuthProvider>(
+    builder: (context, authProvider, child) {
+      // Show auth required screen if not logged in
+      if (!authProvider.isLoggedIn) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('My Bookings'), // or 'Profile' for profile screen
+          ),
+          body: const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.lock, size: 64, color: Colors.grey),
+                SizedBox(height: 16),
+                Text(
+                  'Please sign in to access this feature',
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
 
         return Scaffold(
           backgroundColor: Colors.grey[50],
