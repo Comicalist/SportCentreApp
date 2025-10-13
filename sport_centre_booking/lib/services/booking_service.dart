@@ -71,7 +71,7 @@ class BookingService {
       return await _firestore.runTransaction<Booking?>((transaction) async {
         print('Starting transaction for booking creation');
         
-        // Get activity data within transaction
+        // Get activity data within transaction (READS FIRST)
         final activityRef = _firestore.collection('activities').doc(activityId);
         final activityDoc = await transaction.get(activityRef);
 
@@ -116,6 +116,8 @@ class BookingService {
         final activityTime = activityData['time'] ?? '00:00';
         
         print('Activity details: $activityTitle, Date: $activityDateTime, Time: $activityTime');
+
+        // ---------------- WRITES (after all reads) ----------------
 
         // Update activity capacity first
         print('Updating activity capacity...');
@@ -173,6 +175,32 @@ class BookingService {
           'status': 'confirmed',
           'createdAt': Timestamp.fromDate(DateTime.now()),
         });
+
+        // ---------------- REWARDS (added, no extra reads) ----------------
+        // Credit user's points atomically
+        final userRef = _firestore.collection('users').doc(user.uid);
+        transaction.update(userRef, {
+          'totalPoints': FieldValue.increment(expectedPoints),
+          'availablePoints': FieldValue.increment(expectedPoints),
+          'lifetimePointsEarned': FieldValue.increment(expectedPoints),
+          'lastRewardUpdateAt': FieldValue.serverTimestamp(),
+        });
+
+        // Rewards ledger entry
+        final ledgerRef = _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('rewards_ledger')
+            .doc();
+        transaction.set(ledgerRef, {
+          'type': 'earn',
+          'amount': expectedPoints,
+          'bookingId': bookingRef.id,
+          'activityId': activityId,
+          'activityTitle': activityTitle,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+        // -------------------------------------------------------------
 
         // Create Booking object to return
         final booking = Booking(

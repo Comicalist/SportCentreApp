@@ -5,6 +5,7 @@ import '../../screens/home/home_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/profile/profile_screen.dart';
 import '../../screens/booking/bookings.dart';
+import '../../screens/rewards.dart'; // ✅ vrai RewardsScreen
 
 /// Widget that wraps the app and handles authentication routing
 class AuthWrapper extends StatelessWidget {
@@ -23,13 +24,7 @@ class AuthWrapper extends StatelessWidget {
           );
         }
 
-        // If user is logged in, show main app
-        if (authProvider.isLoggedIn) {
-          return const MainAppContent();
-        }
-
-        // If user is not logged in, allow anonymous browsing
-        // but show auth options for booking activities
+        // Pour ton cas (cours), on affiche l’app même sans connexion
         return const MainAppContent();
       },
     );
@@ -48,10 +43,10 @@ class _MainAppContentState extends State<MainAppContent> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
-    const HomeScreen(), // Activities screen
+    const HomeScreen(),     // Activities screen
     const BookingsScreen(), // My Bookings
-    const RewardsScreen(), // Rewards
-    const ProfileScreen(), // Profile/Auth
+    const RewardsScreen(),  // ✅ Rewards (vrai écran)
+    const ProfileScreen(),  // Profile/Auth
   ];
 
   @override
@@ -91,39 +86,11 @@ class _MainAppContentState extends State<MainAppContent> {
   }
 }
 
-/// Placeholder for Rewards screen
-class RewardsScreen extends StatelessWidget {
-  const RewardsScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    
-    if (!authProvider.isLoggedIn) {
-      return const AuthRequiredScreen(
-        title: 'Rewards',
-        message: 'Sign in to earn points and redeem rewards from your activities.',
-      );
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Rewards'),
-        backgroundColor: Colors.teal,
-        foregroundColor: Colors.white,
-      ),
-      body: const Center(
-        child: Text('Rewards Screen - Coming Soon'),
-      ),
-    );
-  }
-}
-
-/// Screen shown when authentication is required
+/// Screen shown when authentication is required (optionnel)
 class AuthRequiredScreen extends StatelessWidget {
   final String title;
   final String message;
-  
+
   const AuthRequiredScreen({
     super.key,
     required this.title,
@@ -149,9 +116,9 @@ class AuthRequiredScreen extends StatelessWidget {
               color: Colors.grey,
             ),
             const SizedBox(height: 24),
-            Text(
+            const Text(
               'Sign In Required',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
               ),
@@ -166,7 +133,6 @@ class AuthRequiredScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 32),
-            
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -190,7 +156,6 @@ class AuthRequiredScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            
             TextButton(
               onPressed: () {
                 Navigator.push(
@@ -201,7 +166,7 @@ class AuthRequiredScreen extends StatelessWidget {
                 );
               },
               child: const Text(
-                'Don\'t have an account? Sign Up',
+                "Don't have an account? Sign Up",
                 style: TextStyle(color: Colors.teal),
               ),
             ),
