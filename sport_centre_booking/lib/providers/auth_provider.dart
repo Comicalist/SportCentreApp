@@ -165,6 +165,15 @@ class AuthProvider extends ChangeNotifier {
     });
   }
 
+  /// Check if current user's email is verified
+  bool get isEmailVerified => AuthService.isEmailVerified;
+
+  /// Reload user to check verification status
+  Future<void> checkEmailVerification() async {
+    await AuthService.reloadUser();
+    notifyListeners();
+  }
+
   /// Helper method to perform auth actions with loading and error handling
   Future<bool> _performAuthAction(Future<bool> Function() action) async {
     _setLoading(true);

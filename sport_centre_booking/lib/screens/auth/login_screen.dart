@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../utils/validation_utils.dart';
+import 'email_verification_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final bool isSignUp;
@@ -91,16 +93,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (_isSignUp) ...[
                     TextFormField(
                       controller: _displayNameController,
-                      decoration: const InputDecoration(
+                      maxLength: 40,
+                      decoration: InputDecoration(
                         labelText: 'Full Name',
-                        prefixIcon: Icon(Icons.person),
-                        border: OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.person),
+                        border: const OutlineInputBorder(),
+                        counterText: '${_displayNameController.text.length}/40',
+                        helperText: 'Letters, spaces, hyphens, and apostrophes only',
+                        helperMaxLines: 2,
                       ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Please enter your full name';
-                        }
-                        return null;
+                      validator: ValidationUtils.validateDisplayName,
+                      onChanged: (value) {
+                        setState(() {}); // Update counter
                       },
                     ),
                     const SizedBox(height: 16),
@@ -115,15 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       prefixIcon: Icon(Icons.email),
                       border: OutlineInputBorder(),
                     ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter your email';
-                      }
-                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                        return 'Please enter a valid email';
-                      }
-                      return null;
-                    },
+                    validator: ValidationUtils.validateEmail,
                   ),
                   const SizedBox(height: 16),
 
@@ -146,16 +142,25 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       border: const OutlineInputBorder(),
                     ),
-                    validator: (value) {
+                    validator: _isSignUp ? ValidationUtils.validatePassword : (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please enter your password';
                       }
-                      if (_isSignUp && value.length < 6) {
-                        return 'Password must be at least 6 characters';
-                      }
                       return null;
                     },
+                    onChanged: _isSignUp ? (value) {
+                      setState(() {}); // Update password strength indicator
+                    } : null,
                   ),
+                  
+                  // Password strength indicator and requirements (only for sign up)
+                  if (_isSignUp) ...[
+                    const SizedBox(height: 8),
+                    _buildPasswordStrengthIndicator(),
+                    const SizedBox(height: 8),
+                    _buildPasswordRequirements(),
+                  ],
+                  
                   const SizedBox(height: 16),
 
                   // Confirm Password field (only for sign up)
@@ -299,6 +304,16 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordController.text,
         _displayNameController.text.trim(),
       );
+      
+      if (success && mounted) {
+        // Navigate to email verification screen
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const EmailVerificationScreen(),
+          ),
+        );
+        return; // Don't close the login screen yet
+      }
     } else {
       success = await authProvider.signIn(
         _emailController.text.trim(),
@@ -369,6 +384,108 @@ class _LoginScreenState extends State<LoginScreen> {
               );
             },
           ),
+        ],
+      ),
+    );
+  }
+
+  /// Build password strength indicator
+  Widget _buildPasswordStrengthIndicator() {
+    final password = _passwordController.text;
+    final strength = ValidationUtils.getPasswordStrength(password);
+    final label = ValidationUtils.getPasswordStrengthLabel(strength);
+    
+    Color strengthColor;
+    if (strength < 40) {
+      strengthColor = Colors.red;
+    } else if (strength < 70) {
+      strengthColor = Colors.orange;
+    } else if (strength < 90) {
+      strengthColor = Colors.blue;
+    } else {
+      strengthColor = Colors.green;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Password Strength:',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: strengthColor,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        LinearProgressIndicator(
+          value: strength / 100,
+          backgroundColor: Colors.grey[300],
+          valueColor: AlwaysStoppedAnimation<Color>(strengthColor),
+        ),
+      ],
+    );
+  }
+
+  /// Build password requirements checklist
+  Widget _buildPasswordRequirements() {
+    final password = _passwordController.text;
+    final requirements = ValidationUtils.getPasswordRequirements(password);
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        border: Border.all(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Password Requirements:',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...requirements.map((req) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Row(
+              children: [
+                Icon(
+                  req.isMet ? Icons.check_circle : Icons.radio_button_unchecked,
+                  size: 16,
+                  color: req.isMet ? Colors.green : Colors.grey[400],
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    req.text,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: req.isMet ? Colors.green[700] : Colors.grey[600],
+                      fontWeight: req.isMet ? FontWeight.w500 : FontWeight.normal,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )).toList(),
         ],
       ),
     );

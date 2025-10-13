@@ -1,6 +1,6 @@
 // This is a generated file; do not edit or check into version control.
-FLUTTER_ROOT=C:\Users\schmi\Documents\Visual Studio 2017\flutter
-FLUTTER_APPLICATION_PATH=C:\dev\SportCentreApp\sport_centre_booking
+FLUTTER_ROOT=C:\flutter
+FLUTTER_APPLICATION_PATH=C:\Users\nguye\OneDrive\Documents\SportCentreApp\sport_centre_booking
 COCOAPODS_PARALLEL_CODE_SIGN=true
 FLUTTER_BUILD_DIR=build
 FLUTTER_BUILD_NAME=1.0.0

@@ -6,6 +6,7 @@ import '../../screens/booking/bookings.dart';
 import '../../screens/rewards.dart';
 import '../../screens/profile/profile_screen.dart';
 import '../../screens/admin/admin_panel.dart';
+import '../auth/email_verification_banner.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -30,9 +31,16 @@ class _MainNavigationState extends State<MainNavigation> {
         final navItems = _getNavItems(isAdmin);
 
         return Scaffold(
-          body: IndexedStack(
-            index: _currentIndex,
-            children: screens,
+          body: Column(
+            children: [
+              const EmailVerificationBanner(),
+              Expanded(
+                child: IndexedStack(
+                  index: _currentIndex,
+                  children: screens,
+                ),
+              ),
+            ],
           ),
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: _currentIndex,

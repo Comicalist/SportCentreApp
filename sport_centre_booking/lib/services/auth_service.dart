@@ -54,6 +54,11 @@ class AuthService {
 
       if (result.user != null) {
         await _createUserDocument(result.user!, displayName.trim());
+        
+        // Send email verification automatically
+        print('📤 Sending verification email to: ${result.user!.email}');
+        await result.user!.sendEmailVerification();
+        print('✅ Verification email sent successfully!');
       }
 
       return result;
@@ -93,6 +98,19 @@ class AuthService {
       }
     } catch (e) {
       throw 'Error sending verification email. Please try again.';
+    }
+  }
+
+  /// Check if current user's email is verified
+  static bool get isEmailVerified => currentUser?.emailVerified ?? false;
+
+  /// Reload current user to check verification status
+  static Future<void> reloadUser() async {
+    try {
+      await currentUser?.reload();
+    } catch (e) {
+      // Silently fail - not critical
+      print('Failed to reload user: $e');
     }
   }
 
