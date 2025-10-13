@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../models/activity.dart';
-import '../../models/booking.dart';
-import '../../models/user_profile.dart';
 import '../../services/activity_service.dart';
 import 'activity_management_screen.dart'; 
 
 class AdminPanel extends StatelessWidget {
   final ActivityService _activityService = ActivityService();
+
+  AdminPanel({super.key});
 
   @override
   Widget build(BuildContext context) {
