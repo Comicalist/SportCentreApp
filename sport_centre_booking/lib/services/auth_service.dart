@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 
 /// Service for handling Firebase Authentication
 class AuthService {
@@ -25,6 +26,10 @@ class AuthService {
         email: email.trim(),
         password: password,
       );
+      
+      // Update last login
+      await updateLastLogin();
+      
       return result;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
@@ -46,7 +51,7 @@ class AuthService {
       );
 
       await result.user?.updateDisplayName(displayName.trim());
-      await result.user?.reload(); // <-- important pour actualiser currentUser
+      await result.user?.reload();
 
       if (result.user != null) {
         await _createUserDocument(result.user!, displayName.trim());
@@ -112,6 +117,11 @@ class AuthService {
       'isMember': false,
       'membershipType': null,
       'membershipExpiry': null,
+      
+      // Add fields for UserProfile model
+      'bookingHistory': [],
+      'upcomingBookings': [],
+      'profileImageUrl': '',
     }, SetOptions(merge: true));
   }
 

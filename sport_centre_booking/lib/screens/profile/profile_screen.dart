@@ -18,13 +18,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Consumer<AuthProvider>(
       builder: (context, auth, _) {
         // 1) Pas connecté => écran d’auth
-        if (!auth.isLoggedIn) {
-          return const AuthRequiredScreen(
-            title: 'Profile',
-            message:
-                'Sign in to view your profile, points, and manage your account settings.',
-          );
-        }
+  if (!auth.isLoggedIn) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Profile')),
+      body: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.lock, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text('Please sign in to view your profile'),
+          ],
+        ),
+      ),
+    );
+  }
 
         // 2) Connecté mais AppUser pas encore chargé => loader
         final AppUser? user = auth.appUser;

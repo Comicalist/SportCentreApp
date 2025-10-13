@@ -18,6 +18,9 @@ class AuthProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get isLoggedIn => _firebaseUser != null;
   bool get isAnonymous => _firebaseUser?.isAnonymous == true;
+  
+  // NEW: Admin check
+  bool get isAdmin => _appUser?.isAdmin ?? false;
 
   AuthProvider() {
     _initAuthListener();
@@ -46,10 +49,15 @@ class AuthProvider extends ChangeNotifier {
     try {
       final docRef = FirebaseFirestore.instance.collection('users').doc(uid);
 
-      // 1) Forcer un aller-serveur (pas seulement le cache local)
-      var doc = await docRef.get(const GetOptions(source: Source.server));
+      // 1) Essayer d'abord le cache local pour un chargement rapide
+      var doc = await docRef.get(const GetOptions(source: Source.cache));
+      
+      // 2) Si pas dans le cache, charger depuis le serveur
+      if (!doc.exists) {
+        doc = await docRef.get(const GetOptions(source: Source.server));
+      }
 
-      // 2) Si le doc n'existe pas (race sign-up), le créer sur le champ
+      // 3) Si le document n'existe toujours pas, le créer
       if (!doc.exists) {
         final fUser = FirebaseAuth.instance.currentUser;
 
@@ -69,16 +77,17 @@ class AuthProvider extends ChangeNotifier {
           'membershipExpiry': null,
         }, SetOptions(merge: true));
 
-        // Relecture en forçant le serveur (évite un cache vide)
-        doc = await docRef.get(const GetOptions(source: Source.server));
+        // Recharger après création
+        doc = await docRef.get();
       }
 
       if (doc.exists) {
         _appUser = AppUser.fromFirestore(doc);
+        notifyListeners(); // Important: notifier immédiatement
         return;
       }
 
-      // 3) Fallback minimal si, pour une raison X, on n'a toujours rien
+      // Fallback minimal si tout échoue
       final fUser = FirebaseAuth.instance.currentUser;
       if (fUser != null) {
         _appUser = AppUser(
@@ -87,13 +96,14 @@ class AuthProvider extends ChangeNotifier {
           displayName: fUser.displayName ?? (fUser.email?.split('@').first ?? 'User'),
           createdAt: DateTime.now(),
           lastLoginAt: DateTime.now(),
+          role: 'user',
         );
-        return;
+        notifyListeners(); // Notifier même en fallback
       }
     } catch (e) {
-      // En cas d'erreur (souvent règles Firestore), on trace et on met un fallback
       debugPrint('Error loading user data: $e');
 
+      // Fallback en cas d'erreur
       final fUser = FirebaseAuth.instance.currentUser;
       if (fUser != null) {
         _appUser = AppUser(
@@ -102,7 +112,9 @@ class AuthProvider extends ChangeNotifier {
           displayName: fUser.displayName ?? (fUser.email?.split('@').first ?? 'User'),
           createdAt: DateTime.now(),
           lastLoginAt: DateTime.now(),
+          role: 'user',
         );
+        notifyListeners(); // Important même en erreur
       }
     }
   }
@@ -205,7 +217,7 @@ class AuthProvider extends ChangeNotifier {
   /// Get user first name for greetings
   String get userFirstName {
     if (_appUser != null) {
-      return _appUser!.firstName;
+      return _appUser!.firstName; // Now uses the getter from AppUser
     }
     return userDisplayName.split(' ')[0];
   }
