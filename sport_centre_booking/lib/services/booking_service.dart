@@ -11,10 +11,7 @@ class BookingService {
   /// Check if a time slot is available for booking
   static Future<bool> checkAvailability(String activityId, String? timeSlotId) async {
     try {
-      final activityDoc = await _firestore
-          .collection('activities')
-          .doc(activityId)
-          .get();
+      final activityDoc = await _firestore.collection('activities').doc(activityId).get();
 
       if (!activityDoc.exists) return false;
 
@@ -293,6 +290,39 @@ class BookingService {
         }
       } catch (e) {
         // Don't throw here - the booking cancellation succeeded
+        print('Capacity restore warning: $e');
+      }
+
+      // Step 3: Revert reward points (best-effort, does not fail cancellation)
+      try {
+        if (booking.pointsEarned > 0) {
+          final userRef = _firestore.collection('users').doc(user.uid);
+          final batch = _firestore.batch();
+
+          // decrement points; keep lifetime as-is (commented line if you prefer to decrement it too)
+          batch.update(userRef, {
+            'totalPoints': FieldValue.increment(-booking.pointsEarned),
+            'availablePoints': FieldValue.increment(-booking.pointsEarned),
+            // 'lifetimePointsEarned': FieldValue.increment(-booking.pointsEarned), // <- enable if you want
+            'lastRewardUpdateAt': FieldValue.serverTimestamp(),
+          });
+
+          final ledgerRef = userRef.collection('rewards_ledger').doc();
+          batch.set(ledgerRef, {
+            'type': 'reversal',
+            'amount': -booking.pointsEarned,
+            'bookingId': booking.id,
+            'activityId': booking.activityId,
+            'activityTitle': booking.activityTitle,
+            'reason': reason ?? 'booking_cancelled',
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+
+          await batch.commit();
+        }
+      } catch (e) {
+        // Do not block the cancel if points rollback fails
+        print('Warning: failed to revert reward points on cancel: $e');
       }
 
       return true;
