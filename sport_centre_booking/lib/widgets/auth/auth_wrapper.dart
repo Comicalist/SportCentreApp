@@ -3,8 +3,6 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/navigation/main_navigation.dart';
 import '../../screens/auth/login_screen.dart';
-import '../../screens/profile/profile_screen.dart';
-import '../../screens/booking/bookings.dart';
 
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});

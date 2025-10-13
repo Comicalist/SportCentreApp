@@ -259,7 +259,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
 
   Widget _buildCategoryDropdown() {
     return DropdownButtonFormField<String>(
-      value: _selectedCategory,
+      initialValue: _selectedCategory,
       decoration: InputDecoration(
         labelText: 'Category',
         prefixIcon: const Icon(Icons.category),
