@@ -11,10 +11,7 @@ class BookingService {
   /// Check if a time slot is available for booking
   static Future<bool> checkAvailability(String activityId, String? timeSlotId) async {
     try {
-      final activityDoc = await _firestore
-          .collection('activities')
-          .doc(activityId)
-          .get();
+      final activityDoc = await _firestore.collection('activities').doc(activityId).get();
 
       if (!activityDoc.exists) return false;
 
@@ -71,7 +68,7 @@ class BookingService {
       return await _firestore.runTransaction<Booking?>((transaction) async {
         print('Starting transaction for booking creation');
         
-        // Get activity data within transaction
+        // Get activity data within transaction (READS FIRST)
         final activityRef = _firestore.collection('activities').doc(activityId);
         final activityDoc = await transaction.get(activityRef);
 
@@ -116,6 +113,8 @@ class BookingService {
         final activityTime = activityData['time'] ?? '00:00';
         
         print('Activity details: $activityTitle, Date: $activityDateTime, Time: $activityTime');
+
+        // ---------------- WRITES (after all reads) ----------------
 
         // Update activity capacity first
         print('Updating activity capacity...');
@@ -173,6 +172,32 @@ class BookingService {
           'status': 'confirmed',
           'createdAt': Timestamp.fromDate(DateTime.now()),
         });
+
+        // ---------------- REWARDS (added, no extra reads) ----------------
+        // Credit user's points atomically
+        final userRef = _firestore.collection('users').doc(user.uid);
+        transaction.update(userRef, {
+          'totalPoints': FieldValue.increment(expectedPoints),
+          'availablePoints': FieldValue.increment(expectedPoints),
+          'lifetimePointsEarned': FieldValue.increment(expectedPoints),
+          'lastRewardUpdateAt': FieldValue.serverTimestamp(),
+        });
+
+        // Rewards ledger entry
+        final ledgerRef = _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('rewards_ledger')
+            .doc();
+        transaction.set(ledgerRef, {
+          'type': 'earn',
+          'amount': expectedPoints,
+          'bookingId': bookingRef.id,
+          'activityId': activityId,
+          'activityTitle': activityTitle,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+        // -------------------------------------------------------------
 
         // Create Booking object to return
         final booking = Booking(
@@ -265,6 +290,39 @@ class BookingService {
         }
       } catch (e) {
         // Don't throw here - the booking cancellation succeeded
+        print('Capacity restore warning: $e');
+      }
+
+      // Step 3: Revert reward points (best-effort, does not fail cancellation)
+      try {
+        if (booking.pointsEarned > 0) {
+          final userRef = _firestore.collection('users').doc(user.uid);
+          final batch = _firestore.batch();
+
+          // decrement points; keep lifetime as-is (commented line if you prefer to decrement it too)
+          batch.update(userRef, {
+            'totalPoints': FieldValue.increment(-booking.pointsEarned),
+            'availablePoints': FieldValue.increment(-booking.pointsEarned),
+            // 'lifetimePointsEarned': FieldValue.increment(-booking.pointsEarned), // <- enable if you want
+            'lastRewardUpdateAt': FieldValue.serverTimestamp(),
+          });
+
+          final ledgerRef = userRef.collection('rewards_ledger').doc();
+          batch.set(ledgerRef, {
+            'type': 'reversal',
+            'amount': -booking.pointsEarned,
+            'bookingId': booking.id,
+            'activityId': booking.activityId,
+            'activityTitle': booking.activityTitle,
+            'reason': reason ?? 'booking_cancelled',
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+
+          await batch.commit();
+        }
+      } catch (e) {
+        // Do not block the cancel if points rollback fails
+        print('Warning: failed to revert reward points on cancel: $e');
       }
 
       return true;
