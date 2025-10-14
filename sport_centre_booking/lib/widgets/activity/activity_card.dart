@@ -8,7 +8,7 @@ import '../../providers/auth_provider.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/booking/booking_details_screen.dart';
 
-/// Reusable activity card widget for displaying activity information
+
 class ActivityCard extends StatelessWidget {
   final Activity activity;
 
