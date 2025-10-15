@@ -70,7 +70,7 @@ class _MainAppContentState extends State<MainAppContent> {
   final List<Widget> _screens = [
     const HomeScreen(),     // Activities screen
     const BookingsScreen(), // My Bookings
-    const RewardsScreen(),  // ✅ Rewards (vrai écran)
+    const RewardsScreen(),  // Rewards
     const ProfileScreen(),  // Profile/Auth
   ];
 
