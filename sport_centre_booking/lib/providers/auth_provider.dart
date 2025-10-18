@@ -46,76 +46,66 @@ class AuthProvider extends ChangeNotifier {
 
   /// Load user data from Firestore (create it if missing)
   Future<void> _loadUserData(String uid) async {
+  try {
+    final docRef = FirebaseFirestore.instance.collection('users').doc(uid);
+
+    // Always try to get the latest version from the server first
+    DocumentSnapshot<Map<String, dynamic>> doc;
     try {
-      final docRef = FirebaseFirestore.instance.collection('users').doc(uid);
-
-      // 1) Essayer d'abord le cache local pour un chargement rapide
-      var doc = await docRef.get(const GetOptions(source: Source.cache));
-      
-      // 2) Si pas dans le cache, charger depuis le serveur
-      if (!doc.exists) {
-        doc = await docRef.get(const GetOptions(source: Source.server));
-      }
-
-      // 3) Si le document n'existe toujours pas, le créer
-      if (!doc.exists) {
-        final fUser = FirebaseAuth.instance.currentUser;
-
-        await docRef.set({
-          'uid': uid,
-          'email': fUser?.email ?? '',
-          'displayName': fUser?.displayName ?? '',
-          'createdAt': FieldValue.serverTimestamp(),
-          'lastLoginAt': FieldValue.serverTimestamp(),
-          'role': 'user',
-          'isActive': true,
-          'totalPoints': 0,
-          'availablePoints': 0,
-          'lifetimePointsEarned': 0,
-          'isMember': false,
-          'membershipType': null,
-          'membershipExpiry': null,
-        }, SetOptions(merge: true));
-
-        // Recharger après création
-        doc = await docRef.get();
-      }
-
-      if (doc.exists) {
-        _appUser = AppUser.fromFirestore(doc);
-        notifyListeners(); // Important: notifier immédiatement
-        return;
-      }
-
-      // Fallback minimal si tout échoue
-      final fUser = FirebaseAuth.instance.currentUser;
-      if (fUser != null) {
-        _appUser = AppUser(
-          uid: fUser.uid,
-          email: fUser.email ?? '',
-          displayName: fUser.displayName ?? (fUser.email?.split('@').first ?? 'User'),
-          createdAt: DateTime.now(),
-          lastLoginAt: DateTime.now(),
-          role: 'user',
-        );
-        notifyListeners(); // Notifier même en fallback
-      }
+      doc = await docRef.get(const GetOptions(source: Source.server));
     } catch (e) {
-      debugPrint('Error loading user data: $e');
+      // If offline or fails, fallback to cache
+      debugPrint('Server fetch failed, using cache: $e');
+      doc = await docRef.get(const GetOptions(source: Source.cache));
+    }
 
-      // Fallback en cas d'erreur
+    // If the document doesn't exist, create it
+    if (!doc.exists) {
       final fUser = FirebaseAuth.instance.currentUser;
-      if (fUser != null) {
-        _appUser = AppUser(
-          uid: fUser.uid,
-          email: fUser.email ?? '',
-          displayName: fUser.displayName ?? (fUser.email?.split('@').first ?? 'User'),
-          createdAt: DateTime.now(),
-          lastLoginAt: DateTime.now(),
-          role: 'user',
-        );
-        notifyListeners(); // Important même en erreur
-      }
+      await docRef.set({
+        'uid': uid,
+        'email': fUser?.email ?? '',
+        'displayName': fUser?.displayName ?? '',
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastLoginAt': FieldValue.serverTimestamp(),
+        'role': 'user',
+        'isActive': true,
+        'totalPoints': 0,
+        'availablePoints': 0,
+        'lifetimePointsEarned': 0,
+        'isMember': false,
+        'membershipType': null,
+        'membershipExpiry': null,
+      }, SetOptions(merge: true));
+
+      // Fetch again from server after creation
+      doc = await docRef.get(const GetOptions(source: Source.server));
+    }
+
+    if (doc.exists) {
+      _appUser = AppUser.fromFirestore(doc);
+      debugPrint("✅ Loaded user role: ${_appUser?.role}");
+      notifyListeners();
+      return;
+    }
+
+    // Fallback minimal
+    final fUser = FirebaseAuth.instance.currentUser;
+    if (fUser != null) {
+      _appUser = AppUser(
+        uid: fUser.uid,
+        email: fUser.email ?? '',
+        displayName: fUser.displayName ?? (fUser.email?.split('@').first ?? 'User'),
+        createdAt: DateTime.now(),
+        lastLoginAt: DateTime.now(),
+        role: 'user',
+      );
+      notifyListeners();
+    }
+  } catch (e) {
+    debugPrint('Error loading user data: $e');
+
+      
     }
   }
 
