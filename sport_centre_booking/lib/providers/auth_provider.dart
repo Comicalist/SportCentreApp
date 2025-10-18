@@ -21,6 +21,9 @@ class AuthProvider extends ChangeNotifier {
   
   // NEW: Admin check
   bool get isAdmin => _appUser?.isAdmin ?? false;
+  
+  // NEW: Club owner check
+  bool get isClubOwner => _appUser?.isClubOwner ?? false;
 
   AuthProvider() {
     _initAuthListener();
@@ -76,6 +79,7 @@ class AuthProvider extends ChangeNotifier {
         'isMember': false,
         'membershipType': null,
         'membershipExpiry': null,
+        'isClubOwner': false, // Add default value
       }, SetOptions(merge: true));
 
       // Fetch again from server after creation
@@ -84,7 +88,7 @@ class AuthProvider extends ChangeNotifier {
 
     if (doc.exists) {
       _appUser = AppUser.fromFirestore(doc);
-      debugPrint("✅ Loaded user role: ${_appUser?.role}");
+      debugPrint("✅ Loaded user role: ${_appUser?.role}, isClubOwner: ${_appUser?.isClubOwner}");
       notifyListeners();
       return;
     }
@@ -99,13 +103,12 @@ class AuthProvider extends ChangeNotifier {
         createdAt: DateTime.now(),
         lastLoginAt: DateTime.now(),
         role: 'user',
+        isClubOwner: false, // Add default value
       );
       notifyListeners();
     }
   } catch (e) {
-    debugPrint('Error loading user data: $e');
-
-      
+    debugPrint('Error loading user data: $e');      
     }
   }
 
@@ -117,11 +120,15 @@ class AuthProvider extends ChangeNotifier {
     });
   }
 
-  /// Register new user
-  Future<bool> register(String email, String password, String displayName) async {
+  /// Register new user - UPDATED with isClubOwner parameter
+  Future<bool> register(String email, String password, String displayName, {bool isClubOwner = false}) async {
     return await _performAuthAction(() async {
-      final cred =
-          await AuthService.registerWithEmail(email, password, displayName);
+      final cred = await AuthService.registerWithEmail(
+        email, 
+        password, 
+        displayName, 
+        isClubOwner: isClubOwner // Pass the parameter to AuthService
+      );
       final uid = cred?.user?.uid;
       if (uid != null) {
         await _loadUserData(uid);

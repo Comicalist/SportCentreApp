@@ -37,12 +37,13 @@ class AuthService {
     }
   }
 
-  /// Register new user with email and password
+  /// Register new user with email and password - UPDATED with isClubOwner parameter
   static Future<UserCredential?> registerWithEmail(
     String email,
     String password,
-    String displayName,
-  ) async {
+    String displayName, {
+    bool isClubOwner = false, // Add this named parameter
+  }) async {
     try {
       final UserCredential result = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
@@ -53,7 +54,11 @@ class AuthService {
       await result.user?.reload();
 
       if (result.user != null) {
-        await _createUserDocument(result.user!, displayName.trim());
+        await _createUserDocument(
+          result.user!, 
+          displayName.trim(),
+          isClubOwner: isClubOwner, // Pass the parameter
+        );
         
         // Send email verification automatically
         print('📤 Sending verification email to: ${result.user!.email}');
@@ -114,8 +119,12 @@ class AuthService {
     }
   }
 
-  /// Create user document in Firestore with default values
-  static Future<void> _createUserDocument(User user, String displayName) async {
+  /// Create user document in Firestore with default values - UPDATED with isClubOwner
+  static Future<void> _createUserDocument(
+    User user, 
+    String displayName, {
+    bool isClubOwner = false, // Add this parameter
+  }) async {
     final userDoc = _firestore.collection('users').doc(user.uid);
 
     await userDoc.set({
@@ -134,6 +143,9 @@ class AuthService {
       'isMember': false,
       'membershipType': null,
       'membershipExpiry': null,
+      
+      // NEW: Club owner flag
+      'isClubOwner': isClubOwner, // Save the club owner status
       
       // Add fields for UserProfile model
       'bookingHistory': [],

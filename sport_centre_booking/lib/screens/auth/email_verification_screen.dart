@@ -5,7 +5,12 @@ import '../../utils/colors.dart';
 import 'dart:async';
 
 class EmailVerificationScreen extends StatefulWidget {
-  const EmailVerificationScreen({super.key});
+  final bool isClubOwner; // Add this parameter
+  
+  const EmailVerificationScreen({
+    super.key,
+    this.isClubOwner = false,
+  });
 
   @override
   State<EmailVerificationScreen> createState() => _EmailVerificationScreenState();
@@ -137,9 +142,51 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 ),
                 const SizedBox(height: 24),
 
+                // Club Owner Info Card (only show if user registered as club owner)
+                if (widget.isClubOwner) ...[
+                  Card(
+                    color: Colors.orange[50],
+                    margin: const EdgeInsets.only(bottom: 16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Row(
+                        children: [
+                          Icon(Icons.business, color: Colors.orange[700], size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Club Owner Account',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.orange[700],
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'After verification, you can submit clubs for admin approval',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.orange[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+
                 // Instructions
                 Text(
-                  'Click the link in the email to verify your account. This page will automatically update when your email is verified.',
+                  widget.isClubOwner
+                      ? 'Click the verification link to activate your club owner account. This page will automatically update when verified.'
+                      : 'Click the link in the email to verify your account. This page will automatically update when your email is verified.',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey[700],

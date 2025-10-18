@@ -26,6 +26,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isSignUp = false;
+  bool _isClubOwner = false; // Add this
 
   @override
   void initState() {
@@ -193,7 +194,57 @@ class _LoginScreenState extends State<LoginScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Club Owner Checkbox (only for sign up)
+                  if (_isSignUp) ...[
+                    Card(
+                      color: Colors.blue[50],
+                      margin: EdgeInsets.zero,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.business, color: Colors.blue[700], size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Club Owner',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.blue[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            CheckboxListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: const Text(
+                                'I want to register as a club owner',
+                                style: TextStyle(fontSize: 14),
+                              ),
+                              subtitle: const Text(
+                                'You\'ll be able to add and manage clubs after admin approval',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                              value: _isClubOwner,
+                              onChanged: (bool? value) {
+                                setState(() {
+                                  _isClubOwner = value ?? false;
+                                });
+                              },
+                              controlAffinity: ListTileControlAffinity.leading,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                   ],
 
                   // Forgot password link (only for sign in)
@@ -303,13 +354,16 @@ class _LoginScreenState extends State<LoginScreen> {
         _emailController.text.trim(),
         _passwordController.text,
         _displayNameController.text.trim(),
+        isClubOwner: _isClubOwner, // Pass the club owner flag
       );
       
       if (success && mounted) {
         // Navigate to email verification screen
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) => const EmailVerificationScreen(),
+            builder: (context) => EmailVerificationScreen(
+              isClubOwner: _isClubOwner, // Pass the flag to show appropriate message
+            ),
           ),
         );
         return; // Don't close the login screen yet
