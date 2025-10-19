@@ -7,13 +7,13 @@ import '../../utils/constants.dart';
 import '../../providers/auth_provider.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/booking/booking_details_screen.dart';
-
+import '../../services/booking_service.dart';
 
 class ActivityCard extends StatelessWidget {
   final Activity activity;
 
   const ActivityCard({
-    super.key, 
+    super.key,
     required this.activity,
   });
 
@@ -36,7 +36,7 @@ class ActivityCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildActivityImage(),
-          _buildActivityDetails(),
+          _buildActivityDetails(context),
         ],
       ),
     );
@@ -114,7 +114,7 @@ class ActivityCard extends StatelessWidget {
   }
 
   /// Build the activity details section
-  Widget _buildActivityDetails() {
+  Widget _buildActivityDetails(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(AppConstants.cardPadding),
       child: Column(
@@ -129,9 +129,9 @@ class ActivityCard extends StatelessWidget {
           const SizedBox(height: 2),
           _buildLocationInfo(),
           const SizedBox(height: AppConstants.mediumSpacing),
-          _buildPriceAndAvailability(),
+          _buildPriceAndAvailability(context),
           const SizedBox(height: AppConstants.mediumSpacing),
-          _buildBookButton(),
+          _buildBookButton(context),
         ],
       ),
     );
@@ -185,8 +185,8 @@ class ActivityCard extends StatelessWidget {
         Text(
           activity.club,
           style: TextStyle(
-            color: Colors.grey[600], 
-            fontSize: 14, 
+            color: Colors.grey[600],
+            fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -209,23 +209,36 @@ class ActivityCard extends StatelessWidget {
   }
 
   /// Build price, points, and availability section
-  Widget _buildPriceAndAvailability() {
+  Widget _buildPriceAndAvailability(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _buildPriceAndPoints(),
+        _buildPriceAndPoints(context),
         _buildAvailabilityBadge(),
       ],
     );
   }
 
-  /// Build price and points column
-  Widget _buildPriceAndPoints() {
+  /// Build price and points column (points computed with backend rules)
+  Widget _buildPriceAndPoints(BuildContext context) {
+    // Determine member/guest for preview
+    final isMember = context.read<AuthProvider>().isLoggedIn;
+
+    // Price per person according to member status
+    final double currentPrice = isMember ? activity.memberPrice : activity.guestPrice;
+
+    // Compute preview points using the same backend logic as the booking flow
+    final int pointsPreview = BookingService.calculatePointsEarned(
+      activity,
+      currentPrice, // one participant preview
+      isMember,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '\$${activity.price.toStringAsFixed(0)}',
+          '\$${currentPrice.toStringAsFixed(0)}',
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -241,7 +254,7 @@ class ActivityCard extends StatelessWidget {
             ),
             const SizedBox(width: 2),
             Text(
-              '${activity.pointsReward} points',
+              '$pointsPreview points',
               style: TextStyle(
                 fontSize: 11,
                 color: Colors.orange[600],
@@ -257,7 +270,7 @@ class ActivityCard extends StatelessWidget {
   /// Build availability badge
   Widget _buildAvailabilityBadge() {
     final bool isFullyBooked = activity.spotsLeft <= 0;
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: 8,
@@ -279,69 +292,64 @@ class ActivityCard extends StatelessWidget {
   }
 
   /// Build centered book now button
-  Widget _buildBookButton() {
-    // Check if activity is fully booked
+  Widget _buildBookButton(BuildContext context) {
     final bool isFullyBooked = activity.spotsLeft <= 0;
-    
-    return Builder(
-      builder: (context) {
-        return Center(
-          child: SizedBox(
-            width: double.infinity,
-            child: isFullyBooked
-                ? ElevatedButton(
-                    onPressed: null, // Disabled
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey[300],
-                      foregroundColor: Colors.grey[600],
-                      disabledBackgroundColor: Colors.grey[300],
-                      disabledForegroundColor: Colors.grey[600],
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
-                      ),
+
+    return Center(
+      child: SizedBox(
+        width: double.infinity,
+        child: isFullyBooked
+            ? ElevatedButton(
+                onPressed: null, // Disabled
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[300],
+                  foregroundColor: Colors.grey[600],
+                  disabledBackgroundColor: Colors.grey[300],
+                  disabledForegroundColor: Colors.grey[600],
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.event_busy,
+                      size: 16,
+                      color: Colors.grey[600],
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.event_busy,
-                          size: 16,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Fully Booked',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                  )
-                : ElevatedButton(
-                    onPressed: () => _handleBooking(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.teal,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
-                      ),
-                    ),
-                    child: const Text(
-                      'Book Now',
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Fully Booked',
                       style: TextStyle(fontWeight: FontWeight.w600),
                     ),
+                  ],
+                ),
+              )
+            : ElevatedButton(
+                onPressed: () => _handleBooking(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
                   ),
-          ),
-        );
-      },
+                ),
+                child: const Text(
+                  'Book Now',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+      ),
     );
   }
 
   /// Handle booking button press
   void _handleBooking(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
+
     if (!authProvider.isLoggedIn) {
       // Show login dialog for non-authenticated users
       _showLoginPrompt(context);

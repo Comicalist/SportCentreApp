@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/colors.dart';
 // pour AuthRequiredScreen
@@ -18,25 +19,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Consumer<AuthProvider>(
       builder: (context, auth, _) {
         // 1) Pas connecté => écran d’auth
-  if (!auth.isLoggedIn) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.lock, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
-            Text('Please sign in to view your profile'),
-          ],
-        ),
-      ),
-    );
-  }
+        if (!auth.isLoggedIn) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Profile')),
+            body: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.lock, size: 64, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text('Please sign in to view your profile'),
+                ],
+              ),
+            ),
+          );
+        }
 
-        // 2) Connecté mais AppUser pas encore chargé => loader
-        final AppUser? user = auth.appUser;
-        if (user == null) {
+        // 2) Connecté mais AppUser pas encore chargé une première fois => loader
+        if (auth.appUser == null) {
           return Scaffold(
             backgroundColor: Colors.grey[50],
             appBar: AppBar(
@@ -51,77 +51,104 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         }
 
-        // 3) Connecté + AppUser dispo => contenu
-        return Scaffold(
-          backgroundColor: Colors.grey[50],
-          appBar: AppBar(
-            title: const Text(
-              'Profile',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
-            ),
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            actions: [
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert),
-                onSelected: (value) {
-                  switch (value) {
-                    case 'edit':
-                      // TODO: edit profile
-                      break;
-                    case 'settings':
-                      // TODO: settings
-                      break;
-                    case 'logout':
-                      _handleLogout();
-                      break;
-                  }
-                },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(
-                    value: 'edit',
-                    child: ListTile(
-                      leading: Icon(Icons.edit),
-                      title: Text('Edit Profile'),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'settings',
-                    child: ListTile(
-                      leading: Icon(Icons.settings),
-                      title: Text('Settings'),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'logout',
-                    child: ListTile(
-                      leading: Icon(Icons.logout, color: Colors.red),
-                      title: Text('Sign Out',
-                          style: TextStyle(color: Colors.red)),
-                      contentPadding: EdgeInsets.zero,
-                    ),
+        // 3) Connecté + on écoute le doc Firestore en temps réel pour avoir les points à jour
+        final uid = auth.firebaseUser!.uid;
+        final userDocStream = FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .snapshots();
+
+        return StreamBuilder<DocumentSnapshot>(
+          stream: userDocStream,
+          builder: (context, snapshot) {
+            // fallback si le stream n'a rien encore
+            AppUser user = auth.appUser!;
+
+            if (snapshot.hasError) {
+              // En cas d'erreur de stream, on affiche tout de même les infos connues
+              debugPrint('Profile stream error: ${snapshot.error}');
+            } else if (snapshot.hasData && snapshot.data!.exists) {
+              try {
+                user = AppUser.fromFirestore(snapshot.data!);
+              } catch (_) {
+                // Si parsing échoue, on garde le user déjà chargé
+              }
+            }
+
+            return Scaffold(
+              backgroundColor: Colors.grey[50],
+              appBar: AppBar(
+                title: const Text(
+                  'Profile',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
+                ),
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                actions: [
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert),
+                    onSelected: (value) {
+                      switch (value) {
+                        case 'edit':
+                          // TODO: edit profile
+                          break;
+                        case 'settings':
+                          // TODO: settings
+                          break;
+                        case 'logout':
+                          _handleLogout();
+                          break;
+                      }
+                    },
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(
+                        value: 'edit',
+                        child: ListTile(
+                          leading: Icon(Icons.edit),
+                          title: Text('Edit Profile'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'settings',
+                        child: ListTile(
+                          leading: Icon(Icons.settings),
+                          title: Text('Settings'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'logout',
+                        child: ListTile(
+                          leading: Icon(Icons.logout, color: Colors.red),
+                          title: Text('Sign Out',
+                              style: TextStyle(color: Colors.red)),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildUserInfoCard(user),
-                const SizedBox(height: 24),
-                if (user.isMember) ...[
-                  _buildMembershipCard(user),
-                  const SizedBox(height: 24),
-                ],
-                _buildPointsCard(user),
-              ],
-            ),
-          ),
+              body: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildUserInfoCard(user),
+                    const SizedBox(height: 24),
+                    if (user.isMember) ...[
+                      _buildMembershipCard(user),
+                      const SizedBox(height: 24),
+                    ],
+                    // Si tu veux enlever l’affichage des points du profil,
+                    // supprime simplement la ligne ci-dessous.
+                    _buildPointsCard(user),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );
@@ -168,8 +195,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
                       color:
                           user.isMember ? AppColors.primary : Colors.grey[200],
@@ -243,6 +270,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
             const SizedBox(height: 16),
+
+            // Big number = available/spendable points (same as Rewards page)
             Text(
               '${user.availablePoints}',
               style: const TextStyle(
@@ -255,9 +284,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               'Available Points',
               style: TextStyle(color: Colors.white70, fontSize: 14),
             ),
+
             const SizedBox(height: 16),
             Row(
               children: [
+                // Current balance (mirrors backend 'totalPoints')
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -271,13 +302,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       const Text(
-                        'Total Earned',
-                        style:
-                            TextStyle(color: Colors.white70, fontSize: 12),
+                        'Current Balance',
+                        style: TextStyle(color: Colors.white70, fontSize: 12),
                       ),
                     ],
                   ),
                 ),
+                // Lifetime earned
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -291,13 +322,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       const Text(
-                        'Lifetime',
-                        style:
-                            TextStyle(color: Colors.white70, fontSize: 12),
+                        'Lifetime Earned',
+                        style: TextStyle(color: Colors.white70, fontSize: 12),
                       ),
                     ],
                   ),
                 ),
+
                 ElevatedButton(
                   onPressed: user.availablePoints > 0
                       ? () {

@@ -44,7 +44,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         final isMember = authProvider.isLoggedIn;
         final currentPrice = isMember ? widget.activity.memberPrice : widget.activity.guestPrice;
         final totalPrice = currentPrice * _participantCount;
-        final totalPoints = widget.activity.pointsReward * _participantCount;
+        // Use unified points from provider (calculated by BookingService)
+        final expectedPoints = bookingProvider.currentBookingDetails?.expectedPoints ?? 0;
 
         return Scaffold(
           backgroundColor: Colors.grey[50],
@@ -63,15 +64,15 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     children: [
                       _buildActivityCard(),
                       const SizedBox(height: AppConstants.largeSpacing),
-                      _buildBookingDetails(isMember, currentPrice, totalPrice, totalPoints),
+                      _buildBookingDetails(isMember, currentPrice, totalPrice),
                       const SizedBox(height: AppConstants.largeSpacing),
                       _buildParticipantSelector(),
                       const SizedBox(height: AppConstants.largeSpacing),
-                      _buildPricingBreakdown(isMember, currentPrice, totalPrice, totalPoints),
+                      _buildPricingBreakdown(isMember, currentPrice, totalPrice, expectedPoints),
                       const SizedBox(height: AppConstants.largeSpacing),
                       _buildTermsAndConditions(),
                       const SizedBox(height: AppConstants.largeSpacing * 2),
-                      _buildBookingButton(bookingProvider, totalPrice, totalPoints),
+                      _buildBookingButton(bookingProvider, totalPrice),
                     ],
                   ),
                 ),
@@ -318,7 +319,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   }
 
   /// Build booking details section
-  Widget _buildBookingDetails(bool isMember, double currentPrice, double totalPrice, int totalPoints) {
+  Widget _buildBookingDetails(bool isMember, double currentPrice, double totalPrice) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -471,8 +472,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       ),
                     ),
                     IconButton(
-                      onPressed: _participantCount < widget.activity.spotsLeft 
-                          ? _incrementParticipants 
+                      onPressed: _participantCount < widget.activity.spotsLeft
+                          ? _incrementParticipants
                           : null,
                       icon: const Icon(Icons.add),
                       color: Colors.teal,
@@ -498,7 +499,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   }
 
   /// Build pricing breakdown
-  Widget _buildPricingBreakdown(bool isMember, double currentPrice, double totalPrice, int totalPoints) {
+  Widget _buildPricingBreakdown(bool isMember, double currentPrice, double totalPrice, int expectedPoints) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -623,7 +624,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 ),
                 const SizedBox(width: AppConstants.mediumSpacing),
                 Text(
-                  'You\'ll earn $totalPoints points',
+                  'You\'ll earn $expectedPoints points',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -731,12 +732,12 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   }
 
   /// Build confirm booking button
-  Widget _buildBookingButton(BookingProvider bookingProvider, double totalPrice, int totalPoints) {
+  Widget _buildBookingButton(BookingProvider bookingProvider, double totalPrice) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: _agreeToTerms && !bookingProvider.isLoading 
-            ? () => _confirmBooking(bookingProvider, totalPrice, totalPoints)
+        onPressed: _agreeToTerms && !bookingProvider.isLoading
+            ? () => _confirmBooking(bookingProvider, totalPrice)
             : null,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.teal,
@@ -791,7 +792,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   void _updateBookingDetails() {
     final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
+
     bookingProvider.updateBookingDetails(
       participantCount: _participantCount,
       isMemberBooking: authProvider.isLoggedIn,
@@ -799,7 +800,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   }
 
   /// Confirm the booking
-  Future<void> _confirmBooking(BookingProvider bookingProvider, double totalPrice, int totalPoints) async {
+  Future<void> _confirmBooking(BookingProvider bookingProvider, double totalPrice) async {
     setState(() {
       _isLoading = true;
     });
@@ -811,7 +812,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
     try {
       final success = await bookingProvider.confirmBooking();
-      
+
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -833,9 +834,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                success 
-                  ? 'Booking was created but details are unavailable. Please check My Bookings.'
-                  : (bookingProvider.errorMessage ?? 'Booking failed. Please try again.'),
+                success
+                    ? 'Booking was created but details are unavailable. Please check My Bookings.'
+                    : (bookingProvider.errorMessage ?? 'Booking failed. Please try again.'),
               ),
               backgroundColor: success ? Colors.orange : Colors.red,
               behavior: SnackBarBehavior.floating,
@@ -848,7 +849,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         setState(() {
           _isLoading = false;
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Booking failed: ${e.toString()}'),
