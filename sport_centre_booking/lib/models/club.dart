@@ -6,8 +6,8 @@ class Club {
   final String ownerId;
   final String? location;
   final bool isActive;
-  final bool isApproved; // Add this field
-  final DateTime createdAt; // Add this field
+  final bool isApproved;
+  final DateTime createdAt;
 
   Club({
     required this.id,
