@@ -6,6 +6,7 @@ import '../../screens/booking/bookings.dart';
 import '../../screens/rewards.dart';
 import '../../screens/profile/profile_screen.dart';
 import '../../screens/admin/admin_panel.dart';
+import '../../screens/club_owner/club_owner_panel.dart';
 import '../auth/email_verification_banner.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -22,13 +23,14 @@ class _MainNavigationState extends State<MainNavigation> {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
-        // This will now work because appUser is loaded in AuthProvider
+        // Check both admin and club owner status
         final bool isAdmin = authProvider.isAdmin;
+        final bool isClubOwner = authProvider.isClubOwner;
         
-        print('MainNavigation - isAdmin: $isAdmin');
+        print('MainNavigation - isAdmin: $isAdmin, isClubOwner: $isClubOwner');
         
-        final screens = _getScreens(isAdmin);
-        final navItems = _getNavItems(isAdmin);
+        final screens = _getScreens(isAdmin, isClubOwner);
+        final navItems = _getNavItems(isAdmin, isClubOwner);
 
         return Scaffold(
           body: Column(
@@ -59,7 +61,7 @@ class _MainNavigationState extends State<MainNavigation> {
     );
   }
 
-  List<Widget> _getScreens(bool isAdmin) {
+  List<Widget> _getScreens(bool isAdmin, bool isClubOwner) {
     final screens = [
       HomeScreen(),
       BookingsScreen(),
@@ -67,7 +69,12 @@ class _MainNavigationState extends State<MainNavigation> {
       ProfileScreen(),
     ];
     
-    // Only add AdminPanel if user is admin
+    // Add Club Owner Panel if user is club owner
+    if (isClubOwner) {
+      screens.add(ClubOwnerPanel());
+    }
+    
+    // Add Admin Panel if user is admin
     if (isAdmin) {
       screens.add(AdminPanel());
     }
@@ -75,7 +82,7 @@ class _MainNavigationState extends State<MainNavigation> {
     return screens;
   }
 
-  List<BottomNavigationBarItem> _getNavItems(bool isAdmin) {
+  List<BottomNavigationBarItem> _getNavItems(bool isAdmin, bool isClubOwner) {
     final items = [
       const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
       const BottomNavigationBarItem(icon: Icon(Icons.bookmark), label: 'Bookings'),
@@ -83,7 +90,15 @@ class _MainNavigationState extends State<MainNavigation> {
       const BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
     ];
     
-    // Only add Admin tab if user is admin
+    // Add Club Owner tab if user is club owner
+    if (isClubOwner) {
+      items.add(const BottomNavigationBarItem(
+        icon: Icon(Icons.business),
+        label: 'My Clubs',
+      ));
+    }
+    
+    // Add Admin tab if user is admin
     if (isAdmin) {
       items.add(const BottomNavigationBarItem(
         icon: Icon(Icons.admin_panel_settings),
@@ -92,6 +107,7 @@ class _MainNavigationState extends State<MainNavigation> {
     }
 
     print('Screens count: ${items.length}');
+    print('Club Owner included: $isClubOwner');
     print('Admin panel included: $isAdmin');
     
     return items;

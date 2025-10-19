@@ -15,6 +15,7 @@ class AppUser {
   final bool isMember;
   final String? membershipType; // 'basic', 'premium', 'vip'
   final DateTime? membershipExpiry;
+  final bool isClubOwner; // Add this field
 
   const AppUser({
     required this.uid,
@@ -30,6 +31,7 @@ class AppUser {
     this.isMember = false,
     this.membershipType,
     this.membershipExpiry,
+    this.isClubOwner = false, // Default to false
   });
 
   /// Create AppUser from Firestore document
@@ -50,6 +52,7 @@ class AppUser {
       isMember: data['isMember'] ?? false,
       membershipType: data['membershipType'],
       membershipExpiry: (data['membershipExpiry'] as Timestamp?)?.toDate(),
+      isClubOwner: data['isClubOwner'] ?? false, // Add this
     );
   }
 
@@ -69,11 +72,15 @@ class AppUser {
       'isMember': isMember,
       'membershipType': membershipType,
       'membershipExpiry': membershipExpiry != null ? Timestamp.fromDate(membershipExpiry!) : null,
+      'isClubOwner': isClubOwner, // Add this
     };
   }
 
   /// Check if user is admin
   bool get isAdmin => role == 'admin';
+
+  /// Check if user is club owner
+  bool get canManageClubs => isClubOwner || isAdmin; // Both club owners and admins can manage clubs
 
   /// Get user's first name
   String get firstName {
@@ -107,6 +114,7 @@ class AppUser {
     bool? isMember,
     String? membershipType,
     DateTime? membershipExpiry,
+    bool? isClubOwner, // Add this
   }) {
     return AppUser(
       uid: uid ?? this.uid,
@@ -122,12 +130,13 @@ class AppUser {
       isMember: isMember ?? this.isMember,
       membershipType: membershipType ?? this.membershipType,
       membershipExpiry: membershipExpiry ?? this.membershipExpiry,
+      isClubOwner: isClubOwner ?? this.isClubOwner, // Add this
     );
   }
 
   @override
   String toString() {
-    return 'AppUser(uid: $uid, email: $email, displayName: $displayName, role: $role)';
+    return 'AppUser(uid: $uid, email: $email, displayName: $displayName, role: $role, isClubOwner: $isClubOwner)';
   }
 
   @override
