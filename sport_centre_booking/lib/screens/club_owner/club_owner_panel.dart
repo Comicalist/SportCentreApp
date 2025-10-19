@@ -16,11 +16,6 @@ class ClubOwnerPanel extends StatelessWidget {
     final ownerId = authProvider.appUser?.uid;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Club Owner Panel'),
-        backgroundColor: Colors.orange,
-        elevation: 0,
-      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

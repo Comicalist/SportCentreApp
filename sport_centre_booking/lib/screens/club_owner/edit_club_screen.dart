@@ -22,7 +22,9 @@ class _EditClubScreenState extends State<EditClubScreen> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.club.name);
-    _locationController = TextEditingController(text: widget.club.location ?? '');
+    _locationController = TextEditingController(
+      text: widget.club.location ?? '',
+    );
     _isActive = widget.club.isActive;
   }
 
@@ -56,11 +58,44 @@ class _EditClubScreenState extends State<EditClubScreen> {
                     decoration: const InputDecoration(labelText: 'Location'),
                   ),
                   const SizedBox(height: 12),
+                  if (!widget.club.isApproved) ...[
+                    Card(
+                      color: Colors.orange.shade50,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline, color: Colors.orange),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Club must be approved by admin before it can be activated',
+                                style: TextStyle(
+                                  color: Colors.orange.shade700,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
                   SwitchListTile(
                     title: const Text('Active'),
+                    subtitle: Text(
+                      widget.club.isApproved
+                          ? 'Toggle club active status'
+                          : 'Cannot activate until approved by admin',
+                    ),
                     value: _isActive,
-                    onChanged: (val) => setState(() => _isActive = val),
+                    onChanged: widget.club.isApproved
+                        ? (val) => setState(() => _isActive = val)
+                        : null, // Disable if not approved
                   ),
+                  const SizedBox(height: 24),
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: _isLoading ? null : _updateClub,
@@ -96,19 +131,32 @@ class _EditClubScreenState extends State<EditClubScreen> {
       return;
     }
 
+    // NEW: Prevent activating unapproved clubs
+    if (_isActive && !widget.club.isApproved) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cannot activate club until approved by admin'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
       final updatedClub = widget.club.copyWith(
         name: _nameController.text.trim(),
-        location: _locationController.text.trim().isEmpty 
-            ? null 
+        location: _locationController.text.trim().isEmpty
+            ? null
             : _locationController.text.trim(),
         isActive: _isActive,
       );
 
       await _clubService.updateClub(updatedClub);
-      
+
       if (mounted) {
         Navigator.pop(context, updatedClub);
       }

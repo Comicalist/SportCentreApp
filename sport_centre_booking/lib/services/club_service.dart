@@ -10,14 +10,14 @@ class ClubService {
   Future<void> submitClubForApproval({required Club club}) async {
     try {
       final docRef = _firestore.collection('clubs').doc();
-      
+
       // Create club with pending approval status
       final pendingClub = club.copyWith(
         id: docRef.id,
         isApproved: false,
         createdAt: DateTime.now(),
       );
-      
+
       print('🔄 SUBMITTING CLUB FOR APPROVAL:');
       print('   Name: ${pendingClub.name}');
       print('   Owner: ${pendingClub.ownerId}');
@@ -25,9 +25,9 @@ class ClubService {
       print('   isApproved: ${pendingClub.isApproved}');
       print('   isActive: ${pendingClub.isActive}');
       print('   Firestore ID: ${docRef.id}');
-      
+
       await docRef.set(pendingClub.toMap());
-      
+
       print('✅ CLUB SUBMITTED SUCCESSFULLY!');
       print('   Document ID: ${docRef.id}');
     } catch (e) {
@@ -40,7 +40,7 @@ class ClubService {
   Future<List<Club>> getPendingClubs() async {
     try {
       print('🔄 FETCHING PENDING CLUBS...');
-      
+
       final snapshot = await _firestore
           .collection('clubs')
           .where('isApproved', isEqualTo: false)
@@ -55,7 +55,7 @@ class ClubService {
       return snapshot.docs.map((doc) => Club.fromFirestore(doc)).toList();
     } catch (e) {
       print('❌ ERROR FETCHING PENDING CLUBS: $e');
-      
+
       // Fallback: try without ordering
       try {
         print('⚠️ Trying fallback without ordering...');
@@ -64,9 +64,11 @@ class ClubService {
             .where('isApproved', isEqualTo: false)
             .get();
 
-        final clubs = snapshot.docs.map((doc) => Club.fromFirestore(doc)).toList();
+        final clubs = snapshot.docs
+            .map((doc) => Club.fromFirestore(doc))
+            .toList();
         clubs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        
+
         print('✅ FOUND ${clubs.length} PENDING CLUBS (FALLBACK)');
         return clubs;
       } catch (fallbackError) {
@@ -190,24 +192,34 @@ class ClubService {
         : _firestore.collection('clubs').doc();
 
     // Ensure createdAt is set
-    final clubWithTimestamp = club.createdAt == null 
+    final clubWithTimestamp = club.createdAt == null
         ? club.copyWith(createdAt: DateTime.now())
         : club;
 
     await docRef.set(clubWithTimestamp.toMap());
   }
 
-  /// Update an existing club
+  // update Club method:
   Future<void> updateClub(Club club) async {
-    if (club.id.isEmpty) {
-      throw Exception('Cannot update club without an ID');
+    try {
+      // Prevent activating unapproved clubs on server side
+      if (club.isActive && !club.isApproved) {
+        throw Exception('Cannot activate club until approved by admin');
+      }
+
+      await _firestore.collection('clubs').doc(club.id).update(club.toMap());
+    } catch (e) {
+      throw Exception('Failed to update club: $e');
     }
-    await _firestore.collection('clubs').doc(club.id).update(club.toMap());
   }
 
-  /// Delete a club by ID
-  Future<void> deleteClub({required String clubId}) async {
-    await _firestore.collection('clubs').doc(clubId).delete();
+  // deleteClub method:
+  Future<void> deleteClub(String clubId) async {
+    try {
+      await _firestore.collection('clubs').doc(clubId).delete();
+    } catch (e) {
+      throw Exception('Failed to delete club: $e');
+    }
   }
 
   /// Soft delete - deactivate a club
@@ -219,9 +231,7 @@ class ClubService {
 
   /// Reactivate a club
   Future<void> reactivateClub(String clubId) async {
-    await _firestore.collection('clubs').doc(clubId).update({
-      'isActive': true,
-    });
+    await _firestore.collection('clubs').doc(clubId).update({'isActive': true});
   }
 
   // ========== UTILITY METHODS ==========

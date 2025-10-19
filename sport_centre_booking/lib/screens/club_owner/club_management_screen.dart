@@ -5,6 +5,7 @@ import '../../services/club_service.dart';
 import '../../providers/auth_provider.dart';
 import 'add_club_screen.dart';
 import 'edit_club_screen.dart';
+import 'club_detail_screen.dart';
 
 class ClubManagementScreen extends StatefulWidget {
   const ClubManagementScreen({super.key});
@@ -35,9 +36,14 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
             child: FutureBuilder<List<Club>>(
               future: _clubService.getOwnedClubs(ownerId: ownerId),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                if (!snapshot.hasData)
+                  return const Center(child: CircularProgressIndicator());
                 final clubs = snapshot.data!
-                    .where((club) => club.name.toLowerCase().contains(_searchQuery.toLowerCase()))
+                    .where(
+                      (club) => club.name.toLowerCase().contains(
+                        _searchQuery.toLowerCase(),
+                      ),
+                    )
                     .toList();
 
                 if (clubs.isEmpty) {
@@ -86,49 +92,70 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: ListTile(
-        title: Text(club.name),
-        subtitle: Text('Location: ${club.location}'),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
+        leading: CircleAvatar(
+          backgroundColor: club.isActive ? Colors.green : Colors.grey,
+          child: const Icon(Icons.business, color: Colors.white),
+        ),
+        title: Text(
+          club.name,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            IconButton(
-              icon: const Icon(Icons.edit, color: Colors.blue),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => EditClubScreen(club: club)),
-                ).then((_) => setState(() {})); // refresh after edit
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: () => _confirmDelete(club),
+            if (club.location != null && club.location!.isNotEmpty)
+              Text(club.location!),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: club.isApproved ? Colors.green : Colors.orange,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    club.isApproved ? 'Approved' : 'Pending',
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: club.isActive ? Colors.teal : Colors.grey,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    club.isActive ? 'Active' : 'Inactive',
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: () => _navigateToClubDetail(club),
       ),
     );
   }
 
-  void _confirmDelete(Club club) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Club'),
-        content: Text('Are you sure you want to delete "${club.name}"?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await _clubService.deleteClub(clubId: club.id);
-              setState(() {});
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+  void _navigateToClubDetail(Club club) async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (context) => ClubDetailScreen(club: club)),
     );
+
+    // If club was deleted, refresh the list
+    if (result == true) {
+      setState(() {});
+    }
   }
 }
