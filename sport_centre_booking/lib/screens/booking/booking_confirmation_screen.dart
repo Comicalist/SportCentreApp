@@ -101,7 +101,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     );
   }
 
-  Widget _buildBookingSummary(bookingDetails) {
+  Widget _buildBookingSummary(dynamic bookingDetails) {
     return Card(
       elevation: 2,
       child: Padding(
