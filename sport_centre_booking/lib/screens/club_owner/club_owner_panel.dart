@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import 'club_management_screen.dart';
 import 'add_club_screen.dart';
+import 'activity_management_screen.dart';
 
 class ClubOwnerPanel extends StatelessWidget {
   final ClubService _clubService = ClubService();
@@ -94,6 +95,13 @@ class ClubOwnerPanel extends StatelessWidget {
                     onTap: () => _navigateToAddClub(context),
                   ),
                   _OwnerTile(
+                    icon: Icons.event,
+                    title: 'Manage Activities',
+                    subtitle: 'Create and manage your club activities',
+                    color: Colors.teal,
+                    onTap: () => _navigateToActivityManagement(context),
+                  ),
+                  _OwnerTile(
                     icon: Icons.bookmark,
                     title: 'View Bookings',
                     subtitle: 'Bookings for your clubs',
@@ -157,6 +165,15 @@ class ClubOwnerPanel extends StatelessWidget {
       context,
       MaterialPageRoute(
         builder: (context) => const AddClubScreen(),
+      ),
+    );
+  }
+
+  void _navigateToActivityManagement(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ActivityManagementScreen(),
       ),
     );
   }

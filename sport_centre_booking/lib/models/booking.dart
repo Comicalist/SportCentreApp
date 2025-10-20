@@ -122,6 +122,12 @@ class Booking {
   final DateTime activityDate;
   final String activityTime;
   final double totalPrice;
+  
+  // Denormalized club/facility data (NEW - for display without extra queries)
+  final String clubId;              // For filtering by club
+  final String clubName;            // For display
+  final String facilityId;          // For statistics
+  final String facilityName;        // For display
 
   Booking({
     required this.id,
@@ -143,6 +149,10 @@ class Booking {
     required this.activityDate,
     required this.activityTime,
     required this.totalPrice,
+    required this.clubId,
+    required this.clubName,
+    required this.facilityId,
+    required this.facilityName,
   });
 
   factory Booking.fromFirestore(DocumentSnapshot doc) {
@@ -171,6 +181,10 @@ class Booking {
           : (data['bookingDate'] as Timestamp).toDate(),
       activityTime: data['activityTime'] ?? '00:00',
       totalPrice: (data['totalPrice'] ?? data['amountPaid'] ?? 0.0).toDouble(),
+      clubId: data['clubId'] ?? '',
+      clubName: data['clubName'] ?? '',
+      facilityId: data['facilityId'] ?? '',
+      facilityName: data['facilityName'] ?? '',
     );
   }
 
@@ -199,6 +213,10 @@ class Booking {
           : DateTime.parse(json['bookingDate']),
       activityTime: json['activityTime'] ?? '00:00',
       totalPrice: (json['totalPrice'] ?? json['amountPaid'] ?? 0.0).toDouble(),
+      clubId: json['clubId'] ?? '',
+      clubName: json['clubName'] ?? '',
+      facilityId: json['facilityId'] ?? '',
+      facilityName: json['facilityName'] ?? '',
     );
   }
 
@@ -223,6 +241,10 @@ class Booking {
       'activityDate': Timestamp.fromDate(activityDate),
       'activityTime': activityTime,
       'totalPrice': totalPrice,
+      'clubId': clubId,
+      'clubName': clubName,
+      'facilityId': facilityId,
+      'facilityName': facilityName,
     };
   }
 

@@ -93,6 +93,10 @@ class BookingService {
 
         // Extract activity details for the booking
         final activityTitle = activityData['name'] ?? 'Unknown Activity';
+        final clubId = activityData['clubId'] ?? '';
+        final clubName = activityData['clubName'] ?? '';
+        final facilityId = activityData['facilityId'] ?? '';
+        final facilityName = activityData['facilityName'] ?? '';
         
         // Handle date conversion safely
         DateTime activityDateTime;
@@ -152,6 +156,11 @@ class BookingService {
           'activityDate': Timestamp.fromDate(activityDateTime),
           'activityTime': activityTime,
           'totalPrice': totalPrice,
+          // Denormalized club/facility data for display
+          'clubId': clubId,
+          'clubName': clubName,
+          'facilityId': facilityId,
+          'facilityName': facilityName,
         };
 
         print('Booking data prepared, saving to Firestore...');
@@ -218,6 +227,10 @@ class BookingService {
           activityDate: activityDateTime,
           activityTime: activityTime,
           totalPrice: totalPrice,
+          clubId: clubId,
+          clubName: clubName,
+          facilityId: facilityId,
+          facilityName: facilityName,
         );
 
         print('Booking transaction completed successfully');

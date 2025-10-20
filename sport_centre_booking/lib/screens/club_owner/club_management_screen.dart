@@ -4,7 +4,6 @@ import '../../models/club.dart';
 import '../../services/club_service.dart';
 import '../../providers/auth_provider.dart';
 import 'add_club_screen.dart';
-import 'edit_club_screen.dart';
 import 'club_detail_screen.dart';
 
 class ClubManagementScreen extends StatefulWidget {

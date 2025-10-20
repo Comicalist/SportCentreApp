@@ -178,7 +178,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
             ),
             _buildSummaryRow(
               'Location',
-              widget.activity.location,
+              widget.activity.facilityName,
             ),
             _buildSummaryRow(
               'Participants',

@@ -30,10 +30,10 @@ class ActivitiesGrid extends StatelessWidget {
     return StreamBuilder<List<Activity>>(
       stream: ActivityService.getFilteredActivities(
         category: selectedCategory,
-        club: selectedClub,
+        clubName: selectedClub,
         date: selectedDate,
         timeCategory: selectedTimeCategory,
-        location: selectedLocation,
+        facilityId: selectedLocation,
         searchQuery: searchQuery?.isEmpty == true ? null : searchQuery,
         onlyAvailable: onlyAvailable,
       ),
@@ -133,28 +133,5 @@ class ActivitiesGrid extends StatelessWidget {
         }).toList(),
       ),
     );
-  }
-
-  Future<void> _addSampleActivities(BuildContext context) async {
-    try {
-      await ActivityService.addSampleActivities();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Sample activities added!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
   }
 }

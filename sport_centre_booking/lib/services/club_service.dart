@@ -191,12 +191,7 @@ class ClubService {
         ? _firestore.collection('clubs').doc(club.id)
         : _firestore.collection('clubs').doc();
 
-    // Ensure createdAt is set
-    final clubWithTimestamp = club.createdAt == null
-        ? club.copyWith(createdAt: DateTime.now())
-        : club;
-
-    await docRef.set(clubWithTimestamp.toMap());
+    await docRef.set(club.toMap());
   }
 
   // update Club method:

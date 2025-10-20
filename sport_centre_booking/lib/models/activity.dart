@@ -1,90 +1,206 @@
 class Activity {
+  // === IDENTIFIERS & RELATIONSHIPS ===
   final String id;
-  final String name;
+  final String clubId;              // Reference to club (for queries/security)
+  final String facilityId;          // Reference to facility
+  
+  // === DENORMALIZED DATA (for display without extra queries) ===
+  final String clubName;            // Club name for display
+  final String facilityName;        // Facility name for display
+  
+  // === ACTIVITY INFORMATION ===
+  final String name;                // Activity title
   final String description;
-  final String category;
-  final String club;
+  final String category;            // "Wellness", "Fitness", "Kids", "Workshops"
   final DateTime date;
-  final String time;
-  final String timeCategory; // morning, afternoon, evening
-  final String location;
-  final double price; // Default guest price for backward compatibility
+  final String time;                // Format "HH:mm"
+  final String timeCategory;        // "Morning", "Afternoon", "Evening"
+  
+  // === CAPACITY ===
+  final int capacity;
+  final int bookedCount;            // Current number of bookings
+  
+  // === DUAL PRICING (Guest vs Member) ===
   final double guestPrice;
   final double memberPrice;
+  
+  // === POINTS & REWARDS ===
   final int pointsReward;
-  final int capacity;
-  final int bookedCount; // New field for tracking bookings
-  final int spotsLeft;
+  
+  // === RESOURCES ===
+  final List<String> requirements;  // Required equipment
   final String imageUrl;
-  final List<String> requirements;
+  
+  // === METADATA ===
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final String createdBy;           // UID of club owner who created this
 
   Activity({
     required this.id,
+    required this.clubId,
+    required this.facilityId,
+    required this.clubName,
+    required this.facilityName,
     required this.name,
     required this.description,
     required this.category,
-    required this.club,
     required this.date,
     required this.time,
     required this.timeCategory,
-    required this.location,
-    required this.price,
-    double? guestPrice,
-    double? memberPrice,
-    required this.pointsReward,
     required this.capacity,
-    this.bookedCount = 0, // Default to 0 bookings
-    required this.spotsLeft,
-    required this.imageUrl,
+    this.bookedCount = 0,
+    required this.guestPrice,
+    required this.memberPrice,
+    required this.pointsReward,
     this.requirements = const [],
-  }) : guestPrice = guestPrice ?? price,
-       memberPrice = memberPrice ?? (price * 0.8); // 20% discount for members
+    required this.imageUrl,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.createdBy,
+  });
+
+  // Computed property for spots left
+  int get spotsLeft => capacity - bookedCount;
 
   factory Activity.fromJson(Map<String, dynamic> json) {
     return Activity(
-      id: json['id'],
-      name: json['name'],
-      description: json['description'],
-      category: json['category'],
-      club: json['club'],
-      date: DateTime.parse(json['date']),
-      time: json['time'],
-      timeCategory: json['timeCategory'],
-      location: json['location'],
-      price: json['price'].toDouble(),
-      guestPrice: json['guestPrice']?.toDouble(),
-      memberPrice: json['memberPrice']?.toDouble(),
-      pointsReward: json['pointsReward'],
-      capacity: json['capacity'],
-      bookedCount: json['bookedCount'] ?? 0, // Default to 0 if not present
-      spotsLeft: json['spotsLeft'],
-      imageUrl: json['imageUrl'],
+      id: json['id'] ?? '',
+      clubId: json['clubId'] ?? '',
+      facilityId: json['facilityId'] ?? '',
+      clubName: json['clubName'] ?? '',
+      facilityName: json['facilityName'] ?? '',
+      name: json['name'] ?? '',
+      description: json['description'] ?? '',
+      category: json['category'] ?? '',
+      date: json['date'] is String 
+          ? DateTime.parse(json['date']) 
+          : (json['date'] as DateTime),
+      time: json['time'] ?? '00:00',
+      timeCategory: json['timeCategory'] ?? getTimeCategory(json['time'] ?? '00:00'),
+      capacity: json['capacity'] ?? 0,
+      bookedCount: json['bookedCount'] ?? 0,
+      guestPrice: (json['guestPrice'] ?? 0).toDouble(),
+      memberPrice: (json['memberPrice'] ?? 0).toDouble(),
+      pointsReward: json['pointsReward'] ?? 0,
       requirements: List<String>.from(json['requirements'] ?? []),
+      imageUrl: json['imageUrl'] ?? '',
+      createdAt: json['createdAt'] is String
+          ? DateTime.parse(json['createdAt'])
+          : (json['createdAt'] as DateTime? ?? DateTime.now()),
+      updatedAt: json['updatedAt'] is String
+          ? DateTime.parse(json['updatedAt'])
+          : (json['updatedAt'] as DateTime? ?? DateTime.now()),
+      createdBy: json['createdBy'] ?? '',
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'clubId': clubId,
+      'facilityId': facilityId,
+      'clubName': clubName,
+      'facilityName': facilityName,
       'name': name,
       'description': description,
       'category': category,
-      'club': club,
       'date': date.toIso8601String(),
       'time': time,
       'timeCategory': timeCategory,
-      'location': location,
-      'price': price,
+      'capacity': capacity,
+      'bookedCount': bookedCount,
       'guestPrice': guestPrice,
       'memberPrice': memberPrice,
       'pointsReward': pointsReward,
-      'capacity': capacity,
-      'bookedCount': bookedCount,
-      'spotsLeft': spotsLeft,
-      'imageUrl': imageUrl,
       'requirements': requirements,
+      'imageUrl': imageUrl,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+      'createdBy': createdBy,
     };
   }
+
+  // CopyWith method for creating modified copies
+  Activity copyWith({
+    String? id,
+    String? clubId,
+    String? facilityId,
+    String? clubName,
+    String? facilityName,
+    String? name,
+    String? description,
+    String? category,
+    DateTime? date,
+    String? time,
+    String? timeCategory,
+    int? capacity,
+    int? bookedCount,
+    double? guestPrice,
+    double? memberPrice,
+    int? pointsReward,
+    List<String>? requirements,
+    String? imageUrl,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    String? createdBy,
+  }) {
+    return Activity(
+      id: id ?? this.id,
+      clubId: clubId ?? this.clubId,
+      facilityId: facilityId ?? this.facilityId,
+      clubName: clubName ?? this.clubName,
+      facilityName: facilityName ?? this.facilityName,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      category: category ?? this.category,
+      date: date ?? this.date,
+      time: time ?? this.time,
+      timeCategory: timeCategory ?? this.timeCategory,
+      capacity: capacity ?? this.capacity,
+      bookedCount: bookedCount ?? this.bookedCount,
+      guestPrice: guestPrice ?? this.guestPrice,
+      memberPrice: memberPrice ?? this.memberPrice,
+      pointsReward: pointsReward ?? this.pointsReward,
+      requirements: requirements ?? this.requirements,
+      imageUrl: imageUrl ?? this.imageUrl,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? DateTime.now(),
+      createdBy: createdBy ?? this.createdBy,
+    );
+  }
+
+  // Helper to check if activity is in the past
+  bool get isPast {
+    try {
+      final timeParts = time.split(':');
+      if (timeParts.length != 2) return false;
+      
+      final hour = int.parse(timeParts[0]);
+      final minute = int.parse(timeParts[1]);
+      
+      final activityDateTime = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        hour,
+        minute,
+      );
+      
+      return activityDateTime.isBefore(DateTime.now());
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Helper to check if activity has available spots
+  bool get hasAvailableSpots => spotsLeft > 0;
+
+  // Helper to check if activity is almost full (less than 20% spots left)
+  bool get isAlmostFull => spotsLeft > 0 && spotsLeft <= (capacity * 0.2);
+
+  // Helper to check if activity is full
+  bool get isFull => spotsLeft <= 0;
 
   // Helper method to determine time category from time string
   static String getTimeCategory(String time) {

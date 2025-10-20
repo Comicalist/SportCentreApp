@@ -183,7 +183,7 @@ class ActivityCard extends StatelessWidget {
         Icon(Icons.groups, size: 16, color: Colors.grey[600]),
         const SizedBox(width: 4),
         Text(
-          activity.club,
+          activity.clubName,
           style: TextStyle(
             color: Colors.grey[600],
             fontSize: 14,
@@ -201,7 +201,7 @@ class ActivityCard extends StatelessWidget {
         Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
         const SizedBox(width: 4),
         Text(
-          activity.location,
+          activity.facilityName,
           style: TextStyle(color: Colors.grey[600], fontSize: 14),
         ),
       ],
