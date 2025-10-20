@@ -3,7 +3,7 @@ import 'club_management_screen.dart';
 import 'activity_management_screen.dart';
 
 class ClubOwnerPanel extends StatelessWidget {
-  ClubOwnerPanel({super.key});
+  const ClubOwnerPanel({super.key});
 
   @override
   Widget build(BuildContext context) {

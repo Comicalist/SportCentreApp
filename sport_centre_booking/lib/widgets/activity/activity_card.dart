@@ -54,114 +54,86 @@ class ActivityCard extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Activity Image (if available)
-          if (activity.imageUrl.isNotEmpty)
-            ClipRRect(
+          // Activity Image - FIXED: Use displayImageUrl getter
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppConstants.cardBorderRadius),
+            ),
+            child: Image.network(
+              activity.displayImageUrl, // ✅ Changed from activity.imageUrl
+              width: double.infinity,
+              height: double.infinity,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  width: double.infinity,
+                  height: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        ActivityHelpers.getCategoryColor(activity.category).withOpacity(0.7),
+                        ActivityHelpers.getCategoryColor(activity.category).withOpacity(0.4),
+                      ],
+                    ),
+                  ),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
+                          : null,
+                      color: Colors.white,
+                    ),
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                // Fallback to gradient background if image fails
+                return Container(
+                  width: double.infinity,
+                  height: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        ActivityHelpers.getCategoryColor(activity.category).withOpacity(0.7),
+                        ActivityHelpers.getCategoryColor(activity.category).withOpacity(0.4),
+                      ],
+                    ),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      ActivityHelpers.getCategoryIcon(activity.category),
+                      size: AppConstants.categoryIconSize,
+                      color: Colors.white,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          // Dark overlay for better text contrast on images
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: BoxDecoration(
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(AppConstants.cardBorderRadius),
               ),
-              child: Image.network(
-                activity.imageUrl,
-                width: double.infinity,
-                height: double.infinity,
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    width: double.infinity,
-                    height: double.infinity,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          ActivityHelpers.getCategoryColor(activity.category).withOpacity(0.7),
-                          ActivityHelpers.getCategoryColor(activity.category).withOpacity(0.4),
-                        ],
-                      ),
-                    ),
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        value: loadingProgress.expectedTotalBytes != null
-                            ? loadingProgress.cumulativeBytesLoaded /
-                                loadingProgress.expectedTotalBytes!
-                            : null,
-                        color: Colors.white,
-                      ),
-                    ),
-                  );
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  // Fallback to gradient background if image fails
-                  return Container(
-                    width: double.infinity,
-                    height: double.infinity,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          ActivityHelpers.getCategoryColor(activity.category).withOpacity(0.7),
-                          ActivityHelpers.getCategoryColor(activity.category).withOpacity(0.4),
-                        ],
-                      ),
-                    ),
-                    child: Center(
-                      child: Icon(
-                        ActivityHelpers.getCategoryIcon(activity.category),
-                        size: AppConstants.categoryIconSize,
-                        color: Colors.white,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            )
-          else
-            // Gradient background fallback
-            Container(
-              width: double.infinity,
-              height: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(AppConstants.cardBorderRadius),
-                ),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    ActivityHelpers.getCategoryColor(activity.category).withOpacity(0.7),
-                    ActivityHelpers.getCategoryColor(activity.category).withOpacity(0.4),
-                  ],
-                ),
-              ),
-              child: Center(
-                child: Icon(
-                  ActivityHelpers.getCategoryIcon(activity.category),
-                  size: AppConstants.categoryIconSize,
-                  color: Colors.white,
-                ),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withOpacity(0.3),
+                  Colors.transparent,
+                ],
               ),
             ),
-          // Dark overlay for better text contrast on images
-          if (activity.imageUrl.isNotEmpty)
-            Container(
-              width: double.infinity,
-              height: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(AppConstants.cardBorderRadius),
-                ),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.3),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
+          ),
           // Category Badge
           _buildCategoryBadge(),
         ],

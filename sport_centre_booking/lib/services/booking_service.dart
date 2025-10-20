@@ -213,7 +213,7 @@ class BookingService {
         });
         
         print('User booking reference created successfully');
-        print('Note: Points (${expectedPoints}) will be credited when booking is completed');
+        print('Note: Points ($expectedPoints) will be credited when booking is completed');
       } catch (e) {
         print('Warning: Failed to create user booking reference: $e');
         // Don't fail the whole booking if this secondary write fails

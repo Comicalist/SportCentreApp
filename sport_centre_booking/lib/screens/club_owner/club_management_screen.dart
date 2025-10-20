@@ -35,8 +35,9 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
             child: FutureBuilder<List<Club>>(
               future: _clubService.getOwnedClubs(ownerId: ownerId),
               builder: (context, snapshot) {
-                if (!snapshot.hasData)
+                if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
+                }
                 final clubs = snapshot.data!
                     .where(
                       (club) => club.name.toLowerCase().contains(
