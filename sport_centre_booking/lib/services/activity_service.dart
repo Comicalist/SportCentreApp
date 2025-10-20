@@ -463,6 +463,28 @@ class ActivityService {
     });
   }
 
+  /// Get unique facilities for a specific club as a real-time stream
+  static Stream<List<String>> getAvailableFacilitiesStreamByClub(String clubName) {
+    return _firestore
+        .collection(_collection)
+        .where('clubName', isEqualTo: clubName)
+        .snapshots()
+        .map((snapshot) {
+      Set<String> facilities = {};
+      
+      for (QueryDocumentSnapshot doc in snapshot.docs) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        if (data['facilityName'] != null) {
+          facilities.add(data['facilityName']);
+        }
+      }
+      
+      List<String> facilityList = facilities.toList();
+      facilityList.sort();
+      return facilityList;
+    });
+  }
+
   /// Get unique categories from database
   static Future<List<String>> getAvailableCategories() async {
     final snapshot = await _firestore.collection(_collection).get();

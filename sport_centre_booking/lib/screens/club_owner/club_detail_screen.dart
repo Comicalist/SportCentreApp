@@ -144,12 +144,6 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
             ),
             const SizedBox(height: 16),
             _buildActionTile(
-              icon: Icons.sports,
-              title: 'View Activities',
-              subtitle: 'Manage club activities and schedules',
-              onTap: _viewActivities,
-            ),
-            _buildActionTile(
               icon: Icons.home_work,
               title: 'View Facilities',
               subtitle: 'Manage club facilities and resources',
@@ -204,13 +198,6 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
         _currentClub = updatedClub;
       });
     }
-  }
-
-  void _viewActivities() {
-    // TODO: Navigate to club activities screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Activities view - Coming soon!')),
-    );
   }
 
   void _viewFacilities() {

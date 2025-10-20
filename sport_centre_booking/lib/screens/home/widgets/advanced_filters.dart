@@ -81,12 +81,17 @@ class AdvancedFilters extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _buildStreamDropdown(
-                label: 'Facility',  // ✅ Changed from 'Location'
-                value: selectedFacility,
-                stream: ActivityService.getAvailableFacilitiesStream(),
-                onChanged: onFacilityChanged,
-              ),
+              child: selectedClub != null
+                  ? _buildStreamDropdown(
+                      label: 'Facility',
+                      value: selectedFacility,
+                      stream: ActivityService.getAvailableFacilitiesStreamByClub(selectedClub!),
+                      onChanged: onFacilityChanged,
+                    )
+                  : _buildDisabledDropdown(
+                      label: 'Facility',
+                      hint: 'Select a club first',
+                    ),
             ),
           ],
         ),
@@ -258,5 +263,30 @@ class AdvancedFilters extends StatelessWidget {
     if (picked != null && picked != selectedDate) {
       onDateChanged(picked);
     }
+  }
+
+  /// Build a disabled dropdown when no club is selected
+  Widget _buildDisabledDropdown({
+    required String label,
+    required String hint,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(AppConstants.filterBorderRadius),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      child: Row(
+        children: [
+          Icon(Icons.location_city, size: 16, color: Colors.grey[400]),
+          const SizedBox(width: 8),
+          Text(
+            hint,
+            style: TextStyle(color: Colors.grey[500], fontSize: 14),
+          ),
+        ],
+      ),
+    );
   }
 }

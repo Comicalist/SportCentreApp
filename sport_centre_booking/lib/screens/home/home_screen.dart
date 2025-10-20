@@ -176,7 +176,13 @@ class _HomeScreenState extends State<HomeScreen> {
       selectedTimeCategory: selectedTimeCategory,
       selectedFacility: selectedFacility,
       onlyAvailable: onlyAvailable,
-      onClubChanged: (value) => setState(() => selectedClub = value),
+      onClubChanged: (value) {
+        setState(() {
+          selectedClub = value;
+          // ✅ Clear facility when club changes
+          selectedFacility = null;
+        });
+      },
       onDateChanged: (value) => setState(() => selectedDate = value),
       onTimeCategoryChanged: (value) => setState(() => selectedTimeCategory = value),
       onFacilityChanged: (value) => setState(() => selectedFacility = value),
