@@ -20,13 +20,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
-        // Debug prints to see what's happening
-        print('AuthWrapper - isLoggedIn: ${authProvider.isLoggedIn}');
-        print('AuthWrapper - appUser loaded: ${authProvider.appUser != null}');
-        if (authProvider.appUser != null) {
-          print('AuthWrapper - user role: ${authProvider.appUser!.role}');
-          print('AuthWrapper - isAdmin: ${authProvider.isAdmin}');
-        }
+
 
         // User not logged in - show login screen (starting with sign-in form)
         if (!authProvider.isLoggedIn) {

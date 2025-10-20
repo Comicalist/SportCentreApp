@@ -13,9 +13,9 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    print('Firebase initialized successfully');
+    // Firebase initialized successfully
   } catch (e) {
-    print('Firebase initialization failed: $e');
+    // Firebase initialization failed - app may not work properly
   }
   
   runApp(const MyApp());
