@@ -229,11 +229,67 @@ class ClubService {
     }
   }
 
-  // deleteClub method:
+  /// Delete a club and all its facilities and activities (with validation)
   Future<void> deleteClub(String clubId) async {
     try {
-      await _firestore.collection('clubs').doc(clubId).delete();
+      // 1️⃣ Check for active future bookings in club's activities
+      final activitiesSnapshot = await _firestore
+          .collection('activities')
+          .where('clubId', isEqualTo: clubId)
+          .get();
+
+      final now = DateTime.now();
+      
+      for (var activityDoc in activitiesSnapshot.docs) {
+        final activityData = activityDoc.data();
+        final activityDate = activityData['date'] is String
+            ? DateTime.parse(activityData['date'])
+            : (activityData['date'] as Timestamp).toDate();
+
+        // Check if activity is in the future
+        if (activityDate.isAfter(now)) {
+          // Check for active bookings
+          final bookingsSnapshot = await _firestore
+              .collection('bookings')
+              .where('activityId', isEqualTo: activityDoc.id)
+              .where('status', whereIn: ['confirmed', 'pending'])
+              .get();
+
+          if (bookingsSnapshot.docs.isNotEmpty) {
+            throw Exception(
+              'Cannot delete club: Activity "${activityData['name']}" has ${bookingsSnapshot.docs.length} active booking(s). '
+              'Please cancel all future bookings first.'
+            );
+          }
+        }
+      }
+
+      // 2️⃣ Delete all activities (no active future bookings at this point)
+      final batch = _firestore.batch();
+      
+      for (var activityDoc in activitiesSnapshot.docs) {
+        batch.delete(activityDoc.reference);
+      }
+
+      // 3️⃣ Delete all facilities
+      final facilitiesSnapshot = await _firestore
+          .collection('facilities')
+          .where('clubId', isEqualTo: clubId)
+          .get();
+
+      for (var facilityDoc in facilitiesSnapshot.docs) {
+        batch.delete(facilityDoc.reference);
+      }
+
+      // 4️⃣ Delete the club itself
+      batch.delete(_firestore.collection('clubs').doc(clubId));
+
+      // Commit all deletions
+      await batch.commit();
+      
+      print('✅ Club and all related data deleted successfully');
     } catch (e) {
+      print('❌ Error deleting club: $e');
       throw Exception('Failed to delete club: $e');
     }
   }

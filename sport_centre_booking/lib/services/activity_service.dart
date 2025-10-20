@@ -319,10 +319,8 @@ class ActivityService {
   }) async {
     try {
       print('🔄 DELETING ACTIVITY: $activityId');
-      print('   Expected clubId: $clubId');
-      print('   Current user: $currentUserId');
 
-      // First, read the activity to verify it has clubId
+      // Get activity to check date
       final activityDoc = await _firestore
           .collection('activities')
           .doc(activityId)
@@ -333,8 +331,11 @@ class ActivityService {
       }
 
       final activityData = activityDoc.data()!;
-      print('   Activity clubId in Firestore: ${activityData['clubId']}');
-      print('   Activity has clubId field: ${activityData.containsKey('clubId')}');
+      
+      // Get activity date
+      final activityDate = activityData['date'] is String
+          ? DateTime.parse(activityData['date'])
+          : (activityData['date'] as Timestamp).toDate();
 
       // 🔒 VALIDATION: Verify user owns the club
       final clubDoc = await _firestore
@@ -352,21 +353,26 @@ class ActivityService {
         throw Exception('Unauthorized: You do not own this club');
       }
 
-      // Check if there are any active bookings for this activity
-      final bookingsSnapshot = await _firestore
-          .collection('bookings')
-          .where('activityId', isEqualTo: activityId)
-          .where('status', whereIn: ['confirmed', 'pending']).get();
+      // Check only for FUTURE bookings (if activity is in the future)
+      if (activityDate.isAfter(DateTime.now())) {
+        final bookingsSnapshot = await _firestore
+            .collection('bookings')
+            .where('activityId', isEqualTo: activityId)
+            .where('status', whereIn: ['confirmed', 'pending'])
+            .get();
 
-      if (bookingsSnapshot.docs.isNotEmpty) {
-        throw Exception('Cannot delete activity with active bookings. Please cancel all bookings first.');
+        if (bookingsSnapshot.docs.isNotEmpty) {
+          throw Exception(
+            'Cannot delete activity: ${bookingsSnapshot.docs.length} active booking(s) exist. '
+            'Please cancel all bookings first.'
+          );
+        }
       }
 
       await _firestore.collection(_collection).doc(activityId).delete();
-
-      
+      print('✅ ACTIVITY DELETED SUCCESSFULLY');
     } catch (e) {
-   
+      print('❌ ERROR DELETING ACTIVITY: $e');
       rethrow;
     }
   }

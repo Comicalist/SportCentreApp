@@ -83,11 +83,57 @@ class FacilityService {
     }
   }
 
-  /// Delete a facility
+  /// Delete a facility and all its activities (with validation)
   Future<void> deleteFacility({required String facilityId}) async {
     try {
-      await _firestore.collection('facilities').doc(facilityId).delete();
+      // 1️⃣ Check for active future bookings in facility's activities
+      final activitiesSnapshot = await _firestore
+          .collection('activities')
+          .where('facilityId', isEqualTo: facilityId)
+          .get();
+
+      final now = DateTime.now();
+      
+      for (var activityDoc in activitiesSnapshot.docs) {
+        final activityData = activityDoc.data();
+        final activityDate = activityData['date'] is String
+            ? DateTime.parse(activityData['date'])
+            : (activityData['date'] as Timestamp).toDate();
+
+        // Check if activity is in the future
+        if (activityDate.isAfter(now)) {
+          // Check for active bookings
+          final bookingsSnapshot = await _firestore
+              .collection('bookings')
+              .where('activityId', isEqualTo: activityDoc.id)
+              .where('status', whereIn: ['confirmed', 'pending'])
+              .get();
+
+          if (bookingsSnapshot.docs.isNotEmpty) {
+            throw Exception(
+              'Cannot delete facility: Activity "${activityData['name']}" has ${bookingsSnapshot.docs.length} active booking(s). '
+              'Please cancel all future bookings first.'
+            );
+          }
+        }
+      }
+
+      // 2️⃣ Delete all activities (no active future bookings at this point)
+      final batch = _firestore.batch();
+      
+      for (var activityDoc in activitiesSnapshot.docs) {
+        batch.delete(activityDoc.reference);
+      }
+
+      // 3️⃣ Delete the facility itself
+      batch.delete(_firestore.collection('facilities').doc(facilityId));
+
+      // Commit all deletions
+      await batch.commit();
+      
+      print('✅ Facility and all related activities deleted successfully');
     } catch (e) {
+      print('❌ Error deleting facility: $e');
       throw Exception('Failed to delete facility: $e');
     }
   }
