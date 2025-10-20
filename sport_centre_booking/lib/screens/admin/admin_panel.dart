@@ -30,19 +30,23 @@ class AdminPanel extends StatelessWidget {
             // Quick Stats Row
             Row(
               children: [
-                _StatCard(
-                  title: 'Total Activities',
-                  value: '24', // You'd fetch this from your service
-                  icon: Icons.emoji_events,
-                  color: Colors.blue,
+                Expanded(
+                  child: _StatCard(
+                    title: 'Total Activities',
+                    value: '24', // You'd fetch this from your service
+                    icon: Icons.emoji_events,
+                    color: Colors.blue,
+                  ),
                 ),
                 SizedBox(width: 12),
-                _StatCard(
-                  title: 'Pending Clubs',
-                  value: '0', // We'll make this dynamic
-                  icon: Icons.pending_actions,
-                  color: Colors.orange,
-                  future: _clubService.getPendingClubsCount(), // Add future for real data
+                Expanded(
+                  child: _StatCard(
+                    title: 'Pending Clubs',
+                    value: '0', // We'll make this dynamic
+                    icon: Icons.pending_actions,
+                    color: Colors.orange,
+                    future: _clubService.getPendingClubsCount(), // Add future for real data
+                  ),
                 ),
               ],
             ),
@@ -188,20 +192,18 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: future != null 
-              ? FutureBuilder<int>(
-                  future: future,
-                  builder: (context, snapshot) {
-                    final dynamicValue = snapshot.data?.toString() ?? value;
-                    return _buildContent(dynamicValue);
-                  },
-                )
-              : _buildContent(value),
-        ),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: future != null 
+            ? FutureBuilder<int>(
+                future: future,
+                builder: (context, snapshot) {
+                  final dynamicValue = snapshot.data?.toString() ?? value;
+                  return _buildContent(dynamicValue);
+                },
+              )
+            : _buildContent(value),
       ),
     );
   }

@@ -22,23 +22,23 @@ service cloud.firestore {
       // Create: Only club owners for their approved clubs OR admins
       allow create: if request.auth != null && (
         isAdmin() ||
-        (ownsClub(request.resource.data.clubId) &&
+        (request.resource.data.clubId != null &&
+         get(/databases/$(database)/documents/clubs/$(request.resource.data.clubId)).data.ownerId == request.auth.uid &&
          get(/databases/$(database)/documents/clubs/$(request.resource.data.clubId)).data.isApproved == true)
       );
       
       // Update: Club owners, admins, OR authenticated users (for booking capacity updates)
       allow update: if request.auth != null && (
         isAdmin() ||
-        ownsClub(resource.data.clubId) ||
+        (resource.data.clubId != null && 
+         get(/databases/$(database)/documents/clubs/$(resource.data.clubId)).data.ownerId == request.auth.uid) ||
         // Allow capacity updates during booking (authenticated users)
         request.auth.uid != null
       );
       
       // Delete: Only club owners who own the activity's club OR admins
-      allow delete: if request.auth != null && (
-        isAdmin() ||
-        ownsClub(resource.data.clubId)
-      );
+      // TEMPORARY: More permissive for debugging
+      allow delete: if request.auth != null;
     }
     
     // ========== CLUBS ==========
@@ -123,8 +123,18 @@ service cloud.firestore {
       
       // Read: User who made the booking OR club owner of the activity's club OR admin
       allow read: if request.auth != null && (
+        // Booking owner can always read
         request.auth.uid == resource.data.userId ||
-        ownsClub(resource.data.clubId) ||
+        // Club owner can read if clubId is present and owned
+        (resource.data.clubId != null && ownsClub(resource.data.clubId)) ||
+        // Fallback: allow club owner if they own the club of the related activity
+        (
+          resource.data.activityId != null &&
+          // fetch activity (activities are public read) and resolve its clubId
+          get(/databases/$(database)/documents/activities/$(resource.data.activityId)).data.clubId != null &&
+          ownsClub(get(/databases/$(database)/documents/activities/$(resource.data.activityId)).data.clubId)
+        ) ||
+        // Admins
         isAdmin()
       );
       

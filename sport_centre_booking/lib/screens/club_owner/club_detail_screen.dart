@@ -3,7 +3,6 @@ import '../../models/club.dart';
 import '../../services/club_service.dart';
 import 'edit_club_screen.dart';
 import '../facilities/club_facilities_screen.dart';
-import '../../services/facility_service.dart';
 
 class ClubDetailScreen extends StatefulWidget {
   final Club club;
@@ -43,8 +42,6 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildInfoCard(),
-                  const SizedBox(height: 16),
-                  _buildStatsCard(),
                   const SizedBox(height: 16),
                   _buildActionsCard(),
                 ],
@@ -128,69 +125,6 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
     );
   }
 
-  Widget _buildStatsCard() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.analytics, color: Colors.orange),
-                const SizedBox(width: 8),
-                const Text(
-                  'Quick Stats',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                _buildStatItem('Activities', '5', Icons.sports),
-                _buildStatItem('Bookings', '12', Icons.book_online),
-                _buildFacilityStatItem(),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFacilityStatItem() {
-    return Expanded(
-      child: FutureBuilder<int>(
-        future: FacilityService().getClubFacilityCount(clubId: _currentClub.id),
-        builder: (context, snapshot) {
-          final count = snapshot.data ?? 0;
-          return _buildStatItem(
-            'Facilities',
-            count.toString(),
-            Icons.home_work,
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildStatItem(String label, String value, IconData icon) {
-    return Expanded(
-      child: Column(
-        children: [
-          Icon(icon, size: 30, color: Colors.orange),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-        ],
-      ),
-    );
-  }
-
   Widget _buildActionsCard() {
     return Card(
       child: Padding(
@@ -220,12 +154,6 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
               title: 'View Facilities',
               subtitle: 'Manage club facilities and resources',
               onTap: _viewFacilities,
-            ),
-            _buildActionTile(
-              icon: Icons.book_online,
-              title: 'View Bookings',
-              subtitle: 'See all bookings for this club',
-              onTap: _viewBookings,
             ),
             const Divider(),
             _buildActionTile(
@@ -291,13 +219,6 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
       MaterialPageRoute(
         builder: (context) => ClubFacilitiesScreen(club: _currentClub),
       ),
-    );
-  }
-
-  void _viewBookings() {
-    // TODO: Navigate to club bookings screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Bookings view - Coming soon!')),
     );
   }
 

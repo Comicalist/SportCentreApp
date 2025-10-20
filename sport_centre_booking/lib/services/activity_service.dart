@@ -319,6 +319,22 @@ class ActivityService {
   }) async {
     try {
       print('🔄 DELETING ACTIVITY: $activityId');
+      print('   Expected clubId: $clubId');
+      print('   Current user: $currentUserId');
+
+      // First, read the activity to verify it has clubId
+      final activityDoc = await _firestore
+          .collection('activities')
+          .doc(activityId)
+          .get();
+      
+      if (!activityDoc.exists) {
+        throw Exception('Activity not found');
+      }
+
+      final activityData = activityDoc.data()!;
+      print('   Activity clubId in Firestore: ${activityData['clubId']}');
+      print('   Activity has clubId field: ${activityData.containsKey('clubId')}');
 
       // 🔒 VALIDATION: Verify user owns the club
       final clubDoc = await _firestore
