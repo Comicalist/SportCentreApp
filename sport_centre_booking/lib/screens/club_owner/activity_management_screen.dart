@@ -317,23 +317,70 @@ class _ActivityCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image header
+          // Image header - FIXED
           Stack(
             children: [
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
                 child: Image.network(
-                  activity.imageUrl,
+                  activity.displayImageUrl, // ✅ Changed from activity.imageUrl
                   height: 150,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    height: 150,
-                    color: Colors.grey.shade300,
-                    child: const Icon(Icons.image, size: 64, color: Colors.grey),
-                  ),
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      height: 150,
+                      color: Colors.grey.shade200,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                          color: Colors.teal,
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      height: 150,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            _getCategoryColor(activity.category).withOpacity(0.7),
+                            _getCategoryColor(activity.category).withOpacity(0.4),
+                          ],
+                        ),
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              _getCategoryIcon(activity.category),
+                              size: 48,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Image not available',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.8),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
+              // Category badge
               Positioned(
                 top: 8,
                 right: 8,
@@ -353,6 +400,7 @@ class _ActivityCard extends StatelessWidget {
                   ),
                 ),
               ),
+              // Past activity badge
               if (isPast)
                 Positioned(
                   top: 8,
@@ -538,6 +586,22 @@ class _ActivityCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // Add this helper method for category icons
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case 'Wellness':
+        return Icons.spa;
+      case 'Fitness':
+        return Icons.fitness_center;
+      case 'Kids':
+        return Icons.child_care;
+      case 'Workshops':
+        return Icons.school;
+      default:
+        return Icons.event;
+    }
   }
 
   Color _getCategoryColor(String category) {

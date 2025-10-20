@@ -37,7 +37,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
   String _selectedCategory = 'Wellness';
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _selectedTime = const TimeOfDay(hour: 9, minute: 0);
-  List<String> _requirements = [];
+  final List<String> _requirements = [];
   bool _isLoading = false;
   bool _isLoadingClubs = true;
   
@@ -377,7 +377,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                               ),
                               const SizedBox(height: 16),
                               DropdownButtonFormField<Club>(
-                                value: _selectedClub,
+                                initialValue: _selectedClub,
                                 decoration: const InputDecoration(
                                   labelText: 'Select Club *',
                                   border: OutlineInputBorder(),
@@ -406,7 +406,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                               ),
                               const SizedBox(height: 16),
                               DropdownButtonFormField<Facility>(
-                                value: _selectedFacility,
+                                initialValue: _selectedFacility,
                                 decoration: InputDecoration(
                                   labelText: 'Select Facility *',
                                   border: const OutlineInputBorder(),
@@ -489,7 +489,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                               ),
                               const SizedBox(height: 16),
                               DropdownButtonFormField<String>(
-                                value: _selectedCategory,
+                                initialValue: _selectedCategory,
                                 decoration: const InputDecoration(
                                   labelText: 'Category *',
                                   border: OutlineInputBorder(),

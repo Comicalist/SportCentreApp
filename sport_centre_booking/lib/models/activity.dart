@@ -29,7 +29,7 @@ class Activity {
   
   // === RESOURCES ===
   final List<String> requirements;  // Required equipment
-  final String imageUrl;
+  final String? imageUrl;
   
   // === METADATA ===
   final DateTime createdAt;
@@ -54,7 +54,7 @@ class Activity {
     required this.memberPrice,
     required this.pointsReward,
     this.requirements = const [],
-    required this.imageUrl,
+    this.imageUrl,
     required this.createdAt,
     required this.updatedAt,
     required this.createdBy,
@@ -62,6 +62,29 @@ class Activity {
 
   // Computed property for spots left
   int get spotsLeft => capacity - bookedCount;
+
+  // Add this getter
+  String get displayImageUrl {
+    if (imageUrl != null && imageUrl!.isNotEmpty) {
+      return imageUrl!;
+    }
+    return _getDefaultImageForCategory(category);
+  }
+  
+  String _getDefaultImageForCategory(String category) {
+    switch (category) {
+      case 'Wellness':
+        return 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=300&h=200&fit=crop';
+      case 'Fitness':
+        return 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=300&h=200&fit=crop';
+      case 'Kids':
+        return 'https://images.unsplash.com/photo-1566104827745-7237210ee915?w=300&h=200&fit=crop';
+      case 'Workshops':
+        return 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=300&h=200&fit=crop';
+      default:
+        return 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=200&fit=crop';
+    }
+  }
 
   factory Activity.fromJson(Map<String, dynamic> json) {
     return Activity(

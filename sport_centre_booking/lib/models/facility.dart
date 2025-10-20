@@ -34,21 +34,26 @@ class Facility {
     if (imageUrl != null && imageUrl!.isNotEmpty) {
       return imageUrl!;
     }
-    
-    // Smart default based on title keywords
-    final titleLower = title.toLowerCase();
-    if (titleLower.contains('gym') || titleLower.contains('weight')) {
+    return _getDefaultImageUrl();
+  }
+  
+  String _getDefaultImageUrl() {
+    final title = this.title.toLowerCase();
+    if (title.contains('gym') || title.contains('weight')) {
       return defaultImages['gym']!;
-    } else if (titleLower.contains('pool') || titleLower.contains('swim')) {
+    } else if (title.contains('pool') || title.contains('swim')) {
       return defaultImages['pool']!;
-    } else if (titleLower.contains('court') || titleLower.contains('tennis') || 
-               titleLower.contains('basketball') || titleLower.contains('badminton')) {
+    } else if (title.contains('court') ||
+        title.contains('tennis') ||
+        title.contains('basketball') ||
+        title.contains('badminton')) {
       return defaultImages['court']!;
-    } else if (titleLower.contains('studio') || titleLower.contains('yoga') || 
-               titleLower.contains('dance') || titleLower.contains('class')) {
+    } else if (title.contains('studio') ||
+        title.contains('yoga') ||
+        title.contains('dance') ||
+        title.contains('class')) {
       return defaultImages['studio']!;
     }
-    
     return defaultImages['default']!;
   }
 

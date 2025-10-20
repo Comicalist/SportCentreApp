@@ -124,16 +124,49 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Image.network(
-                    widget.activity.imageUrl,
+                    widget.activity.displayImageUrl, // ✅ Changed from widget.activity.imageUrl
                     width: 60,
                     height: 60,
                     fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        width: 60,
+                        height: 60,
+                        color: Colors.grey[200],
+                        child: Center(
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.teal,
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                     errorBuilder: (context, error, stackTrace) {
                       return Container(
                         width: 60,
                         height: 60,
-                        color: Colors.grey[300],
-                        child: const Icon(Icons.image_not_supported),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.teal[400]!, Colors.teal[600]!],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.image_not_supported,
+                          color: Colors.white,
+                          size: 24,
+                        ),
                       );
                     },
                   ),
