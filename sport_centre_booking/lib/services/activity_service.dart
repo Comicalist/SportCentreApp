@@ -364,9 +364,9 @@ class ActivityService {
 
       await _firestore.collection(_collection).doc(activityId).delete();
 
-      print('✅ ACTIVITY DELETED SUCCESSFULLY');
+      
     } catch (e) {
-      print('❌ ERROR DELETING ACTIVITY: $e');
+   
       rethrow;
     }
   }

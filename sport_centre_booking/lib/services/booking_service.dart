@@ -39,7 +39,7 @@ class BookingService {
 
       return isAvailable && bookedCount < capacity;
     } catch (e) {
-      print('Error checking availability: $e');
+  
       return false;
     }
   }
@@ -57,16 +57,15 @@ class BookingService {
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
-      print('Error: User must be authenticated to book');
+      
       throw Exception('User must be authenticated to book');
     }
 
-    print('Creating booking for activity: $activityId, user: ${user.uid}');
 
     try {
       // Use transaction to ensure data consistency and prevent overbooking
       final booking = await _firestore.runTransaction<Booking>((transaction) async {
-        print('Starting transaction for booking creation');
+
         
         // Get activity data within transaction (READS FIRST)
         final activityRef = _firestore.collection('activities').doc(activityId);

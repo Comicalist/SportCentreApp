@@ -39,7 +39,7 @@ class ClubService {
   /// Admin: Get all pending clubs for approval
   Future<List<Club>> getPendingClubs() async {
     try {
-      print('🔄 FETCHING PENDING CLUBS...');
+    
 
       final snapshot = await _firestore
           .collection('clubs')
@@ -47,18 +47,18 @@ class ClubService {
           .orderBy('createdAt', descending: true)
           .get();
 
-      print('✅ FOUND ${snapshot.docs.length} PENDING CLUBS');
+    
       for (var doc in snapshot.docs) {
-        print('   - ${doc.data()['name']} (ID: ${doc.id})');
+   
       }
 
       return snapshot.docs.map((doc) => Club.fromFirestore(doc)).toList();
     } catch (e) {
-      print('❌ ERROR FETCHING PENDING CLUBS: $e');
+ 
 
       // Fallback: try without ordering
       try {
-        print('⚠️ Trying fallback without ordering...');
+     
         final snapshot = await _firestore
             .collection('clubs')
             .where('isApproved', isEqualTo: false)
@@ -69,10 +69,10 @@ class ClubService {
             .toList();
         clubs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-        print('✅ FOUND ${clubs.length} PENDING CLUBS (FALLBACK)');
+ 
         return clubs;
       } catch (fallbackError) {
-        print('❌ FALLBACK ALSO FAILED: $fallbackError');
+
         return [];
       }
     }
@@ -81,14 +81,14 @@ class ClubService {
   /// Admin: Approve a club
   Future<void> approveClub(String clubId) async {
     try {
-      print('🔄 APPROVING CLUB: $clubId');
+
       await _firestore.collection('clubs').doc(clubId).update({
         'isApproved': true,
         'isActive': true,
       });
-      print('✅ CLUB APPROVED: $clubId');
+
     } catch (e) {
-      print('❌ ERROR APPROVING CLUB: $e');
+  
       rethrow;
     }
   }
@@ -96,11 +96,11 @@ class ClubService {
   /// Admin: Reject a club
   Future<void> rejectClub(String clubId) async {
     try {
-      print('🔄 REJECTING CLUB: $clubId');
+    
       await _firestore.collection('clubs').doc(clubId).delete();
-      print('✅ CLUB REJECTED: $clubId');
+
     } catch (e) {
-      print('❌ ERROR REJECTING CLUB: $e');
+     
       rethrow;
     }
   }
@@ -116,7 +116,7 @@ class ClubService {
 
       return snapshot.docs.map((doc) => Club.fromFirestore(doc)).toList();
     } catch (e) {
-      print('Error fetching approved clubs: $e');
+     
       return [];
     }
   }
@@ -140,7 +140,7 @@ class ClubService {
 
       return clubs;
     } catch (e) {
-      print('Error fetching owned clubs: $e');
+   
       return [];
     }
   }

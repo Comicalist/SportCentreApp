@@ -23,24 +23,10 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
   @override
   void initState() {
     super.initState();
-    _debugClubAndAuth();
+
     _loadFacilities();
   }
 
-  void _debugClubAndAuth() {
-    print('=== FACILITY DEBUG START ===');
-    print('Club ID: ${widget.club.id}');
-    print('Club name: ${widget.club.name}');
-    print('Club isApproved: ${widget.club.isApproved}');
-    print('Club isActive: ${widget.club.isActive}');
-    print('Club ownerId: ${widget.club.ownerId}');
-
-    // Check current user
-    final user = FirebaseAuth.instance.currentUser;
-    print('Current user ID: ${user?.uid}');
-    print('User authenticated: ${user != null}');
-    print('=== FACILITY DEBUG END ===');
-  }
 
   void _loadFacilities() {
     _facilitiesFuture = _facilityService.getClubFacilities(

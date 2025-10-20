@@ -36,13 +36,13 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   void _startEmailCheckTimer() {
     _timer = Timer.periodic(const Duration(seconds: 3), (timer) async {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      print('🔍 Checking email verification status...');
+     
       await authProvider.checkEmailVerification();
-      print('📧 Email verified: ${authProvider.isEmailVerified}');
+    
       
       // If email is verified, navigate back
       if (authProvider.isEmailVerified && mounted) {
-        print('✅ Email verification confirmed! Navigating back...');
+   
         timer.cancel();
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
