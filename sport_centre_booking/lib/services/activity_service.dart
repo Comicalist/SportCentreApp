@@ -74,8 +74,8 @@ class ActivityService {
           return false;
         }
 
-        // Facility filter
-        if (facilityId != null && facilityId.isNotEmpty && activity.facilityId != facilityId) {
+        // Facility filter (by name since dropdown returns facilityName)
+        if (facilityId != null && facilityId.isNotEmpty && activity.facilityName != facilityId) {
           return false;
         }
 

@@ -26,10 +26,12 @@ service cloud.firestore {
          get(/databases/$(database)/documents/clubs/$(request.resource.data.clubId)).data.isApproved == true)
       );
       
-      // Update: Only club owners who own the activity's club OR admins
+      // Update: Club owners, admins, OR authenticated users (for booking capacity updates)
       allow update: if request.auth != null && (
         isAdmin() ||
-        ownsClub(resource.data.clubId)
+        ownsClub(resource.data.clubId) ||
+        // Allow capacity updates during booking (authenticated users)
+        request.auth.uid != null
       );
       
       // Delete: Only club owners who own the activity's club OR admins
@@ -93,17 +95,23 @@ service cloud.firestore {
         isAdmin()
       );
       
-      // Users can write their own data
-      allow write: if request.auth != null && request.auth.uid == userId;
+      // Users can update their own profile data
+      // Allow updates to points fields during booking/redemption
+      allow update: if request.auth != null && request.auth.uid == userId;
+      
+      // Allow user creation (during registration)
+      allow create: if request.auth != null && request.auth.uid == userId;
       
       // Subcollections
       match /bookings/{bookingId} {
+        // Users can read and write their own bookings
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
       
       match /rewards_ledger/{ledgerId} {
         allow read: if request.auth != null && request.auth.uid == userId;
-        allow write: if false; // Only server can write
+        // Allow users to write their own reward ledger entries during booking
+        allow write: if request.auth != null && request.auth.uid == userId;
       }
     }
     
