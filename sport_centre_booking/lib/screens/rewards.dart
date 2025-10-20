@@ -65,7 +65,6 @@ class RewardsScreen extends StatelessWidget {
           }
 
           final data = snapshot.data!;
-          final totalPoints = (data['totalPoints'] ?? 0) as int;
           final availablePoints = (data['availablePoints'] ?? 0) as int;
           final lifetimePoints = (data['lifetimePointsEarned'] ?? 0) as int;
 
@@ -88,9 +87,7 @@ class RewardsScreen extends StatelessWidget {
                 // Cards (match card style used elsewhere)
                 _buildPointsCard('Available Points', availablePoints, Colors.green),
                 const SizedBox(height: 12),
-                _buildPointsCard('Total Points', totalPoints, Colors.blue),
-                const SizedBox(height: 12),
-                _buildPointsCard('Lifetime Points', lifetimePoints, Colors.orange),
+                _buildPointsCard('Lifetime Points Earned', lifetimePoints, Colors.orange),
 
                 // No History section (backend not implemented)
               ],

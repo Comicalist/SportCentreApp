@@ -193,9 +193,9 @@ class BookingService {
         );
       });
 
-      // After transaction completes, update user points and create references
-      // These are non-critical writes that can happen outside the transaction
-      print('Updating user points and creating references...');
+      // After transaction completes, create user booking reference
+      // Points will be credited only when booking status changes to 'completed'
+      print('Creating user booking reference...');
       
       try {
         // Create user booking reference for easy querying
@@ -211,34 +211,12 @@ class BookingService {
           'status': 'confirmed',
           'createdAt': Timestamp.fromDate(DateTime.now()),
         });
-
-        // Credit user's points
-        await _firestore.collection('users').doc(user.uid).set({
-          'totalPoints': FieldValue.increment(expectedPoints),
-          'availablePoints': FieldValue.increment(expectedPoints),
-          'lifetimePointsEarned': FieldValue.increment(expectedPoints),
-          'lastRewardUpdateAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-
-        // Rewards ledger entry
-        await _firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('rewards_ledger')
-            .doc()
-            .set({
-          'type': 'earn',
-          'amount': expectedPoints,
-          'bookingId': booking.id,
-          'activityId': activityId,
-          'activityTitle': booking.activityTitle,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
         
-        print('User points and references updated successfully');
+        print('User booking reference created successfully');
+        print('Note: Points (${expectedPoints}) will be credited when booking is completed');
       } catch (e) {
-        print('Warning: Failed to update user points/references: $e');
-        // Don't fail the whole booking if these secondary writes fail
+        print('Warning: Failed to create user booking reference: $e');
+        // Don't fail the whole booking if this secondary write fails
       }
 
       return booking;
@@ -312,40 +290,74 @@ class BookingService {
         print('Capacity restore warning: $e');
       }
 
-      // Step 3: Revert reward points (best-effort, does not fail cancellation)
-      try {
-        if (booking.pointsEarned > 0) {
-          final userRef = _firestore.collection('users').doc(user.uid);
-          final batch = _firestore.batch();
+      // Note: No need to revert points since they are only credited when status is 'completed'
+      // Cancelled bookings will never have points credited
+      print('Booking cancelled successfully. Points were not credited yet (only on completion).');
 
-          // decrement points; keep lifetime as-is (commented line if you prefer to decrement it too)
-          batch.update(userRef, {
-            'totalPoints': FieldValue.increment(-booking.pointsEarned),
-            'availablePoints': FieldValue.increment(-booking.pointsEarned),
-            // 'lifetimePointsEarned': FieldValue.increment(-booking.pointsEarned), // <- enable if you want
-            'lastRewardUpdateAt': FieldValue.serverTimestamp(),
-          });
+      return true;
+    } catch (e) {
+      rethrow;
+    }
+  }
 
-          final ledgerRef = userRef.collection('rewards_ledger').doc();
-          batch.set(ledgerRef, {
-            'type': 'reversal',
-            'amount': -booking.pointsEarned,
-            'bookingId': booking.id,
-            'activityId': booking.activityId,
-            'activityTitle': booking.activityTitle,
-            'reason': reason ?? 'booking_cancelled',
-            'createdAt': FieldValue.serverTimestamp(),
-          });
+  /// Complete a booking and credit reward points
+  /// This should be called when the activity is completed (after participation)
+  static Future<bool> completeBooking(String bookingId) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('User must be authenticated');
 
-          await batch.commit();
-        }
-      } catch (e) {
-        // Do not block the cancel if points rollback fails
-        print('Warning: failed to revert reward points on cancel: $e');
+    try {
+      // Get the booking
+      final bookingDoc = await _firestore.collection('bookings').doc(bookingId).get();
+      
+      if (!bookingDoc.exists) {
+        throw Exception('Booking not found');
+      }
+
+      final booking = Booking.fromFirestore(bookingDoc);
+
+      // Check if user owns this booking
+      if (booking.userId != user.uid) {
+        throw Exception('Unauthorized to complete this booking');
+      }
+
+      // Check if booking is confirmed (can only complete confirmed bookings)
+      if (booking.status != BookingStatus.confirmed) {
+        throw Exception('Only confirmed bookings can be completed (current status: ${booking.status})');
+      }
+
+      // Update booking status to completed
+      await _firestore.collection('bookings').doc(bookingId).update({
+        'status': 'completed',
+        'completedAt': Timestamp.fromDate(DateTime.now()),
+      });
+
+      // Credit user's points
+      if (booking.pointsEarned > 0) {
+        final userRef = _firestore.collection('users').doc(user.uid);
+        
+        await userRef.set({
+          'availablePoints': FieldValue.increment(booking.pointsEarned),
+          'lifetimePointsEarned': FieldValue.increment(booking.pointsEarned),
+          'lastRewardUpdateAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        // Create rewards ledger entry
+        await userRef.collection('rewards_ledger').doc().set({
+          'type': 'earn',
+          'amount': booking.pointsEarned,
+          'bookingId': booking.id,
+          'activityId': booking.activityId,
+          'activityTitle': booking.activityTitle,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        print('Booking completed and ${booking.pointsEarned} points credited to user ${user.uid}');
       }
 
       return true;
     } catch (e) {
+      print('Error completing booking: $e');
       rethrow;
     }
   }

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/booking_provider.dart';
 import '../../models/booking.dart';
+import '../../services/booking_service.dart';
 import '../../utils/colors.dart';
 import '../../screens/auth/login_screen.dart';
 
@@ -287,7 +288,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 ),
               ],
             ),
-            if (booking.pointsEarned > 0) ...[
+            // Only show points earned for completed bookings
+            if (booking.pointsEarned > 0 && booking.status == BookingStatus.completed) ...[
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -340,6 +342,23 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 8),
+              // Temporary button for testing - Complete booking and credit points
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => _completeBooking(booking),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text('Complete Booking (+${booking.pointsEarned} pts)'),
+                ),
               ),
             ],
           ],
@@ -431,6 +450,69 @@ class _BookingsScreenState extends State<BookingsScreen> {
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _completeBooking(Booking booking) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Complete Booking'),
+        content: Text('Mark "${booking.activityTitle}" as completed and credit ${booking.pointsEarned} points?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              
+              try {
+                final success = await BookingService.completeBooking(booking.id);
+                
+                if (!mounted) return;
+                
+                if (success) {
+                  if (mounted && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Booking completed! ${booking.pointsEarned} points credited'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } else {
+                  if (mounted && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Failed to complete booking. Please try again.'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (!mounted) return;
+                
+                if (mounted && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: ${e.toString().replaceAll('Exception: ', '')}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Complete & Credit Points'),
           ),
         ],
       ),
