@@ -475,7 +475,7 @@ class BookingService {
 
       return true;
     } catch (e) {
-      print('Error marking booking as completed: $e');
+      
       return false;
     }
   }
