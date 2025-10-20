@@ -20,7 +20,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
-      
 
         // User not logged in - show login screen (starting with sign-in form)
         if (!authProvider.isLoggedIn) {

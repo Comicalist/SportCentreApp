@@ -58,7 +58,7 @@ class AuthProvider extends ChangeNotifier {
       doc = await docRef.get(const GetOptions(source: Source.server));
     } catch (e) {
       // If offline or fails, fallback to cache
-      debugPrint('Server fetch failed, using cache: $e');
+      // Server fetch failed, fall back to cache
       doc = await docRef.get(const GetOptions(source: Source.cache));
     }
 
@@ -88,7 +88,7 @@ class AuthProvider extends ChangeNotifier {
 
     if (doc.exists) {
       _appUser = AppUser.fromFirestore(doc);
-      debugPrint("✅ Loaded user role: ${_appUser?.role}, isClubOwner: ${_appUser?.isClubOwner}");
+
       notifyListeners();
       return;
     }
@@ -108,7 +108,7 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
     }
   } catch (e) {
-    debugPrint('Error loading user data: $e');      
+    // Error loading user data - will retry on next auth state change      
     }
   }
 
