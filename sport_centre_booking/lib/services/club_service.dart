@@ -129,10 +129,16 @@ class ClubService {
       final snapshot = await _firestore
           .collection('clubs')
           .where('ownerId', isEqualTo: ownerId)
-          .orderBy('createdAt', descending: true)
           .get();
 
-      return snapshot.docs.map((doc) => Club.fromFirestore(doc)).toList();
+      final clubs = snapshot.docs
+          .map((doc) => Club.fromFirestore(doc))
+          .toList();
+      
+      // Sort manually to avoid needing composite index
+      clubs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      return clubs;
     } catch (e) {
       print('Error fetching owned clubs: $e');
       return [];
@@ -141,18 +147,33 @@ class ClubService {
 
   /// Fetch only approved clubs owned by a specific user
   Future<List<Club>> getApprovedOwnedClubs({required String ownerId}) async {
+    print('🔄 FETCHING APPROVED OWNED CLUBS FOR USER: $ownerId');
+    
+    // Use manual filtering approach to avoid composite index issues
+    // Once the composite index is fully built, this can be optimized
     try {
       final snapshot = await _firestore
           .collection('clubs')
           .where('ownerId', isEqualTo: ownerId)
-          .where('isApproved', isEqualTo: true)
-          .where('isActive', isEqualTo: true)
-          .orderBy('createdAt', descending: true)
           .get();
 
-      return snapshot.docs.map((doc) => Club.fromFirestore(doc)).toList();
+      print('📦 GOT ${snapshot.docs.length} TOTAL CLUBS FOR OWNER');
+      
+      final clubs = snapshot.docs
+          .map((doc) => Club.fromFirestore(doc))
+          .where((club) => club.isApproved && club.isActive)
+          .toList();
+      
+      clubs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      print('✅ FOUND ${clubs.length} APPROVED OWNED CLUBS');
+      for (var club in clubs) {
+        print('   - ${club.name} (ID: ${club.id}, isApproved: ${club.isApproved}, isActive: ${club.isActive})');
+      }
+      
+      return clubs;
     } catch (e) {
-      print('Error fetching approved owned clubs: $e');
+      print('❌ ERROR FETCHING APPROVED OWNED CLUBS: $e');
       return [];
     }
   }
