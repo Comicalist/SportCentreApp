@@ -188,7 +188,7 @@ class BookingSuccessScreen extends StatelessWidget {
             _buildDetailRow(
               Icons.location_on,
               'Location',
-              activity.location,
+              activity.facilityName,
             ),
             _buildDetailRow(
               Icons.people,

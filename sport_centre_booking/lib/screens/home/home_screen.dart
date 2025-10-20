@@ -20,7 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? selectedClub;
   DateTime? selectedDate;
   String? selectedTimeCategory;
-  String? selectedLocation;
+  String? selectedFacility;
   String searchQuery = '';
   bool onlyAvailable = false;
 
@@ -47,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 selectedClub: selectedClub,
                 selectedDate: selectedDate,
                 selectedTimeCategory: selectedTimeCategory,
-                selectedLocation: selectedLocation,
+                selectedLocation: selectedFacility,
                 searchQuery: searchQuery,
                 onlyAvailable: onlyAvailable,
               ),
@@ -174,12 +174,12 @@ class _HomeScreenState extends State<HomeScreen> {
       selectedClub: selectedClub,
       selectedDate: selectedDate,
       selectedTimeCategory: selectedTimeCategory,
-      selectedLocation: selectedLocation,
+      selectedFacility: selectedFacility,
       onlyAvailable: onlyAvailable,
       onClubChanged: (value) => setState(() => selectedClub = value),
       onDateChanged: (value) => setState(() => selectedDate = value),
       onTimeCategoryChanged: (value) => setState(() => selectedTimeCategory = value),
-      onLocationChanged: (value) => setState(() => selectedLocation = value),
+      onFacilityChanged: (value) => setState(() => selectedFacility = value),
       onAvailabilityChanged: (value) => setState(() => onlyAvailable = value),
       onClearFilters: _clearFilters,
     );
@@ -201,7 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
       selectedClub = null;
       selectedDate = null;
       selectedTimeCategory = null;
-      selectedLocation = null;
+      selectedFacility = null;
       searchQuery = '';
       onlyAvailable = false;
       searchController.clear();

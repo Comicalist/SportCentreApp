@@ -65,7 +65,7 @@ class BookingService {
 
     try {
       // Use transaction to ensure data consistency and prevent overbooking
-      return await _firestore.runTransaction<Booking?>((transaction) async {
+      final booking = await _firestore.runTransaction<Booking>((transaction) async {
         print('Starting transaction for booking creation');
         
         // Get activity data within transaction (READS FIRST)
@@ -93,6 +93,10 @@ class BookingService {
 
         // Extract activity details for the booking
         final activityTitle = activityData['name'] ?? 'Unknown Activity';
+        final clubId = activityData['clubId'] ?? '';
+        final clubName = activityData['clubName'] ?? '';
+        final facilityId = activityData['facilityId'] ?? '';
+        final facilityName = activityData['facilityName'] ?? '';
         
         // Handle date conversion safely
         DateTime activityDateTime;
@@ -131,7 +135,7 @@ class BookingService {
         final bookingRef = _firestore.collection('bookings').doc();
         final confirmationNumber = _generateConfirmationNumber();
         
-        // Create booking data directly instead of using toJson() to avoid serialization issues
+        // Create booking data
         final bookingData = {
           'id': bookingRef.id,
           'userId': user.uid,
@@ -152,55 +156,20 @@ class BookingService {
           'activityDate': Timestamp.fromDate(activityDateTime),
           'activityTime': activityTime,
           'totalPrice': totalPrice,
+          // Denormalized club/facility data for display
+          'clubId': clubId,
+          'clubName': clubName,
+          'facilityId': facilityId,
+          'facilityName': facilityName,
         };
 
         print('Booking data prepared, saving to Firestore...');
         transaction.set(bookingRef, bookingData);
 
-        // Create user booking reference for easy querying
-        print('Creating user booking reference...');
-        final userBookingRef = _firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('bookings')
-            .doc(bookingRef.id);
+        print('Booking transaction completed successfully');
         
-        transaction.set(userBookingRef, {
-          'bookingId': bookingRef.id,
-          'activityId': activityId,
-          'bookingDate': Timestamp.fromDate(bookingDate),
-          'status': 'confirmed',
-          'createdAt': Timestamp.fromDate(DateTime.now()),
-        });
-
-        // ---------------- REWARDS (added, no extra reads) ----------------
-        // Credit user's points atomically
-        final userRef = _firestore.collection('users').doc(user.uid);
-        transaction.update(userRef, {
-          'totalPoints': FieldValue.increment(expectedPoints),
-          'availablePoints': FieldValue.increment(expectedPoints),
-          'lifetimePointsEarned': FieldValue.increment(expectedPoints),
-          'lastRewardUpdateAt': FieldValue.serverTimestamp(),
-        });
-
-        // Rewards ledger entry
-        final ledgerRef = _firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('rewards_ledger')
-            .doc();
-        transaction.set(ledgerRef, {
-          'type': 'earn',
-          'amount': expectedPoints,
-          'bookingId': bookingRef.id,
-          'activityId': activityId,
-          'activityTitle': activityTitle,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-        // -------------------------------------------------------------
-
         // Create Booking object to return
-        final booking = Booking(
+        return Booking(
           id: bookingRef.id,
           userId: user.uid,
           activityId: activityId,
@@ -218,11 +187,62 @@ class BookingService {
           activityDate: activityDateTime,
           activityTime: activityTime,
           totalPrice: totalPrice,
+          clubId: clubId,
+          clubName: clubName,
+          facilityId: facilityId,
+          facilityName: facilityName,
         );
-
-        print('Booking transaction completed successfully');
-        return booking;
       });
+
+      // After transaction completes, update user points and create references
+      // These are non-critical writes that can happen outside the transaction
+      print('Updating user points and creating references...');
+      
+      try {
+        // Create user booking reference for easy querying
+        await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('bookings')
+            .doc(booking.id)
+            .set({
+          'bookingId': booking.id,
+          'activityId': activityId,
+          'bookingDate': Timestamp.fromDate(bookingDate),
+          'status': 'confirmed',
+          'createdAt': Timestamp.fromDate(DateTime.now()),
+        });
+
+        // Credit user's points
+        await _firestore.collection('users').doc(user.uid).set({
+          'totalPoints': FieldValue.increment(expectedPoints),
+          'availablePoints': FieldValue.increment(expectedPoints),
+          'lifetimePointsEarned': FieldValue.increment(expectedPoints),
+          'lastRewardUpdateAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        // Rewards ledger entry
+        await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('rewards_ledger')
+            .doc()
+            .set({
+          'type': 'earn',
+          'amount': expectedPoints,
+          'bookingId': booking.id,
+          'activityId': activityId,
+          'activityTitle': booking.activityTitle,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+        
+        print('User points and references updated successfully');
+      } catch (e) {
+        print('Warning: Failed to update user points/references: $e');
+        // Don't fail the whole booking if these secondary writes fail
+      }
+
+      return booking;
     } catch (e) {
       print('Error creating booking: $e');
       print('Error type: ${e.runtimeType}');

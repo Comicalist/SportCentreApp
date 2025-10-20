@@ -3,18 +3,18 @@ import 'package:intl/intl.dart';
 import '../../../services/activity_service.dart';
 import '../../../utils/constants.dart';
 
-/// Widget for advanced filtering options
+/// Widget for advanced filtering options with club and facility selection
 class AdvancedFilters extends StatelessWidget {
   final bool isExpanded;
   final String? selectedClub;
   final DateTime? selectedDate;
   final String? selectedTimeCategory;
-  final String? selectedLocation;
+  final String? selectedFacility;  // ✅ Changed from selectedLocation
   final bool onlyAvailable;
   final Function(String?) onClubChanged;
   final Function(DateTime?) onDateChanged;
   final Function(String?) onTimeCategoryChanged;
-  final Function(String?) onLocationChanged;
+  final Function(String?) onFacilityChanged;  // ✅ Changed from onLocationChanged
   final Function(bool) onAvailabilityChanged;
   final VoidCallback onClearFilters;
 
@@ -24,12 +24,12 @@ class AdvancedFilters extends StatelessWidget {
     required this.selectedClub,
     required this.selectedDate,
     required this.selectedTimeCategory,
-    required this.selectedLocation,
+    required this.selectedFacility,  // ✅ Changed from selectedLocation
     required this.onlyAvailable,
     required this.onClubChanged,
     required this.onDateChanged,
     required this.onTimeCategoryChanged,
-    required this.onLocationChanged,
+    required this.onFacilityChanged,  // ✅ Changed from onLocationChanged
     required this.onAvailabilityChanged,
     required this.onClearFilters,
   });
@@ -68,7 +68,7 @@ class AdvancedFilters extends StatelessWidget {
         
         const SizedBox(height: 12),
         
-        // Row 2: Time and Location
+        // Row 2: Time and Facility
         Row(
           children: [
             Expanded(
@@ -82,10 +82,10 @@ class AdvancedFilters extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _buildStreamDropdown(
-                label: 'Location',
-                value: selectedLocation,
-                stream: ActivityService.getAvailableLocationsStream(),
-                onChanged: onLocationChanged,
+                label: 'Facility',  // ✅ Changed from 'Location'
+                value: selectedFacility,
+                stream: ActivityService.getAvailableFacilitiesStream(),
+                onChanged: onFacilityChanged,
               ),
             ),
           ],
@@ -143,7 +143,8 @@ class AdvancedFilters extends StatelessWidget {
           items: [
             DropdownMenuItem<String>(
               value: null,
-              child: Text('All ${label}s', style: TextStyle(color: Colors.grey[600])),
+              child: Text('All ${label == "Time" ? "Times" : "Facilities"}', 
+                style: TextStyle(color: Colors.grey[600])),
             ),
             ...items.map((item) => DropdownMenuItem<String>(
               value: item,
@@ -182,7 +183,8 @@ class AdvancedFilters extends StatelessWidget {
               items: [
                 DropdownMenuItem<String>(
                   value: null,
-                  child: Text('All ${label}s', style: TextStyle(color: Colors.grey[600])),
+                  child: Text('All ${label == "Club" ? "Clubs" : "Facilities"}', 
+                    style: TextStyle(color: Colors.grey[600])),
                 ),
                 ...items.map((item) => DropdownMenuItem<String>(
                   value: item,

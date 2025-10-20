@@ -199,13 +199,13 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         _buildInfoRow(
           Icons.location_on,
           'Location',
-          widget.activity.location,
+          widget.activity.facilityName,
         ),
         const SizedBox(height: AppConstants.mediumSpacing),
         _buildInfoRow(
           Icons.groups,
           'Organized by',
-          widget.activity.club,
+          widget.activity.clubName,
         ),
         const SizedBox(height: AppConstants.mediumSpacing),
         _buildInfoRow(

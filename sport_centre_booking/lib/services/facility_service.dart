@@ -12,7 +12,6 @@ class FacilityService {
       final querySnapshot = await _firestore
           .collection('facilities')
           .where('clubId', isEqualTo: clubId)
-          .orderBy('createdAt', descending: false)
           .get();
 
       print('Debug: Found ${querySnapshot.docs.length} facility documents');
@@ -31,6 +30,9 @@ class FacilityService {
           // Continue with other facilities instead of failing completely
         }
       }
+
+      // Sort manually to avoid needing composite index
+      facilities.sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
       print('Debug: Successfully parsed ${facilities.length} facilities');
       return facilities;
