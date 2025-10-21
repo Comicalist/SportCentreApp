@@ -14,6 +14,7 @@ class Activity {
   final String category;            // "Wellness", "Fitness", "Kids", "Workshops"
   final DateTime date;
   final String time;                // Format "HH:mm"
+  final int duration;               // Duration in minutes
   final String timeCategory;        // "Morning", "Afternoon", "Evening"
   
   // === CAPACITY ===
@@ -47,6 +48,7 @@ class Activity {
     required this.category,
     required this.date,
     required this.time,
+    required this.duration,
     required this.timeCategory,
     required this.capacity,
     this.bookedCount = 0,
@@ -62,6 +64,35 @@ class Activity {
 
   // Computed property for spots left
   int get spotsLeft => capacity - bookedCount;
+
+  // Calculate end time based on start time and duration
+  DateTime get endTime {
+    try {
+      final timeParts = time.split(':');
+      if (timeParts.length != 2) return date;
+      
+      final hour = int.parse(timeParts[0]);
+      final minute = int.parse(timeParts[1]);
+      
+      final startDateTime = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        hour,
+        minute,
+      );
+      
+      return startDateTime.add(Duration(minutes: duration));
+    } catch (e) {
+      return date;
+    }
+  }
+
+  // Format end time as HH:mm
+  String get endTimeFormatted {
+    final endDateTime = endTime;
+    return '${endDateTime.hour.toString().padLeft(2, '0')}:${endDateTime.minute.toString().padLeft(2, '0')}';
+  }
 
   // Add this getter
   String get displayImageUrl {
@@ -100,6 +131,7 @@ class Activity {
           ? DateTime.parse(json['date']) 
           : (json['date'] as DateTime),
       time: json['time'] ?? '00:00',
+      duration: json['duration'] ?? 60,  // Default 60 minutes for backward compatibility
       timeCategory: json['timeCategory'] ?? getTimeCategory(json['time'] ?? '00:00'),
       capacity: json['capacity'] ?? 0,
       bookedCount: json['bookedCount'] ?? 0,
@@ -130,6 +162,7 @@ class Activity {
       'category': category,
       'date': date.toIso8601String(),
       'time': time,
+      'duration': duration,
       'timeCategory': timeCategory,
       'capacity': capacity,
       'bookedCount': bookedCount,
@@ -156,6 +189,7 @@ class Activity {
     String? category,
     DateTime? date,
     String? time,
+    int? duration,
     String? timeCategory,
     int? capacity,
     int? bookedCount,
@@ -179,6 +213,7 @@ class Activity {
       category: category ?? this.category,
       date: date ?? this.date,
       time: time ?? this.time,
+      duration: duration ?? this.duration,
       timeCategory: timeCategory ?? this.timeCategory,
       capacity: capacity ?? this.capacity,
       bookedCount: bookedCount ?? this.bookedCount,

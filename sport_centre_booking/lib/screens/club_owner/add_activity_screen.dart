@@ -28,6 +28,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
   final _capacityController = TextEditingController();
   final _pointsController = TextEditingController();
   final _imageUrlController = TextEditingController();
+  final _durationController = TextEditingController(text: '60'); // Default 60 minutes
   
   // Form state
   List<Club> _ownedClubs = [];
@@ -58,6 +59,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     _capacityController.dispose();
     _pointsController.dispose();
     _imageUrlController.dispose();
+    _durationController.dispose();
     super.dispose();
   }
   
@@ -157,6 +159,27 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     }
   }
   
+  String _calculateEndTime() {
+    try {
+      final duration = int.tryParse(_durationController.text);
+      if (duration == null || duration <= 0) {
+        return 'Enter a valid duration to see end time';
+      }
+      
+      final startMinutes = _selectedTime.hour * 60 + _selectedTime.minute;
+      final endMinutes = startMinutes + duration;
+      final endHour = (endMinutes ~/ 60) % 24;
+      final endMinute = endMinutes % 60;
+      
+      final startTime = '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
+      final endTime = '${endHour.toString().padLeft(2, '0')}:${endMinute.toString().padLeft(2, '0')}';
+      
+      return 'Activity time: $startTime - $endTime';
+    } catch (e) {
+      return 'Enter a valid duration';
+    }
+  }
+  
   void _addRequirement() {
     showDialog(
       context: context,
@@ -239,6 +262,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
       
       // Create time string
       final timeString = '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
+      final duration = int.parse(_durationController.text);
       
       // Create the activity
       final activity = Activity(
@@ -252,6 +276,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
         category: _selectedCategory,
         date: _selectedDate,
         time: timeString,
+        duration: duration,
         timeCategory: Activity.getTimeCategory(timeString),
         capacity: capacity,
         bookedCount: 0,
@@ -550,6 +575,36 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                   side: BorderSide(color: Colors.grey.shade300),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              // Duration field
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                child: TextFormField(
+                                  controller: _durationController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Duration (minutes) *',
+                                    border: const OutlineInputBorder(),
+                                    prefixIcon: const Icon(Icons.timer),
+                                    helperText: _calculateEndTime(),
+                                    helperMaxLines: 2,
+                                  ),
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (_) => setState(() {}), // Refresh end time display
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Please enter duration';
+                                    }
+                                    final duration = int.tryParse(value);
+                                    if (duration == null || duration < 15) {
+                                      return 'Duration must be at least 15 minutes';
+                                    }
+                                    if (duration > 480) {
+                                      return 'Duration cannot exceed 8 hours (480 min)';
+                                    }
+                                    return null;
+                                  },
                                 ),
                               ),
                             ],

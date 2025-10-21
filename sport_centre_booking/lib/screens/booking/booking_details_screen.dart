@@ -193,7 +193,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         _buildInfoRow(
           Icons.access_time,
           'Time',
-          widget.activity.time,
+          '${widget.activity.time} - ${widget.activity.endTimeFormatted} (${widget.activity.duration} min)',
         ),
         const SizedBox(height: AppConstants.mediumSpacing),
         _buildInfoRow(

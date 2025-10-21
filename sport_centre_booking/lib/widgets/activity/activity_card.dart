@@ -223,8 +223,17 @@ class ActivityCard extends StatelessWidget {
         Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
         const SizedBox(width: 4),
         Text(
-          activity.time,
+          '${activity.time} - ${activity.endTimeFormatted}',
           style: TextStyle(color: Colors.grey[600], fontSize: 14),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '(${activity.duration}min)',
+          style: TextStyle(
+            color: Colors.grey[500],
+            fontSize: 12,
+            fontStyle: FontStyle.italic,
+          ),
         ),
       ],
     );
