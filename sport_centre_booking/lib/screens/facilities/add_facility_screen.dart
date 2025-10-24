@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/facility.dart';
 import '../../models/club.dart';
 import '../../services/facility_service.dart';
+import '../../services/imageUpload_service.dart'; // Add this import
 
 class AddFacilityScreen extends StatefulWidget {
   final Club club;
@@ -17,10 +18,13 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _capacityController = TextEditingController();
-  final _imageUrlController = TextEditingController();
 
   bool _isActive = true;
   bool _isLoading = false;
+  
+  // Add image upload state
+  String? _uploadedImageUrl;
+  bool _isUploadingImage = false;
 
   final FacilityService _facilityService = FacilityService();
 
@@ -29,7 +33,6 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
     _titleController.dispose();
     _descriptionController.dispose();
     _capacityController.dispose();
-    _imageUrlController.dispose();
     super.dispose();
   }
 
@@ -55,7 +58,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
                     const SizedBox(height: 24),
                     _buildFacilityForm(),
                     const SizedBox(height: 24),
-                    _buildImagePreview(),
+                    _buildImageSection(), // Updated method
                     const SizedBox(height: 32),
                     _buildSubmitButton(),
                   ],
@@ -187,28 +190,6 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Image URL (Optional)
-            TextFormField(
-              controller: _imageUrlController,
-              decoration: const InputDecoration(
-                labelText: 'Image URL (Optional)',
-                hintText: 'https://example.com/facility-image.jpg',
-                border: OutlineInputBorder(),
-                helperText:
-                    'Leave empty to use a default image based on facility type',
-              ),
-              validator: (value) {
-                if (value != null && value.isNotEmpty) {
-                  final uri = Uri.tryParse(value);
-                  if (uri == null || !uri.hasScheme) {
-                    return 'Please enter a valid URL';
-                  }
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
             // Active Status
             SwitchListTile(
               title: const Text('Active Status'),
@@ -223,71 +204,227 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
     );
   }
 
-  Widget _buildImagePreview() {
-    final imageUrl = _imageUrlController.text.trim();
-    final previewUrl = imageUrl.isNotEmpty
-        ? imageUrl
-        : _getDefaultImagePreview();
-
+  // NEW: Updated image section with upload functionality
+  Widget _buildImageSection() {
     return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                const Icon(Icons.preview, color: Colors.teal),
-                const SizedBox(width: 8),
-                const Text(
-                  'Image Preview',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ],
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Facility Image',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-          ),
-          Container(
-            height: 160,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              image: DecorationImage(
-                image: NetworkImage(previewUrl),
-                fit: BoxFit.cover,
+            const SizedBox(height: 8),
+            
+            // Requirements info box
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.withOpacity(0.3)),
               ),
-            ),
-            child: imageUrl.isEmpty
-                ? Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.7),
-                        ],
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: Colors.blue[700]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Image requirements: Max 5MB, JPG/PNG/WebP format, Max 1200x800px. If no image is uploaded, a default image will be used.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue[700],
                       ),
                     ),
-                    child: const Align(
-                      alignment: Alignment.bottomLeft,
-                      child: Padding(
-                        padding: EdgeInsets.all(12.0),
-                        child: Text(
-                          'Default Image',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // Image preview
+            Container(
+              width: double.infinity,
+              height: 200,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: _uploadedImageUrl != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        _uploadedImageUrl!,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            color: Colors.grey[100],
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                value: loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                    : null,
+                                color: Colors.teal,
+                              ),
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey[200],
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.image_not_supported, size: 48, color: Colors.grey[400]),
+                                const SizedBox(height: 8),
+                                Text('Image not available', style: TextStyle(color: Colors.grey[600])),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    )
+                  : Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        image: DecorationImage(
+                          image: NetworkImage(_getDefaultImagePreview()),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withOpacity(0.7),
+                            ],
+                          ),
+                        ),
+                        child: const Align(
+                          alignment: Alignment.bottomLeft,
+                          child: Padding(
+                            padding: EdgeInsets.all(12.0),
+                            child: Text(
+                              'Default Image (Will be used if no custom image is uploaded)',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  )
-                : null,
-          ),
-        ],
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // Upload and remove buttons
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _isUploadingImage ? null : _uploadImage,
+                    icon: _isUploadingImage 
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.upload),
+                    label: Text(_isUploadingImage ? 'Uploading...' : 'Upload Custom Image'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+                if (_uploadedImageUrl != null) ...[
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: _removeImage,
+                    icon: const Icon(Icons.delete),
+                    label: const Text('Remove'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  // NEW: Upload image method
+  Future<void> _uploadImage() async {
+    setState(() {
+      _isUploadingImage = true;
+    });
+
+    try {
+      // Generate temporary ID for upload path
+      final tempId = DateTime.now().millisecondsSinceEpoch.toString();
+      
+      final imageUrl = await ImageUploadService.pickAndUploadImage(
+        type: 'facilities',
+        id: tempId,
+        context: context,
+      );
+
+      if (imageUrl != null) {
+        setState(() {
+          _uploadedImageUrl = imageUrl;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Image uploaded successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // Error handling is done in the service
+      print('Image upload error: $e');
+    } finally {
+      setState(() {
+        _isUploadingImage = false;
+      });
+    }
+  }
+
+  // NEW: Remove image method
+  void _removeImage() {
+    if (_uploadedImageUrl != null) {
+      // Optionally delete from storage
+      ImageUploadService.deleteImage(_uploadedImageUrl!);
+      setState(() {
+        _uploadedImageUrl = null;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Image removed'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
   }
 
   String _getDefaultImagePreview() {
@@ -366,9 +503,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         maxCapacity: int.parse(_capacityController.text.trim()),
-        imageUrl: _imageUrlController.text.trim().isEmpty
-            ? null
-            : _imageUrlController.text.trim(),
+        imageUrl: _uploadedImageUrl, // Use uploaded image or null for default
         isActive: _isActive,
         createdAt: now,
         updatedAt: now,

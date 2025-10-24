@@ -45,6 +45,10 @@ dependencies:
   # State management and utilities
   provider: ^6.1.2
   intl: ^0.19.0
+  
+  # Image handling
+  image_picker: ^1.0.7
+  path: ^1.8.3
 
 dev_dependencies:
   flutter_test:
@@ -56,6 +60,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

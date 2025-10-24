@@ -6,6 +6,7 @@ import '../../models/facility.dart';
 import '../../services/activity_service.dart';
 import '../../services/club_service.dart';
 import '../../services/facility_service.dart';
+import '../../services/imageUpload_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class AddActivityScreen extends StatefulWidget {
@@ -41,6 +42,9 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
   final List<String> _requirements = [];
   bool _isLoading = false;
   bool _isLoadingClubs = true;
+  
+  String? _uploadedImageUrl;
+  bool _isUploadingImage = false;
   
   final List<String> _categories = ['Wellness', 'Fitness', 'Kids', 'Workshops'];
   
@@ -227,6 +231,170 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     });
   }
   
+  Widget _buildImageSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Activity Image'),
+        const SizedBox(height: 8),
+        
+        // Requirements info box
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.blue.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.blue.withOpacity(0.3)),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, size: 16, color: Colors.blue[700]),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  ImageUploadService.getValidationRequirements(),
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 12),
+        
+        // Image preview or placeholder
+        Container(
+          width: double.infinity,
+          height: 200,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Colors.grey[300]!,
+              style: _uploadedImageUrl != null ? BorderStyle.solid : BorderStyle.solid,
+            ),
+          ),
+          child: _uploadedImageUrl != null
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    _uploadedImageUrl!,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey[200],
+                        child: const Icon(Icons.error, size: 50),
+                      );
+                    },
+                  ),
+                )
+              : Container(
+                  color: Colors.grey[50],
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.image, size: 48, color: Colors.grey[400]),
+                      const SizedBox(height: 8),
+                      Text(
+                        'No image selected',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+        ),
+        
+        const SizedBox(height: 12),
+        
+        // Upload and remove buttons
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: _isUploadingImage ? null : _uploadImage,
+                icon: _isUploadingImage 
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.upload),
+                label: Text(_isUploadingImage ? 'Uploading...' : 
+                           _uploadedImageUrl != null ? 'Change Image' : 'Upload Image'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+            if (_uploadedImageUrl != null) ...[
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: _removeImage,
+                icon: const Icon(Icons.delete),
+                label: const Text('Remove'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _uploadImage() async {
+    setState(() {
+      _isUploadingImage = true;
+    });
+
+    try {
+      // Generate temporary ID for upload path
+      final tempId = DateTime.now().millisecondsSinceEpoch.toString();
+      
+      final imageUrl = await ImageUploadService.pickAndUploadImage(
+        type: 'activities',
+        id: tempId,
+        context: context,
+      );
+
+      if (imageUrl != null) {
+        setState(() {
+          _uploadedImageUrl = imageUrl;
+        });
+      }
+    } catch (e) {
+      // Error handling is done in the service
+      print('Image upload error: $e');
+    } finally {
+      setState(() {
+        _isUploadingImage = false;
+      });
+    }
+  }
+
+  void _removeImage() {
+    if (_uploadedImageUrl != null) {
+      // Optionally delete from storage
+      ImageUploadService.deleteImage(_uploadedImageUrl!);
+      setState(() {
+        _uploadedImageUrl = null;
+      });
+    }
+  }
+  
   Future<void> _createActivity() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -284,9 +452,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
         memberPrice: double.parse(_memberPriceController.text),
         pointsReward: int.parse(_pointsController.text),
         requirements: _requirements,
-        imageUrl: _imageUrlController.text.trim().isEmpty 
-            ? _getDefaultImage(_selectedCategory) 
-            : _imageUrlController.text.trim(),
+        imageUrl: _uploadedImageUrl ?? _getDefaultImage(_selectedCategory),
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         createdBy: user.uid,
@@ -338,503 +504,457 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     }
   }
   
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+  }
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Create Activity'),
+        title: const Text('Add New Activity'),
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
       ),
-      body: _isLoadingClubs
-          ? const Center(child: CircularProgressIndicator())
-          : _ownedClubs.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.business, size: 64, color: Colors.grey),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'No Approved Clubs',
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'You need at least one approved club to create activities.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton.icon(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.arrow_back),
-                          label: const Text('Go Back'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.teal,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : Form(
-                  key: _formKey,
-                  child: ListView(
-                    padding: const EdgeInsets.all(16.0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSectionTitle('Basic Information'),
+              
+              const SizedBox(height: 16),
+              
+              // Club Selection
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Club Selection
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Club & Facility',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              DropdownButtonFormField<Club>(
-                                initialValue: _selectedClub,
-                                decoration: const InputDecoration(
-                                  labelText: 'Select Club *',
-                                  border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.business),
-                                ),
-                                items: _ownedClubs.map((club) {
-                                  return DropdownMenuItem(
-                                    value: club,
-                                    child: Text(club.name),
-                                  );
-                                }).toList(),
-                                onChanged: (club) {
-                                  setState(() {
-                                    _selectedClub = club;
-                                    if (club != null) {
-                                      _loadFacilities(club.id);
-                                    }
-                                  });
-                                },
-                                validator: (value) {
-                                  if (value == null) {
-                                    return 'Please select a club';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 16),
-                              DropdownButtonFormField<Facility>(
-                                initialValue: _selectedFacility,
-                                decoration: InputDecoration(
-                                  labelText: 'Select Facility *',
-                                  border: const OutlineInputBorder(),
-                                  prefixIcon: const Icon(Icons.location_city),
-                                  helperText: _selectedFacility != null
-                                      ? 'Max capacity: ${_selectedFacility!.maxCapacity} people'
-                                      : null,
-                                ),
-                                items: _facilities.map((facility) {
-                                  return DropdownMenuItem(
-                                    value: facility,
-                                    child: Text('${facility.title} (Max: ${facility.maxCapacity})'),
-                                  );
-                                }).toList(),
-                                onChanged: _selectedClub == null
-                                    ? null
-                                    : (facility) {
-                                        setState(() {
-                                          _selectedFacility = facility;
-                                        });
-                                      },
-                                validator: (value) {
-                                  if (value == null) {
-                                    return 'Please select a facility';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ],
-                          ),
+                      const Text(
+                        'Club & Facility',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      
                       const SizedBox(height: 16),
-                      
-                      // Activity Details
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Activity Details',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: _nameController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Activity Name *',
-                                  border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.title),
-                                ),
-                                validator: (value) {
-                                  if (value == null || value.trim().isEmpty) {
-                                    return 'Please enter activity name';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: _descriptionController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Description *',
-                                  border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.description),
-                                ),
-                                maxLines: 3,
-                                validator: (value) {
-                                  if (value == null || value.trim().isEmpty) {
-                                    return 'Please enter description';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 16),
-                              DropdownButtonFormField<String>(
-                                initialValue: _selectedCategory,
-                                decoration: const InputDecoration(
-                                  labelText: 'Category *',
-                                  border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.category),
-                                ),
-                                items: _categories.map((category) {
-                                  return DropdownMenuItem(
-                                    value: category,
-                                    child: Text(category),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  if (value != null) {
-                                    setState(() => _selectedCategory = value);
-                                  }
-                                },
-                              ),
-                            ],
-                          ),
+                      DropdownButtonFormField<Club>(
+                        initialValue: _selectedClub,
+                        decoration: const InputDecoration(
+                          labelText: 'Select Club *',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.business),
                         ),
+                        items: _ownedClubs.map((club) {
+                          return DropdownMenuItem(
+                            value: club,
+                            child: Text(club.name),
+                          );
+                        }).toList(),
+                        onChanged: (club) {
+                          setState(() {
+                            _selectedClub = club;
+                            if (club != null) {
+                              _loadFacilities(club.id);
+                            }
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null) {
+                            return 'Please select a club';
+                          }
+                          return null;
+                        },
                       ),
-                      
                       const SizedBox(height: 16),
-                      
-                      // Date & Time
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Schedule',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              ListTile(
-                                leading: const Icon(Icons.calendar_today),
-                                title: const Text('Date'),
-                                subtitle: Text(DateFormat('EEEE, MMM d, y').format(_selectedDate)),
-                                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                                onTap: _selectDate,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  side: BorderSide(color: Colors.grey.shade300),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              ListTile(
-                                leading: const Icon(Icons.access_time),
-                                title: const Text('Time'),
-                                subtitle: Text(_selectedTime.format(context)),
-                                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                                onTap: _selectTime,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  side: BorderSide(color: Colors.grey.shade300),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              // Duration field
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                                child: TextFormField(
-                                  controller: _durationController,
-                                  decoration: InputDecoration(
-                                    labelText: 'Duration (minutes) *',
-                                    border: const OutlineInputBorder(),
-                                    prefixIcon: const Icon(Icons.timer),
-                                    helperText: _calculateEndTime(),
-                                    helperMaxLines: 2,
-                                  ),
-                                  keyboardType: TextInputType.number,
-                                  onChanged: (_) => setState(() {}), // Refresh end time display
-                                  validator: (value) {
-                                    if (value == null || value.trim().isEmpty) {
-                                      return 'Please enter duration';
-                                    }
-                                    final duration = int.tryParse(value);
-                                    if (duration == null || duration < 15) {
-                                      return 'Duration must be at least 15 minutes';
-                                    }
-                                    if (duration > 480) {
-                                      return 'Duration cannot exceed 8 hours (480 min)';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
+                      DropdownButtonFormField<Facility>(
+                        initialValue: _selectedFacility,
+                        decoration: InputDecoration(
+                          labelText: 'Select Facility *',
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.location_city),
+                          helperText: _selectedFacility != null
+                              ? 'Max capacity: ${_selectedFacility!.maxCapacity} people'
+                              : null,
                         ),
+                        items: _facilities.map((facility) {
+                          return DropdownMenuItem(
+                            value: facility,
+                            child: Text('${facility.title} (Max: ${facility.maxCapacity})'),
+                          );
+                        }).toList(),
+                        onChanged: _selectedClub == null
+                            ? null
+                            : (facility) {
+                                setState(() {
+                                  _selectedFacility = facility;
+                                });
+                              },
+                        validator: (value) {
+                          if (value == null) {
+                            return 'Please select a facility';
+                          }
+                          return null;
+                        },
                       ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      // Capacity & Pricing
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Capacity & Pricing',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: _capacityController,
-                                decoration: InputDecoration(
-                                  labelText: 'Capacity *',
-                                  border: const OutlineInputBorder(),
-                                  prefixIcon: const Icon(Icons.people),
-                                  helperText: _selectedFacility != null
-                                      ? 'Maximum: ${_selectedFacility!.maxCapacity}'
-                                      : null,
-                                ),
-                                keyboardType: TextInputType.number,
-                                validator: (value) {
-                                  if (value == null || value.trim().isEmpty) {
-                                    return 'Please enter capacity';
-                                  }
-                                  final capacity = int.tryParse(value);
-                                  if (capacity == null || capacity <= 0) {
-                                    return 'Please enter a valid number';
-                                  }
-                                  if (_selectedFacility != null && capacity > _selectedFacility!.maxCapacity) {
-                                    return 'Exceeds facility max (${_selectedFacility!.maxCapacity})';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: TextFormField(
-                                      controller: _guestPriceController,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Guest Price (€) *',
-                                        border: OutlineInputBorder(),
-                                        prefixIcon: Icon(Icons.euro),
-                                      ),
-                                      keyboardType: TextInputType.number,
-                                      validator: (value) {
-                                        if (value == null || value.trim().isEmpty) {
-                                          return 'Required';
-                                        }
-                                        final price = double.tryParse(value);
-                                        if (price == null || price < 0) {
-                                          return 'Invalid';
-                                        }
-                                        return null;
-                                      },
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: TextFormField(
-                                      controller: _memberPriceController,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Member Price (€) *',
-                                        border: OutlineInputBorder(),
-                                        prefixIcon: Icon(Icons.card_membership),
-                                      ),
-                                      keyboardType: TextInputType.number,
-                                      validator: (value) {
-                                        if (value == null || value.trim().isEmpty) {
-                                          return 'Required';
-                                        }
-                                        final price = double.tryParse(value);
-                                        if (price == null || price < 0) {
-                                          return 'Invalid';
-                                        }
-                                        return null;
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: _pointsController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Points Reward *',
-                                  border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.star),
-                                ),
-                                keyboardType: TextInputType.number,
-                                validator: (value) {
-                                  if (value == null || value.trim().isEmpty) {
-                                    return 'Please enter points reward';
-                                  }
-                                  final points = int.tryParse(value);
-                                  if (points == null || points < 0) {
-                                    return 'Please enter a valid number';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      // Requirements
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    'Requirements',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  TextButton.icon(
-                                    onPressed: _addRequirement,
-                                    icon: const Icon(Icons.add),
-                                    label: const Text('Add'),
-                                  ),
-                                ],
-                              ),
-                              if (_requirements.isEmpty)
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 8.0),
-                                  child: Text(
-                                    'No requirements added',
-                                    style: TextStyle(color: Colors.grey),
-                                  ),
-                                )
-                              else
-                                ...List.generate(_requirements.length, (index) {
-                                  return ListTile(
-                                    leading: const Icon(Icons.check_circle_outline),
-                                    title: Text(_requirements[index]),
-                                    trailing: IconButton(
-                                      icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                      onPressed: () => _removeRequirement(index),
-                                    ),
-                                  );
-                                }),
-                            ],
-                          ),
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      // Image URL (Optional)
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Image',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: _imageUrlController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Image URL (Optional)',
-                                  border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.image),
-                                  helperText: 'Leave empty to use default category image',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 24),
-                      
-                      // Create Button
-                      SizedBox(
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _createActivity,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.teal,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: _isLoading
-                              ? const CircularProgressIndicator(color: Colors.white)
-                              : const Text(
-                                  'Create Activity',
-                                  style: TextStyle(fontSize: 18),
-                                ),
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 32),
                     ],
                   ),
                 ),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Activity Details
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Activity Details',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Activity Name *',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.title),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter activity name';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _descriptionController,
+                        decoration: const InputDecoration(
+                          labelText: 'Description *',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.description),
+                        ),
+                        maxLines: 3,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter description';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedCategory,
+                        decoration: const InputDecoration(
+                          labelText: 'Category *',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.category),
+                        ),
+                        items: _categories.map((category) {
+                          return DropdownMenuItem(
+                            value: category,
+                            child: Text(category),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() => _selectedCategory = value);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Date & Time
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Schedule',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ListTile(
+                        leading: const Icon(Icons.calendar_today),
+                        title: const Text('Date'),
+                        subtitle: Text(DateFormat('EEEE, MMM d, y').format(_selectedDate)),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: _selectDate,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: BorderSide(color: Colors.grey.shade300),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ListTile(
+                        leading: const Icon(Icons.access_time),
+                        title: const Text('Time'),
+                        subtitle: Text(_selectedTime.format(context)),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: _selectTime,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: BorderSide(color: Colors.grey.shade300),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // Duration field
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        child: TextFormField(
+                          controller: _durationController,
+                          decoration: InputDecoration(
+                            labelText: 'Duration (minutes) *',
+                            border: const OutlineInputBorder(),
+                            prefixIcon: const Icon(Icons.timer),
+                            helperText: _calculateEndTime(),
+                            helperMaxLines: 2,
+                          ),
+                          keyboardType: TextInputType.number,
+                          onChanged: (_) => setState(() {}), // Refresh end time display
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Please enter duration';
+                            }
+                            final duration = int.tryParse(value);
+                            if (duration == null || duration < 15) {
+                              return 'Duration must be at least 15 minutes';
+                            }
+                            if (duration > 480) {
+                              return 'Duration cannot exceed 8 hours (480 min)';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Capacity & Pricing
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Capacity & Pricing',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _capacityController,
+                        decoration: InputDecoration(
+                          labelText: 'Capacity *',
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.people),
+                          helperText: _selectedFacility != null
+                              ? 'Maximum: ${_selectedFacility!.maxCapacity}'
+                              : null,
+                        ),
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter capacity';
+                          }
+                          final capacity = int.tryParse(value);
+                          if (capacity == null || capacity <= 0) {
+                            return 'Please enter a valid number';
+                          }
+                          if (_selectedFacility != null && capacity > _selectedFacility!.maxCapacity) {
+                            return 'Exceeds facility max (${_selectedFacility!.maxCapacity})';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _guestPriceController,
+                              decoration: const InputDecoration(
+                                labelText: 'Guest Price (€) *',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.euro),
+                              ),
+                              keyboardType: TextInputType.number,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Required';
+                                }
+                                final price = double.tryParse(value);
+                                if (price == null || price < 0) {
+                                  return 'Invalid';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _memberPriceController,
+                              decoration: const InputDecoration(
+                                labelText: 'Member Price (€) *',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.card_membership),
+                              ),
+                              keyboardType: TextInputType.number,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Required';
+                                }
+                                final price = double.tryParse(value);
+                                if (price == null || price < 0) {
+                                  return 'Invalid';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _pointsController,
+                        decoration: const InputDecoration(
+                          labelText: 'Points Reward *',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.star),
+                        ),
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter points reward';
+                          }
+                          final points = int.tryParse(value);
+                          if (points == null || points < 0) {
+                            return 'Please enter a valid number';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Requirements
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Requirements',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: _addRequirement,
+                            icon: const Icon(Icons.add),
+                            label: const Text('Add'),
+                          ),
+                        ],
+                      ),
+                      if (_requirements.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8.0),
+                          child: Text(
+                            'No requirements added',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        )
+                      else
+                        ...List.generate(_requirements.length, (index) {
+                          return ListTile(
+                            leading: const Icon(Icons.check_circle_outline),
+                            title: Text(_requirements[index]),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.delete_outline, color: Colors.red),
+                              onPressed: () => _removeRequirement(index),
+                            ),
+                          );
+                        }),
+                    ],
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 24),
+              
+              _buildImageSection(), // Add image section here
+              
+              const SizedBox(height: 32),
+              
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _createActivity,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
+                          'Create Activity',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

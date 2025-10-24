@@ -150,7 +150,7 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Facility Image - FIXED
-          Container(
+          SizedBox(
             height: 160,
             width: double.infinity,
             child: Image.network(

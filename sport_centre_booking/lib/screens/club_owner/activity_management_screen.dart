@@ -6,6 +6,7 @@ import '../../services/activity_service.dart';
 import '../../services/club_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'add_activity_screen.dart';
+import 'edit_activity_screen.dart';
 
 class ActivityManagementScreen extends StatefulWidget {
   const ActivityManagementScreen({super.key});
@@ -299,10 +300,12 @@ class _ActivityManagementScreenState extends State<ActivityManagementScreen> {
 class _ActivityCard extends StatelessWidget {
   final Activity activity;
   final VoidCallback onDelete;
+  final VoidCallback? onEdit; // Add this parameter
 
   const _ActivityCard({
     required this.activity,
     required this.onDelete,
+    this.onEdit, // Add this parameter
   });
 
   @override
@@ -317,13 +320,13 @@ class _ActivityCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image header - FIXED
+          // Image header - NO 3-dots menu here anymore
           Stack(
             children: [
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
                 child: Image.network(
-                  activity.displayImageUrl, // ✅ Changed from activity.imageUrl
+                  activity.displayImageUrl,
                   height: 150,
                   width: double.infinity,
                   fit: BoxFit.cover,
@@ -380,6 +383,7 @@ class _ActivityCard extends StatelessWidget {
                   },
                 ),
               ),
+              
               // Category badge
               Positioned(
                 top: 8,
@@ -400,10 +404,11 @@ class _ActivityCard extends StatelessWidget {
                   ),
                 ),
               ),
+              
               // Past activity badge
               if (isPast)
                 Positioned(
-                  top: 8,
+                  bottom: 8,
                   left: 8,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -423,111 +428,136 @@ class _ActivityCard extends StatelessWidget {
                 ),
             ],
           ),
-
-          // Content
+          
+          // Activity details
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Title
-                Text(
-                  activity.name,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // Facility & Club
+                // Activity name with 3-dots menu - MOVED HERE like facility card
                 Row(
                   children: [
-                    const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                    const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        '${activity.facilityName} @ ${activity.clubName}',
-                        style: TextStyle(color: Colors.grey.shade600),
+                        activity.name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
+                    ),
+                    PopupMenuButton<String>(
+                      onSelected: (String value) {
+                        switch (value) {
+                          case 'edit':
+                            _editActivity(context);
+                            break;
+                          case 'delete':
+                            _confirmDelete(context);
+                            break;
+                        }
+                      },
+                      itemBuilder: (BuildContext context) => [
+                        // Edit option (only if not past activity)
+                        if (!isPast)
+                          const PopupMenuItem<String>(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(Icons.edit, size: 16),
+                                SizedBox(width: 8),
+                                Text('Edit'),
+                              ],
+                            ),
+                          ),
+                        
+                        // Delete option
+                        const PopupMenuItem<String>(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete, color: Colors.red, size: 16),
+                              SizedBox(width: 8),
+                              Text(
+                                'Delete',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
 
-                // Date & Time
+                // Date and time
                 Row(
                   children: [
-                    const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Text(dateFormat.format(activity.date)),
-                    const SizedBox(width: 16),
-                    const Icon(Icons.access_time, size: 16, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Text('${activity.time} - ${activity.endTimeFormatted}'),
+                    Icon(Icons.calendar_today, size: 16, color: Colors.grey.shade600),
                     const SizedBox(width: 4),
                     Text(
-                      '(${activity.duration}min)',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade600,
-                        fontStyle: FontStyle.italic,
-                      ),
+                      dateFormat.format(activity.date),
+                      style: TextStyle(color: Colors.grey.shade600),
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                    const SizedBox(width: 16),
+                    Icon(Icons.access_time, size: 16, color: Colors.grey.shade600),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${activity.time} - ${activity.endTimeFormatted}',
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Location
+                Row(
+                  children: [
+                    Icon(Icons.location_on, size: 16, color: Colors.grey.shade600),
+                    const SizedBox(width: 4),
+                    Expanded(
                       child: Text(
-                        activity.timeCategory,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.blue.shade700,
-                        ),
+                        '${activity.facilityName} @ ${activity.clubName}',
+                        style: TextStyle(color: Colors.grey.shade600),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
 
-                // Capacity & Pricing
+                // Capacity info
                 Row(
                   children: [
-                    // Capacity
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isFull ? Colors.red.shade50 : Colors.green.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.people,
-                            size: 16,
-                            color: isFull ? Colors.red : Colors.green,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${activity.bookedCount}/${activity.capacity}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: isFull ? Colors.red : Colors.green,
-                            ),
-                          ),
-                        ],
+                    Icon(Icons.people, size: 16, color: Colors.blue.shade600),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${activity.bookedCount}/${activity.capacity}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isFull ? Colors.red.shade600 : Colors.blue.shade600,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 4),
+                    Text(
+                      isFull ? 'Full' : 'spots',
+                      style: TextStyle(
+                        color: isFull ? Colors.red.shade600 : Colors.blue.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
 
-                    // Guest Price
+                // Pricing info
+                Row(
+                  children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.orange.shade50,
+                        color: Colors.orange.shade100,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -539,12 +569,10 @@ class _ActivityCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-
-                    // Member Price
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.purple.shade50,
+                        color: Colors.purple.shade100,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -557,7 +585,7 @@ class _ActivityCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
 
                 // Points
                 Row(
@@ -573,22 +601,6 @@ class _ActivityCard extends StatelessWidget {
                     ),
                   ],
                 ),
-
-                // Actions
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton.icon(
-                      onPressed: onDelete,
-                      icon: const Icon(Icons.delete, size: 18),
-                      label: const Text('Delete'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.red,
-                      ),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
@@ -597,22 +609,85 @@ class _ActivityCard extends StatelessWidget {
     );
   }
 
-  // Add this helper method for category icons
-  IconData _getCategoryIcon(String category) {
-    switch (category) {
-      case 'Wellness':
-        return Icons.spa;
-      case 'Fitness':
-        return Icons.fitness_center;
-      case 'Kids':
-        return Icons.child_care;
-      case 'Workshops':
-        return Icons.school;
-      default:
-        return Icons.event;
+  // Edit activity method
+  void _editActivity(BuildContext context) async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditActivityScreen(activity: activity),
+      ),
+    );
+    
+    // If edit was successful, refresh the parent list
+    if (result == true && context.mounted) {
+      if (onEdit != null) {
+        onEdit!(); // Call parent refresh callback
+      }
     }
   }
 
+  // Confirm delete method
+  void _confirmDelete(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Activity'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Are you sure you want to delete "${activity.name}"?'),
+              const SizedBox(height: 8),
+              if (activity.bookedCount > 0)
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning, color: Colors.orange[600], size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'This activity has ${activity.bookedCount} booking(s). Deleting will cancel all bookings.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.orange[700],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                onDelete();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Helper method for category colors
   Color _getCategoryColor(String category) {
     switch (category) {
       case 'Wellness':
@@ -625,6 +700,22 @@ class _ActivityCard extends StatelessWidget {
         return Colors.blue;
       default:
         return Colors.grey;
+    }
+  }
+
+  // Helper method for category icons
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case 'Wellness':
+        return Icons.spa;
+      case 'Fitness':
+        return Icons.fitness_center;
+      case 'Kids':
+        return Icons.child_care;
+      case 'Workshops':
+        return Icons.school;
+      default:
+        return Icons.event;
     }
   }
 }
