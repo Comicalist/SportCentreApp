@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/facility.dart';
 import '../../services/facility_service.dart';
+import '../../services/imageUpload_service.dart'; // Add this import
 
 class EditFacilityScreen extends StatefulWidget {
   final Facility facility;
@@ -19,10 +20,13 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
   late TextEditingController _capacityController;
-  late TextEditingController _imageUrlController;
   
   late bool _isActive;
   bool _isLoading = false;
+  
+  // Add image upload state
+  String? _newImageUrl; // For tracking new uploaded image
+  bool _isUploadingImage = false;
   
   final FacilityService _facilityService = FacilityService();
 
@@ -32,7 +36,6 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
     _titleController = TextEditingController(text: widget.facility.title);
     _descriptionController = TextEditingController(text: widget.facility.description);
     _capacityController = TextEditingController(text: widget.facility.maxCapacity.toString());
-    _imageUrlController = TextEditingController(text: widget.facility.imageUrl ?? '');
     _isActive = widget.facility.isActive;
   }
 
@@ -41,7 +44,6 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
     _titleController.dispose();
     _descriptionController.dispose();
     _capacityController.dispose();
-    _imageUrlController.dispose();
     super.dispose();
   }
 
@@ -73,7 +75,7 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
                     const SizedBox(height: 24),
                     _buildFacilityForm(),
                     const SizedBox(height: 24),
-                    _buildImagePreview(),
+                    _buildImageSection(), // Updated method
                     const SizedBox(height: 32),
                     _buildUpdateButton(),
                   ],
@@ -232,27 +234,6 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
             ),
             const SizedBox(height: 16),
             
-            // Image URL (Optional)
-            TextFormField(
-              controller: _imageUrlController,
-              decoration: const InputDecoration(
-                labelText: 'Image URL (Optional)',
-                hintText: 'https://example.com/facility-image.jpg',
-                border: OutlineInputBorder(),
-                helperText: 'Leave empty to use a default image based on facility type',
-              ),
-              validator: (value) {
-                if (value != null && value.isNotEmpty) {
-                  final uri = Uri.tryParse(value);
-                  if (uri == null || !uri.hasScheme) {
-                    return 'Please enter a valid URL';
-                  }
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            
             // Active Status
             SwitchListTile(
               title: const Text('Active Status'),
@@ -267,74 +248,162 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
     );
   }
 
-  Widget _buildImagePreview() {
-    final imageUrl = _imageUrlController.text.trim();
-    final previewUrl = imageUrl.isNotEmpty 
-        ? imageUrl 
-        : _getDefaultImagePreview();
-
+  // NEW: Updated image section with upload functionality
+  Widget _buildImageSection() {
+    final currentImageUrl = _newImageUrl ?? widget.facility.displayImageUrl;
+    
     return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                const Icon(Icons.preview, color: Colors.teal),
-                const SizedBox(width: 8),
-                const Text(
-                  'Image Preview',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Facility Image',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-          ),
-          Container(
-            height: 160,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              image: DecorationImage(
-                image: NetworkImage(previewUrl),
-                fit: BoxFit.cover,
+            const SizedBox(height: 12),
+            
+            // Current image preview
+            Container(
+              width: double.infinity,
+              height: 200,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[300]!),
               ),
-            ),
-            child: imageUrl.isEmpty
-                ? Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.7),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  currentImageUrl,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      color: Colors.grey[100],
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                          color: Colors.teal,
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color: Colors.grey[200],
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.image_not_supported, size: 48, color: Colors.grey[400]),
+                          const SizedBox(height: 8),
+                          Text('Image not available', style: TextStyle(color: Colors.grey[600])),
                         ],
                       ),
-                    ),
-                    child: const Align(
-                      alignment: Alignment.bottomLeft,
-                      child: Padding(
-                        padding: EdgeInsets.all(12.0),
-                        child: Text(
-                          'Default Image',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Upload new image button
+            ElevatedButton.icon(
+              onPressed: _isUploadingImage ? null : _uploadNewImage,
+              icon: _isUploadingImage 
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.upload),
+              label: Text(_isUploadingImage ? 'Uploading...' : 'Change Image'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal,
+                foregroundColor: Colors.white,
+              ),
+            ),
+            
+            if (_newImageUrl != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.green[600], size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'New image ready! Save to apply changes.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.green[700],
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
-                  )
-                : null,
-          ),
-        ],
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
+  }
+
+  // NEW: Upload new image method
+  Future<void> _uploadNewImage() async {
+    setState(() {
+      _isUploadingImage = true;
+    });
+
+    try {
+      final imageUrl = await ImageUploadService.pickAndUploadImage(
+        type: 'facilities',
+        id: widget.facility.id,
+        context: context,
+      );
+
+      if (imageUrl != null) {
+        setState(() {
+          _newImageUrl = imageUrl;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('New image uploaded! Save to apply changes.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to upload image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingImage = false;
+        });
+      }
+    }
   }
 
   String _getDefaultImagePreview() {
@@ -398,9 +467,7 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         maxCapacity: int.parse(_capacityController.text.trim()),
-        imageUrl: _imageUrlController.text.trim().isEmpty 
-            ? null 
-            : _imageUrlController.text.trim(),
+        imageUrl: _newImageUrl ?? widget.facility.imageUrl, // Use new image or keep existing
         isActive: _isActive,
         updatedAt: DateTime.now(),
       );
