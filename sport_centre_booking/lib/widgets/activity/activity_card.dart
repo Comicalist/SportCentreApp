@@ -25,7 +25,7 @@ class ActivityCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(AppConstants.shadowOpacity),
+            color: Colors.black.withValues(alpha: AppConstants.shadowOpacity),
             blurRadius: AppConstants.shadowBlurRadius,
             offset: AppConstants.shadowOffset,
           ),
@@ -74,8 +74,8 @@ class ActivityCard extends StatelessWidget {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        ActivityHelpers.getCategoryColor(activity.category).withOpacity(0.7),
-                        ActivityHelpers.getCategoryColor(activity.category).withOpacity(0.4),
+                        ActivityHelpers.getCategoryColor(activity.category).withValues(alpha: 0.7),
+                        ActivityHelpers.getCategoryColor(activity.category).withValues(alpha: 0.4),
                       ],
                     ),
                   ),
@@ -100,8 +100,8 @@ class ActivityCard extends StatelessWidget {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        ActivityHelpers.getCategoryColor(activity.category).withOpacity(0.7),
-                        ActivityHelpers.getCategoryColor(activity.category).withOpacity(0.4),
+                        ActivityHelpers.getCategoryColor(activity.category).withValues(alpha: 0.7),
+                        ActivityHelpers.getCategoryColor(activity.category).withValues(alpha: 0.4),
                       ],
                     ),
                   ),
@@ -128,7 +128,7 @@ class ActivityCard extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withOpacity(0.3),
+                  Colors.black.withValues(alpha: 0.3),
                   Colors.transparent,
                 ],
               ),

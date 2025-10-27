@@ -89,7 +89,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(AppConstants.shadowOpacity),
+            color: Colors.black.withValues(alpha: AppConstants.shadowOpacity),
             blurRadius: AppConstants.shadowBlurRadius,
             offset: AppConstants.shadowOffset,
           ),
@@ -109,8 +109,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  ActivityHelpers.getCategoryColor(widget.activity.category).withOpacity(0.8),
-                  ActivityHelpers.getCategoryColor(widget.activity.category).withOpacity(0.6),
+                  ActivityHelpers.getCategoryColor(widget.activity.category).withValues(alpha: 0.8),
+                  ActivityHelpers.getCategoryColor(widget.activity.category).withValues(alpha: 0.6),
                 ],
               ),
             ),
@@ -326,7 +326,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(AppConstants.shadowOpacity),
+            color: Colors.black.withValues(alpha: AppConstants.shadowOpacity),
             blurRadius: AppConstants.shadowBlurRadius,
             offset: AppConstants.shadowOffset,
           ),
@@ -349,9 +349,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.teal.withOpacity(0.1),
+                color: Colors.teal.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppConstants.filterBorderRadius),
-                border: Border.all(color: Colors.teal.withOpacity(0.3)),
+                border: Border.all(color: Colors.teal.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
@@ -378,9 +378,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
+                color: Colors.orange.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppConstants.filterBorderRadius),
-                border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
@@ -416,7 +416,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(AppConstants.shadowOpacity),
+            color: Colors.black.withValues(alpha: AppConstants.shadowOpacity),
             blurRadius: AppConstants.shadowBlurRadius,
             offset: AppConstants.shadowOffset,
           ),
@@ -506,7 +506,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(AppConstants.shadowOpacity),
+            color: Colors.black.withValues(alpha: AppConstants.shadowOpacity),
             blurRadius: AppConstants.shadowBlurRadius,
             offset: AppConstants.shadowOffset,
           ),
@@ -612,7 +612,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
+              color: Colors.orange.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppConstants.filterBorderRadius),
             ),
             child: Row(
@@ -647,7 +647,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(AppConstants.shadowOpacity),
+            color: Colors.black.withValues(alpha: AppConstants.shadowOpacity),
             blurRadius: AppConstants.shadowBlurRadius,
             offset: AppConstants.shadowOffset,
           ),

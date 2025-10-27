@@ -12,7 +12,6 @@ class ActivitySeeder {
 
   /// Create sample activities for all approved clubs with facilities
   static Future<void> seedActivities() async {
-    print('🌱 Starting Activity Seeding...');
 
     try {
       // Get current user for createdBy field
@@ -21,18 +20,14 @@ class ActivitySeeder {
         throw Exception('User must be authenticated to seed data');
       }
 
-      print('📋 Fetching approved clubs...');
       final clubsSnapshot = await _firestore
           .collection('clubs')
           .where('isApproved', isEqualTo: true)
           .get();
 
       if (clubsSnapshot.docs.isEmpty) {
-        print('⚠️ No approved clubs found. Please approve clubs first.');
         return;
       }
-
-      print('✅ Found ${clubsSnapshot.docs.length} approved clubs');
 
       int totalActivitiesCreated = 0;
 
@@ -42,7 +37,6 @@ class ActivitySeeder {
         final clubName = clubData['name'] as String;
         final clubOwnerId = clubData['ownerId'] as String;
 
-        print('\n🏢 Processing club: $clubName (ID: $clubId)');
 
         // Get facilities for this club
         final facilitiesSnapshot = await _firestore
@@ -52,11 +46,8 @@ class ActivitySeeder {
             .get();
 
         if (facilitiesSnapshot.docs.isEmpty) {
-          print('  ⚠️ No active facilities for $clubName. Skipping...');
           continue;
         }
-
-        print('  ✅ Found ${facilitiesSnapshot.docs.length} facilities');
 
         // Create 2-3 activities per facility
         for (var facilityDoc in facilitiesSnapshot.docs) {
@@ -64,8 +55,6 @@ class ActivitySeeder {
           final facilityId = facilityDoc.id;
           final facilityName = facilityData['title'] as String;
           final facilityMaxCapacity = facilityData['maxCapacity'] as int;
-
-          print('    📍 Facility: $facilityName (Max: $facilityMaxCapacity)');
 
           // Determine activities based on facility type
           final activities = _getActivitiesForFacility(
@@ -84,18 +73,14 @@ class ActivitySeeder {
 
               await _firestore.collection('activities').add(activityData);
               totalActivitiesCreated++;
-              print('      ✅ Created: ${activity.name}');
             } catch (e) {
-              print('      ❌ Error creating ${activity.name}: $e');
+              // Log error but continue with other activities
             }
           }
         }
       }
 
-      print('\n🎉 Seeding Complete!');
-      print('📊 Total activities created: $totalActivitiesCreated');
     } catch (e) {
-      print('❌ Error during seeding: $e');
       rethrow;
     }
   }
@@ -383,17 +368,13 @@ class ActivitySeeder {
 
   /// Delete all existing activities (for clean re-seeding)
   static Future<void> clearAllActivities() async {
-    print('🗑️ Clearing all existing activities...');
 
     try {
       final snapshot = await _firestore.collection('activities').get();
       
       if (snapshot.docs.isEmpty) {
-        print('✅ No activities to clear');
         return;
       }
-
-      print('📋 Found ${snapshot.docs.length} activities to delete');
 
       final batch = _firestore.batch();
       for (var doc in snapshot.docs) {
@@ -401,9 +382,7 @@ class ActivitySeeder {
       }
 
       await batch.commit();
-      print('✅ All activities cleared');
     } catch (e) {
-      print('❌ Error clearing activities: $e');
       rethrow;
     }
   }

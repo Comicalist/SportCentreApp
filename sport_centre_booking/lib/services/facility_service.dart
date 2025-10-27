@@ -7,26 +7,18 @@ class FacilityService {
   /// Get all facilities for a specific club
   Future<List<Facility>> getClubFacilities({required String clubId}) async {
     try {
-      print('Debug: Fetching facilities for clubId: $clubId');
 
       final querySnapshot = await _firestore
           .collection('facilities')
           .where('clubId', isEqualTo: clubId)
           .get();
 
-      print('Debug: Found ${querySnapshot.docs.length} facility documents');
-
       final facilities = <Facility>[];
       for (var doc in querySnapshot.docs) {
         try {
-          print('Debug: Processing facility doc ID: ${doc.id}');
-          print('Debug: Document data: ${doc.data()}');
-
           final facility = Facility.fromJson(doc.data(), doc.id);
           facilities.add(facility);
-          print('Debug: Successfully parsed facility: ${facility.title}');
         } catch (e) {
-          print('Debug: Error parsing facility ${doc.id}: $e');
           // Continue with other facilities instead of failing completely
         }
       }
@@ -34,11 +26,8 @@ class FacilityService {
       // Sort manually to avoid needing composite index
       facilities.sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
-      print('Debug: Successfully parsed ${facilities.length} facilities');
       return facilities;
     } catch (e) {
-      print('Debug: Error in getClubFacilities: $e');
-      print('Debug: Error type: ${e.runtimeType}');
       throw Exception('Failed to fetch facilities: $e');
     }
   }
@@ -131,9 +120,7 @@ class FacilityService {
       // Commit all deletions
       await batch.commit();
       
-      print('✅ Facility and all related activities deleted successfully');
     } catch (e) {
-      print('❌ Error deleting facility: $e');
       throw Exception('Failed to delete facility: $e');
     }
   }

@@ -91,7 +91,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
           Text(
             'Please review your booking details below',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               fontSize: 16,
             ),
             textAlign: TextAlign.center,

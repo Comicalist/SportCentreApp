@@ -41,7 +41,6 @@ class BookingProvider extends ChangeNotifier {
 
   /// Start a new booking flow
   void startBooking(Activity activity, AuthProvider authProvider) {
-    print('Starting booking for activity: ${activity.name}, user logged in: ${authProvider.isLoggedIn}');
     
     // Clear any previous booking result
     _lastCreatedBooking = null;
@@ -56,8 +55,6 @@ class BookingProvider extends ChangeNotifier {
       totalPrice: _calculatePrice(activity, authProvider.isLoggedIn, 1),
       expectedPoints: _calculatePoints(activity, authProvider.isLoggedIn, 1),
     );
-    
-    print('Booking details initialized: totalPrice=${_currentBookingDetails!.totalPrice}, expectedPoints=${_currentBookingDetails!.expectedPoints}');
     
     _clearError();
     notifyListeners();
@@ -152,7 +149,6 @@ class BookingProvider extends ChangeNotifier {
       _setLoading(false);
       return success;
     } catch (e) {
-      print('BookingProvider: Error cancelling booking: $e');
       _setError('Failed to cancel booking: ${e.toString()}');
       _setLoading(false);
       return false;

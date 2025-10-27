@@ -18,20 +18,9 @@ class ClubService {
         createdAt: DateTime.now(),
       );
 
-      print('🔄 SUBMITTING CLUB FOR APPROVAL:');
-      print('   Name: ${pendingClub.name}');
-      print('   Owner: ${pendingClub.ownerId}');
-      print('   Location: ${pendingClub.location}');
-      print('   isApproved: ${pendingClub.isApproved}');
-      print('   isActive: ${pendingClub.isActive}');
-      print('   Firestore ID: ${docRef.id}');
-
       await docRef.set(pendingClub.toMap());
 
-      print('✅ CLUB SUBMITTED SUCCESSFULLY!');
-      print('   Document ID: ${docRef.id}');
     } catch (e) {
-      print('❌ ERROR SUBMITTING CLUB: $e');
       rethrow;
     }
   }
@@ -147,7 +136,6 @@ class ClubService {
 
   /// Fetch only approved clubs owned by a specific user
   Future<List<Club>> getApprovedOwnedClubs({required String ownerId}) async {
-    print('🔄 FETCHING APPROVED OWNED CLUBS FOR USER: $ownerId');
     
     // Use manual filtering approach to avoid composite index issues
     // Once the composite index is fully built, this can be optimized
@@ -156,8 +144,6 @@ class ClubService {
           .collection('clubs')
           .where('ownerId', isEqualTo: ownerId)
           .get();
-
-      print('📦 GOT ${snapshot.docs.length} TOTAL CLUBS FOR OWNER');
       
       final clubs = snapshot.docs
           .map((doc) => Club.fromFirestore(doc))
@@ -165,15 +151,9 @@ class ClubService {
           .toList();
       
       clubs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-      print('✅ FOUND ${clubs.length} APPROVED OWNED CLUBS');
-      for (var club in clubs) {
-        print('   - ${club.name} (ID: ${club.id}, isApproved: ${club.isApproved}, isActive: ${club.isActive})');
-      }
       
       return clubs;
     } catch (e) {
-      print('❌ ERROR FETCHING APPROVED OWNED CLUBS: $e');
       return [];
     }
   }
@@ -201,7 +181,6 @@ class ClubService {
 
       return snapshot.docs.length;
     } catch (e) {
-      print('Error fetching pending owned club count: $e');
       return 0;
     }
   }
@@ -287,9 +266,7 @@ class ClubService {
       // Commit all deletions
       await batch.commit();
       
-      print('✅ Club and all related data deleted successfully');
     } catch (e) {
-      print('❌ Error deleting club: $e');
       throw Exception('Failed to delete club: $e');
     }
   }
@@ -317,7 +294,6 @@ class ClubService {
           .get();
       return snapshot.docs.length;
     } catch (e) {
-      print('Error fetching activities count for club $clubId: $e');
       return 0;
     }
   }
@@ -331,7 +307,6 @@ class ClubService {
       }
       return null;
     } catch (e) {
-      print('Error fetching club by ID $clubId: $e');
       return null;
     }
   }
@@ -345,7 +320,6 @@ class ClubService {
           .get();
       return snapshot.docs.length;
     } catch (e) {
-      print('Error fetching pending clubs count: $e');
       return 0;
     }
   }
@@ -356,7 +330,6 @@ class ClubService {
       final snapshot = await _firestore.collection('clubs').get();
       return snapshot.docs.length;
     } catch (e) {
-      print('Error fetching total clubs count: $e');
       return 0;
     }
   }

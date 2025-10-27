@@ -31,7 +31,7 @@ class UserService extends ChangeNotifier { // Add extends ChangeNotifier
         return _currentUserProfile;
       }
     } catch (e) {
-      print('Error loading user profile: $e');
+      // Handle error if needed
     }
     return null;
   }

@@ -25,10 +25,10 @@ class AuthService {
         email: email.trim(),
         password: password,
       );
-      
+
       // Update last login
       await updateLastLogin();
-      
+
       return result;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
@@ -55,15 +55,13 @@ class AuthService {
 
       if (result.user != null) {
         await _createUserDocument(
-          result.user!, 
+          result.user!,
           displayName.trim(),
           isClubOwner: isClubOwner, // Pass the parameter
         );
-        
+
         // Send email verification automatically
-        print('📤 Sending verification email to: ${result.user!.email}');
         await result.user!.sendEmailVerification();
-        print('✅ Verification email sent successfully!');
       }
 
       return result;
@@ -111,17 +109,12 @@ class AuthService {
 
   /// Reload current user to check verification status
   static Future<void> reloadUser() async {
-    try {
-      await currentUser?.reload();
-    } catch (e) {
-      // Silently fail - not critical
-      print('Failed to reload user: $e');
-    }
+    await currentUser?.reload();
   }
 
   /// Create user document in Firestore with default values - UPDATED with isClubOwner
   static Future<void> _createUserDocument(
-    User user, 
+    User user,
     String displayName, {
     bool isClubOwner = false, // Add this parameter
   }) async {
@@ -143,10 +136,9 @@ class AuthService {
       'isMember': false,
       'membershipType': null,
       'membershipExpiry': null,
-      
+
       // NEW: Club owner flag
       'isClubOwner': isClubOwner, // Save the club owner status
-      
       // Add fields for UserProfile model
       'bookingHistory': [],
       'upcomingBookings': [],
@@ -158,14 +150,9 @@ class AuthService {
   static Future<void> updateLastLogin() async {
     final user = currentUser;
     if (user != null) {
-      try {
-        await _firestore.collection('users').doc(user.uid).update({
-          'lastLoginAt': FieldValue.serverTimestamp(),
-        });
-      } catch (e) {
-        // Silently fail - not critical
-        print('Failed to update last login: $e');
-      }
+      await _firestore.collection('users').doc(user.uid).update({
+        'lastLoginAt': FieldValue.serverTimestamp(),
+      });
     }
   }
 
