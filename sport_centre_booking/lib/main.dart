@@ -1,10 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
+import 'package:logger/logger.dart';
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'providers/booking_provider.dart';
 import 'widgets/auth/auth_wrapper.dart';
+
+// Global logger instance
+final logger = Logger(
+  printer: PrettyPrinter(
+    methodCount: 2,
+    errorMethodCount: 8,
+    lineLength: 120,
+    colors: true,
+    printEmojis: true,
+    printTime: true,
+  ),
+);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,9 +26,21 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    print('Firebase initialized successfully');
-  } catch (e) {
-    print('Firebase initialization failed: $e');
+    logger.i('Firebase initialized successfully');
+  } catch (e, stackTrace) {
+    logger.e(
+      'Firebase initialization failed',
+      error: e,
+      stackTrace: stackTrace,
+    );
+    
+    // In a production app, you might want to:
+    // 1. Show an error dialog to the user
+    // 2. Prevent the app from continuing
+    // 3. Send crash reports to a service like Firebase Crashlytics
+    
+    // For now, we'll continue but the app might not work properly
+    logger.w('Continuing app startup despite Firebase initialization failure');
   }
   
   runApp(const MyApp());

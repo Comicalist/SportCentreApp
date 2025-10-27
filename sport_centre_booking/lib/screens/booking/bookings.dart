@@ -125,7 +125,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                             selectedFilter = filter;
                           });
                         },
-                        selectedColor: AppColors.primary.withOpacity(0.2),
+                        selectedColor: AppColors.primary.withValues(alpha: 0.2),
                         checkmarkColor: AppColors.primary,
                       ),
                     )).toList(),
@@ -374,27 +374,27 @@ class _BookingsScreenState extends State<BookingsScreen> {
 
     switch (status) {
       case BookingStatus.pending:
-        backgroundColor = Colors.orange.withOpacity(0.1);
+        backgroundColor = Colors.orange.withValues(alpha: 0.1);
         textColor = Colors.orange[700]!;
         text = 'Pending';
         break;
       case BookingStatus.confirmed:
-        backgroundColor = AppColors.primary.withOpacity(0.1);
+        backgroundColor = AppColors.primary.withValues(alpha: 0.1);
         textColor = AppColors.primary;
         text = 'Confirmed';
         break;
       case BookingStatus.completed:
-        backgroundColor = Colors.green.withOpacity(0.1);
+        backgroundColor = Colors.green.withValues(alpha: 0.1);
         textColor = Colors.green[700]!;
         text = 'Completed';
         break;
       case BookingStatus.cancelled:
-        backgroundColor = Colors.red.withOpacity(0.1);
+        backgroundColor = Colors.red.withValues(alpha: 0.1);
         textColor = Colors.red[700]!;
         text = 'Cancelled';
         break;
       case BookingStatus.waitlist:
-        backgroundColor = Colors.orange.withOpacity(0.1);
+        backgroundColor = Colors.orange.withValues(alpha: 0.1);
         textColor = Colors.orange[700]!;
         text = 'Waitlist';
         break;

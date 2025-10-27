@@ -66,7 +66,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
     _requirements.addAll(activity.requirements);
     
     // Parse time
-    try {
+   
       final timeParts = activity.time.split(':');
       if (timeParts.length == 2) {
         _selectedTime = TimeOfDay(
@@ -74,9 +74,6 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
           minute: int.parse(timeParts[1]),
         );
       }
-    } catch (e) {
-      print('Error parsing time: $e');
-    }
   }
   
   @override

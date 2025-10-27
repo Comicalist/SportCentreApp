@@ -354,8 +354,8 @@ class _ActivityCard extends StatelessWidget {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            _getCategoryColor(activity.category).withOpacity(0.7),
-                            _getCategoryColor(activity.category).withOpacity(0.4),
+                            _getCategoryColor(activity.category).withValues(alpha: 0.7),
+                            _getCategoryColor(activity.category).withValues(alpha: 0.4),
                           ],
                         ),
                       ),
@@ -372,7 +372,7 @@ class _ActivityCard extends StatelessWidget {
                             Text(
                               'Image not available',
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.8),
+                                color: Colors.white.withValues(alpha: 0.8),
                                 fontSize: 12,
                               ),
                             ),

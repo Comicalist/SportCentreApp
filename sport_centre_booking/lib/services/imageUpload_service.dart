@@ -127,7 +127,7 @@ class ImageUploadService {
       // Generate unique filename following your existing pattern
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final extension = path.extension(image.path);
-      final fileName = '${timestamp}_${id}$extension';
+      final fileName = '${timestamp}_$id$extension';
 
       // Create storage reference
       final Reference ref = _storage.ref().child('$type/$id/$fileName');
@@ -141,7 +141,6 @@ class ImageUploadService {
 
       return downloadUrl;
     } catch (e) {
-      print('Error uploading image: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -169,9 +168,9 @@ class ImageUploadService {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
+                  color: Colors.blue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                  border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -230,7 +229,6 @@ class ImageUploadService {
       final Reference ref = _storage.refFromURL(imageUrl);
       await ref.delete();
     } catch (e) {
-      print('Warning: Could not delete image: $e');
       // Don't throw error - image might already be deleted
     }
   }

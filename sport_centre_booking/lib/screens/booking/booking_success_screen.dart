@@ -85,7 +85,7 @@ class BookingSuccessScreen extends StatelessWidget {
           Text(
             'Your spot is reserved',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               fontSize: 16,
             ),
           ),

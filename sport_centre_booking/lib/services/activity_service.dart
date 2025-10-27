@@ -171,16 +171,12 @@ class ActivityService {
 
   /// Get count of activities for a club (for dashboard stats)
   static Future<int> getClubActivityCount(String clubId) async {
-    try {
+
       final snapshot = await _firestore
           .collection(_collection)
           .where('clubId', isEqualTo: clubId)
           .get();
       return snapshot.size;
-    } catch (e) {
-      print('Error getting club activity count: $e');
-      return 0;
-    }
   }
 
   // ========== CREATE / UPDATE / DELETE OPERATIONS ==========
@@ -191,12 +187,6 @@ class ActivityService {
     required String currentUserId,
   }) async {
     try {
-      print('🔄 CREATING ACTIVITY:');
-      print('   Name: ${activity.name}');
-      print('   Club ID: ${activity.clubId}');
-      print('   Facility ID: ${activity.facilityId}');
-      print('   Created by: $currentUserId');
-
       // 🔒 VALIDATION 1: Verify user owns the club
       final clubDoc = await _firestore
           .collection('clubs')
@@ -257,12 +247,8 @@ class ActivityService {
 
       final docRef = await _firestore.collection(_collection).add(activityData);
 
-      print('✅ ACTIVITY CREATED SUCCESSFULLY!');
-      print('   Document ID: ${docRef.id}');
-
       return docRef.id;
     } catch (e) {
-      print('❌ ERROR CREATING ACTIVITY: $e');
       rethrow;
     }
   }
@@ -273,7 +259,6 @@ class ActivityService {
     required String currentUserId,
   }) async {
     try {
-      print('🔄 UPDATING ACTIVITY: ${activity.id}');
 
       // 🔒 VALIDATION: Verify user owns the club
       final clubDoc = await _firestore
@@ -304,9 +289,7 @@ class ActivityService {
           .doc(activity.id)
           .update(activityData);
 
-      print('✅ ACTIVITY UPDATED SUCCESSFULLY');
     } catch (e) {
-      print('❌ ERROR UPDATING ACTIVITY: $e');
       rethrow;
     }
   }
@@ -318,7 +301,6 @@ class ActivityService {
     required String currentUserId,
   }) async {
     try {
-      print('🔄 DELETING ACTIVITY: $activityId');
 
       // Get activity to check date
       final activityDoc = await _firestore
@@ -370,9 +352,7 @@ class ActivityService {
       }
 
       await _firestore.collection(_collection).doc(activityId).delete();
-      print('✅ ACTIVITY DELETED SUCCESSFULLY');
     } catch (e) {
-      print('❌ ERROR DELETING ACTIVITY: $e');
       rethrow;
     }
   }
