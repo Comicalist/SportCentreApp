@@ -3,6 +3,8 @@ import '../../models/club.dart';
 import '../../services/club_service.dart';
 import 'edit_club_screen.dart';
 import '../facilities/club_facilities_screen.dart';
+import 'edit_open_hours_screen.dart';
+
 
 class ClubDetailScreen extends StatefulWidget {
   final Club club;
@@ -142,14 +144,27 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
                 ),
               ],
             ),
+
             const SizedBox(height: 16),
+            
             _buildActionTile(
               icon: Icons.home_work,
               title: 'View Facilities',
               subtitle: 'Manage club facilities and resources',
               onTap: _viewFacilities,
             ),
+
             const Divider(),
+
+            _buildActionTile(
+              icon: Icons.access_time,
+              title: 'Edit Open Hours',
+              subtitle: 'Adjust or block specific club hours',
+              onTap: _editOpenHours,
+            ),
+
+            const Divider(),
+
             _buildActionTile(
               icon: Icons.delete,
               title: 'Delete Club',
@@ -208,6 +223,16 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
       ),
     );
   }
+
+  void _editOpenHours() {
+    Navigator.push(
+      context,
+    MaterialPageRoute(
+        builder: (context) => EditOpenHoursScreen(club: _currentClub),
+      ),
+    );
+  }
+
 
   void _confirmDelete() {
     showDialog(
