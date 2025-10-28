@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:table_calendar/table_calendar.dart';
 import '../../models/activity.dart';
+import '../../models/booking.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/booking_provider.dart';
 import '../../utils/activity_helpers.dart';
@@ -25,15 +27,21 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   int _participantCount = 1;
   bool _agreeToTerms = false;
   bool _isLoading = false;
+  DateTime _focusedDay = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    // Initialize booking flow when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
       bookingProvider.startBooking(widget.activity, authProvider);
+
+      // Make sure the bookings stream is initialized (even if empty)
+      final uid = authProvider.firebaseUser?.uid;
+      if (uid != null) {
+        bookingProvider.loadUserBookings(uid);
+      }
     });
   }
 
@@ -42,10 +50,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     return Consumer2<AuthProvider, BookingProvider>(
       builder: (context, authProvider, bookingProvider, child) {
         final isMember = authProvider.isLoggedIn;
-        final currentPrice = isMember ? widget.activity.memberPrice : widget.activity.guestPrice;
+        final currentPrice =
+            isMember ? widget.activity.memberPrice : widget.activity.guestPrice;
         final totalPrice = currentPrice * _participantCount;
-        // Use unified points from provider (calculated by BookingService)
-        final expectedPoints = bookingProvider.currentBookingDetails?.expectedPoints ?? 0;
+        final expectedPoints =
+            bookingProvider.currentBookingDetails?.expectedPoints ?? 0;
 
         return Scaffold(
           backgroundColor: Colors.grey[50],
@@ -68,7 +77,10 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       const SizedBox(height: AppConstants.largeSpacing),
                       _buildParticipantSelector(),
                       const SizedBox(height: AppConstants.largeSpacing),
-                      _buildPricingBreakdown(isMember, currentPrice, totalPrice, expectedPoints),
+                      _buildPricingBreakdown(
+                          isMember, currentPrice, totalPrice, expectedPoints),
+                      const SizedBox(height: AppConstants.largeSpacing),
+                      _buildCalendarSection(bookingProvider),
                       const SizedBox(height: AppConstants.largeSpacing),
                       _buildTermsAndConditions(),
                       const SizedBox(height: AppConstants.largeSpacing * 2),
@@ -78,6 +90,146 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 ),
         );
       },
+    );
+  }
+
+  // Helper pour normaliser les dates à minuit
+  DateTime _atMidnight(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  /// --- 📅 CALENDAR SECTION ---
+  Widget _buildCalendarSection(BookingProvider bookingProvider) {
+    final Stream<List<Booking>> safeStream =
+        bookingProvider.userBookingsStream ?? Stream.value(const <Booking>[]);
+
+    return StreamBuilder<List<Booking>>(
+      stream: safeStream,
+      initialData: const <Booking>[],
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return _buildEmptyCalendar(message: 'Failed to load bookings.');
+        }
+
+        final bookings = snapshot.data ?? const <Booking>[];
+        final eventDates = <DateTime>{
+          for (final b in bookings) _atMidnight(b.activityDate),
+        }.toList();
+
+        final isLoading = snapshot.connectionState == ConnectionState.waiting;
+
+        return Column(
+          children: [
+            _buildCalendar(eventDates),
+            if (isLoading) const SizedBox(height: 8),
+            if (!isLoading && bookings.isEmpty) const SizedBox(height: 8),
+            if (!isLoading && bookings.isEmpty)
+              const Text('No bookings yet.',
+                  style: TextStyle(color: Colors.grey)),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildCalendar(List<DateTime> eventDates) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(AppConstants.largeSpacing),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'My Bookings Calendar',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TableCalendar(
+            focusedDay: _focusedDay,
+            firstDay: DateTime.now().subtract(const Duration(days: 365)),
+            lastDay: DateTime.now().add(const Duration(days: 365)),
+            calendarFormat: CalendarFormat.month,
+            startingDayOfWeek: StartingDayOfWeek.monday,
+            availableGestures: AvailableGestures.horizontalSwipe,
+            headerStyle:
+                const HeaderStyle(formatButtonVisible: false, titleCentered: true),
+            calendarStyle: CalendarStyle(
+              todayDecoration: BoxDecoration(
+                color: Colors.teal.withOpacity(0.3),
+                shape: BoxShape.circle,
+              ),
+              markerDecoration: const BoxDecoration(
+                color: Colors.teal,
+                shape: BoxShape.circle,
+              ),
+            ),
+            eventLoader: (day) {
+              final d = _atMidnight(day);
+              return eventDates
+                  .where((e) =>
+                      e.year == d.year && e.month == d.month && e.day == d.day)
+                  .toList();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyCalendar({String? message}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(AppConstants.largeSpacing),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'My Bookings Calendar',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TableCalendar(
+            focusedDay: _focusedDay,
+            firstDay: DateTime.now().subtract(const Duration(days: 365)),
+            lastDay: DateTime.now().add(const Duration(days: 365)),
+            calendarFormat: CalendarFormat.month,
+            headerStyle:
+                const HeaderStyle(formatButtonVisible: false, titleCentered: true),
+            eventLoader: (_) => const [],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message ?? 'No bookings yet.',
+            style: TextStyle(color: Colors.grey[600]),
+          ),
+        ],
+      ),
     );
   }
 
