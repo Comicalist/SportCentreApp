@@ -96,6 +96,30 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   // Helper pour normaliser les dates à minuit
   DateTime _atMidnight(DateTime d) => DateTime(d.year, d.month, d.day);
 
+  // ---- Nouveaux champs/helpers pour la section calendrier ----
+  DateTime? _selectedDay;
+
+  /// Essaie d’afficher "HH:mm – HH:mm" (si fin connue) sinon "HH:mm • X min" (si durée connue),
+  /// sinon au minimum "HH:mm".
+  String _formatTimeRange(Booking b) {
+    final start = b.activityDate;
+    DateTime? end;
+    int? dur;
+
+    // On tente d'accéder à quelques champs possibles sans casser si absents.
+    try { end = (b as dynamic).activityEndDate as DateTime?; } catch (_) {}
+    try { end ??= (b as dynamic).endDate as DateTime?; } catch (_) {}
+    try { dur = (b as dynamic).durationMinutes as int?; } catch (_) {}
+
+    final s = DateFormat('HH:mm').format(start);
+    if (end != null) {
+      final e = DateFormat('HH:mm').format(end);
+      return '$s – $e';
+    }
+    if (dur != null) return '$s • ${dur} min';
+    return s;
+  }
+
   /// --- 📅 CALENDAR SECTION ---
   Widget _buildCalendarSection(BookingProvider bookingProvider) {
     final Stream<List<Booking>> safeStream =
@@ -110,81 +134,170 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         }
 
         final bookings = snapshot.data ?? const <Booking>[];
-        final eventDates = <DateTime>{
-          for (final b in bookings) _atMidnight(b.activityDate),
-        }.toList();
-
         final isLoading = snapshot.connectionState == ConnectionState.waiting;
 
-        return Column(
-          children: [
-            _buildCalendar(eventDates),
-            if (isLoading) const SizedBox(height: 8),
-            if (!isLoading && bookings.isEmpty) const SizedBox(height: 8),
-            if (!isLoading && bookings.isEmpty)
-              const Text('No bookings yet.',
-                  style: TextStyle(color: Colors.grey)),
-          ],
+        // Map jour -> liste de bookings
+        final Map<DateTime, List<Booking>> byDay = {};
+        for (final b in bookings) {
+          final key = _atMidnight(b.activityDate);
+          byDay.putIfAbsent(key, () => []).add(b);
+        }
+
+        // Sélection par défaut : aujourd’hui si dispo, sinon premier jour avec résa, sinon aujourd’hui.
+        _selectedDay ??= () {
+          final todayKey = _atMidnight(DateTime.now());
+          if (byDay.containsKey(todayKey)) return todayKey;
+          if (byDay.isNotEmpty) {
+            final keys = byDay.keys.toList()..sort();
+            return keys.first;
+          }
+          return todayKey;
+        }();
+
+        final selectedBookings = byDay[_selectedDay!] ?? const <Booking>[];
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(AppConstants.largeSpacing),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'My Bookings Calendar',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // --- Calendrier ---
+              TableCalendar<Booking>(
+                focusedDay: _focusedDay,
+                firstDay: DateTime.now().subtract(const Duration(days: 365)),
+                lastDay: DateTime.now().add(const Duration(days: 365)),
+                calendarFormat: CalendarFormat.month,
+                startingDayOfWeek: StartingDayOfWeek.monday,
+                availableGestures: AvailableGestures.horizontalSwipe,
+                headerStyle: const HeaderStyle(
+                  formatButtonVisible: false,
+                  titleCentered: true,
+                ),
+                calendarStyle: CalendarStyle(
+                  todayDecoration: BoxDecoration(
+                    color: Colors.teal.withOpacity(0.3),
+                    shape: BoxShape.circle,
+                  ),
+                  markerDecoration: const BoxDecoration(
+                    color: Colors.teal,
+                    shape: BoxShape.circle,
+                  ),
+                  selectedDecoration: const BoxDecoration(
+                    color: Colors.teal,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                onDaySelected: (selected, focused) {
+                  setState(() {
+                    _selectedDay = _atMidnight(selected);
+                    _focusedDay = focused;
+                  });
+                },
+                // On renvoie la liste des bookings de ce jour (et pas juste des dates)
+                eventLoader: (day) => byDay[_atMidnight(day)] ?? const <Booking>[],
+              ),
+
+              const SizedBox(height: 12),
+
+              // --- État / messages ---
+              if (isLoading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: CircularProgressIndicator(color: Colors.teal),
+                  ),
+                )
+              else if (bookings.isEmpty) ...[
+                const Text('No bookings yet.', style: TextStyle(color: Colors.grey)),
+              ] else ...[
+                // --- Titre du jour sélectionné ---
+                Text(
+                  DateFormat('EEEE, MMMM d, yyyy').format(_selectedDay!),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+
+                // --- Liste des réservations du jour sélectionné ---
+                if (selectedBookings.isEmpty)
+                  const Text('No bookings this day.', style: TextStyle(color: Colors.grey))
+                else
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: selectedBookings.length,
+                    separatorBuilder: (_, __) => const Divider(height: 16),
+                    itemBuilder: (context, i) {
+                      final b = selectedBookings[i];
+
+                      // Champs facultatifs selon ton modèle
+                      String title = 'Booking';
+                      String? place;
+                      try { title = (b as dynamic).activityName as String? ?? title; } catch (_) {}
+                      try { place = (b as dynamic).facilityName as String?; } catch (_) {}
+
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const CircleAvatar(child: Icon(Icons.event)),
+                        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            runSpacing: 6,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.access_time, size: 16, color: Colors.teal),
+                                  const SizedBox(width: 6),
+                                  Text(_formatTimeRange(b),
+                                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                                ],
+                              ),
+                              if (place != null) ...[
+                                const SizedBox(width: 12),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.location_on, size: 16, color: Colors.teal),
+                                    const SizedBox(width: 6),
+                                    Text(place!),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+              ],
+            ],
+          ),
         );
       },
-    );
-  }
-
-  Widget _buildCalendar(List<DateTime> eventDates) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(AppConstants.largeSpacing),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'My Bookings Calendar',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 12),
-          TableCalendar(
-            focusedDay: _focusedDay,
-            firstDay: DateTime.now().subtract(const Duration(days: 365)),
-            lastDay: DateTime.now().add(const Duration(days: 365)),
-            calendarFormat: CalendarFormat.month,
-            startingDayOfWeek: StartingDayOfWeek.monday,
-            availableGestures: AvailableGestures.horizontalSwipe,
-            headerStyle:
-                const HeaderStyle(formatButtonVisible: false, titleCentered: true),
-            calendarStyle: CalendarStyle(
-              todayDecoration: BoxDecoration(
-                color: Colors.teal.withOpacity(0.3),
-                shape: BoxShape.circle,
-              ),
-              markerDecoration: const BoxDecoration(
-                color: Colors.teal,
-                shape: BoxShape.circle,
-              ),
-            ),
-            eventLoader: (day) {
-              final d = _atMidnight(day);
-              return eventDates
-                  .where((e) =>
-                      e.year == d.year && e.month == d.month && e.day == d.day)
-                  .toList();
-            },
-          ),
-        ],
-      ),
     );
   }
 
