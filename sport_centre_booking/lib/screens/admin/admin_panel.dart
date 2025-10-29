@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/club_service.dart';
-import 'activity_management_screen.dart';
-import 'club_approval_screen.dart'; // Add this import
+import 'club_approval_screen.dart';
+import 'participants_management_screen.dart';
 
 class AdminPanel extends StatelessWidget {
   final ClubService _clubService = ClubService();
@@ -100,6 +100,15 @@ class AdminPanel extends StatelessWidget {
     );
   }
   
+  void _navigateToParticipants(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AdminParticipantsScreen(),
+      ),
+    );
+  }
+  
   void _navigateToBookingsManagement(BuildContext context) {
     // Navigate to bookings management
   }
@@ -114,6 +123,22 @@ class AdminPanel extends StatelessWidget {
   
   void _navigateToAppConfig(BuildContext context) {
     // Navigate to app configuration
+  }
+  
+  void _showSeedDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Seed Activities'),
+        content: const Text('This feature is not yet implemented. It will generate sample activities for testing.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
