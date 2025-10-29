@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/activity.dart';
+import 'blocking_service.dart';
 
 class ActivityService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -232,6 +233,24 @@ class ActivityService {
       // 🔒 VALIDATION 4: Verify facility is active
       if (!facilityIsActive) {
         throw Exception('Cannot create activities for inactive facilities');
+      }
+
+      // 🔒 VALIDATION 4.5: Check if facility/club is blocked during activity time
+      final blockStatus = await BlockingService.isTimeSlotBlocked(
+        facilityId: activity.facilityId,
+        activityDate: activity.date,
+        activityTime: activity.time,
+        durationMinutes: activity.duration,
+      );
+
+      if (blockStatus.isBlocked) {
+        final sourceText = blockStatus.source == 'club' ? 'Club' : 'Facility';
+        final reasonText = (blockStatus.reason != null && blockStatus.reason!.isNotEmpty)
+            ? ' Reason: ${blockStatus.reason}'
+            : '';
+        throw Exception(
+          'Cannot create activity: $sourceText is blocked during this time.$reasonText',
+        );
       }
 
       // 🔒 VALIDATION 5: Verify capacity doesn't exceed facility maximum
