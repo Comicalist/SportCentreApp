@@ -27,10 +27,15 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
     final timeFormat = DateFormat('HH:mm');
 
 
-    String? dayOfWeek = existing?['dayOfWeek'];
-    String? date = existing?['date'];
+    String? startDayOfWeek = existing?['startDayOfWeek'];
+    String? endDayOfWeek = existing?['endDayOfWeek'];
+
+    String? startDate = existing?['startDate'];
+    String? endDate = existing?['endDate'];
+
     String? startTime = existing?['startTime'];
     String? endTime = existing?['endTime'];
+
     bool recurring = existing?['recurring'] ?? false;
     String reason = existing?['reason'] ?? '';
 
@@ -58,30 +63,97 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
                     value: recurring,
                     onChanged: (val) => setDialogState(() => recurring = val),
                   ),
-                  if (recurring)
+                  if (recurring) ...[
                     DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: 'Day of Week'),
-                      value: dayOfWeek,
-                      items: const [
-                        'Monday',
-                        'Tuesday',
-                        'Wednesday',
-                        'Thursday',
-                        'Friday',
-                        'Saturday',
-                        'Sunday'
-                      ].map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
-                      onChanged: (val) => setDialogState(() => dayOfWeek = val),
-                    )
-                  else
-                    InputDatePickerFormField(
-                      firstDate: now.subtract(const Duration(days: 0)),
-                      lastDate: now.add(const Duration(days: 365)),
-                      fieldLabelText: 'Specific Date',
-                      initialDate: DateTime.tryParse(date ?? '') ?? now,
-                      onDateSubmitted: (selectedDate) =>
-                          setDialogState(() => date = selectedDate.toIso8601String().split('T')[0]),
+                      decoration: const InputDecoration(
+                        labelText: 'Start Day of Week',
+                      ),
+                      value: startDayOfWeek,
+                      items:
+                          const [
+                                'Monday',
+                                'Tuesday',
+                                'Wednesday',
+                                'Thursday',
+                                'Friday',
+                                'Saturday',
+                                'Sunday',
+                              ]
+                              .map(
+                                (d) =>
+                                    DropdownMenuItem(value: d, child: Text(d)),
+                              )
+                              .toList(),
+                      onChanged: (val) =>
+                          setDialogState(() => startDayOfWeek = val),
                     ),
+                    DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(
+                        labelText: 'End Day of Week',
+                      ),
+                      value: endDayOfWeek,
+                      items:
+                          const [
+                                'Monday',
+                                'Tuesday',
+                                'Wednesday',
+                                'Thursday',
+                                'Friday',
+                                'Saturday',
+                                'Sunday',
+                              ]
+                              .map(
+                                (d) =>
+                                    DropdownMenuItem(value: d, child: Text(d)),
+                              )
+                              .toList(),
+                      onChanged: (val) =>
+                          setDialogState(() => endDayOfWeek = val),
+                    ),
+                  ] else ...[
+                    ListTile(
+                      title: const Text('Start Date'),
+                      subtitle: Text(startDate ?? 'No date selected'),
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: now,
+                          firstDate: now,
+                          lastDate: now.add(const Duration(days: 365)),
+                        );
+                        if (picked != null) {
+                          setDialogState(
+                            () => startDate = picked.toIso8601String().split(
+                              'T',
+                            )[0],
+                          );
+                        }
+                      },
+                    ),
+                    ListTile(
+                      title: const Text('End Date'),
+                      subtitle: Text(endDate ?? 'No date selected'),
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: startDate != null
+                              ? DateTime.parse(startDate!)
+                              : now,
+                          firstDate: now,
+                          lastDate: now.add(const Duration(days: 365)),
+                        );
+                        if (picked != null) {
+                          setDialogState(
+                            () => endDate = picked.toIso8601String().split(
+                              'T',
+                            )[0],
+                          );
+                        }
+                      },
+                    ),
+                  ],
+
+
                   const SizedBox(height: 12),
                   ListTile(
                     title: const Text('Start Time'),
@@ -118,13 +190,76 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
                   onPressed: () => Navigator.pop(context),
                   child: const Text('Cancel'),
                 ),
+
+                // Save + Validation
                 ElevatedButton(
                   onPressed: () {
-                    if ((recurring && dayOfWeek != null) ||
-                        (!recurring && date != null && startTime != null && endTime != null)) {
+                    if ((recurring &&
+                            startDayOfWeek != null &&
+                            endDayOfWeek != null) ||
+                        (!recurring &&
+                            startDate != null &&
+                            endDate != null &&
+                            startTime != null &&
+                            endTime != null)) {
+                      if (!recurring) {
+                        final start = DateTime.parse(startDate!);
+                        final end = DateTime.parse(endDate!);
+                        if (start.isAfter(end)) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Start date cannot be after end date',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+
+                        // If same date, validate times
+                        if (start.isAtSameMomentAs(end)) {
+                          final startParts = startTime!
+                              .split(':')
+                              .map(int.parse)
+                              .toList();
+                          final endParts = endTime!
+                              .split(':')
+                              .map(int.parse)
+                              .toList();
+                          final startDt = DateTime(
+                            now.year,
+                            now.month,
+                            now.day,
+                            startParts[0],
+                            startParts[1],
+                          );
+                          final endDt = DateTime(
+                            now.year,
+                            now.month,
+                            now.day,
+                            endParts[0],
+                            endParts[1],
+                          );
+
+                          if (endDt.isBefore(startDt)) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'End time cannot be before start time',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+                        }
+                      }
+
+                      // If all good, save
                       final newEntry = {
-                        'dayOfWeek': recurring ? dayOfWeek : null,
-                        'date': recurring ? null : date,
+                        'startDayOfWeek': recurring ? startDayOfWeek : null,
+                        'endDayOfWeek': recurring ? endDayOfWeek : null,
+                        'startDate': recurring ? null : startDate,
+                        'endDate': recurring ? null : endDate,
                         'startTime': startTime,
                         'endTime': endTime,
                         'recurring': recurring,
@@ -133,6 +268,7 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
                       Navigator.pop(context, newEntry);
                     }
                   },
+
                   child: const Text('Save'),
                 ),
               ],
@@ -140,8 +276,8 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
           },
         );
       },
-    ).then((result) {
-      if (result != null) {
+    ).then((result) async {
+  if (result != null) {
         setState(() {
           if (existing != null) {
             final index = blockedTimes.indexOf(existing);
@@ -150,37 +286,34 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
             blockedTimes.add(result);
           }
         });
+        await _saveToFirestore();
       }
     });
+
   }
 
   Future<void> _saveToFirestore() async {
-    try {
-      await FirebaseFirestore.instance
-        .collection('clubs')
-        .doc(widget.club.id)
-        .set({'blockedTimes': blockedTimes}, SetOptions(merge: true));
+  try {
+    await FirebaseFirestore.instance
+      .collection('clubs')
+      .doc(widget.club.id)
+      .set({'blockedTimes': blockedTimes}, SetOptions(merge: true));
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Blocked times updated')));
-      Navigator.pop(context);
-    } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: $e')));
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Blocked times updated')),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error: $e')),
+    );
   }
+}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Open Hours'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: _saveToFirestore,
-          ),
-        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -191,8 +324,8 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
                 leading: const Icon(Icons.block, color: Colors.redAccent),
                 title: Text(
                   block['recurring']
-                      ? '${block['dayOfWeek']} ${block['startTime']} - ${block['endTime']}'
-                      : '${block['date']} ${block['startTime']} - ${block['endTime']}',
+                    ? '${block['startDayOfWeek']} ${block['startTime']} → ${block['endDayOfWeek']} ${block['endTime']}'
+                    : '${block['startDate']} ${block['startTime']} → ${block['endDate']} ${block['endTime']}',
                 ),
                 subtitle: Text(
                   block['reason'] != null && block['reason'].isNotEmpty
@@ -210,8 +343,10 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () =>
-                          setState(() => blockedTimes.remove(block)),
+                      onPressed: () async {
+                        setState(() => blockedTimes.remove(block));
+                        await _saveToFirestore();
+                      },
                     ),
                   ],
                 ),
