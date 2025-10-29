@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/club_service.dart';
-import '../../utils/activity_seeder.dart';
-import 'club_approval_screen.dart';
+import 'activity_management_screen.dart';
+import 'club_approval_screen.dart'; // Add this import
 
 class AdminPanel extends StatelessWidget {
   final ClubService _clubService = ClubService();
@@ -73,6 +73,14 @@ class AdminPanel extends StatelessWidget {
                     color: Colors.teal,
                   ),
                   
+                  _AdminTile(
+                    icon: Icons.people,
+                    title: 'Event Participants',
+                    subtitle: 'View, edit, and manage all participants',
+                    onTap: () => _navigateToParticipants(context),
+                    color: Colors.green,
+                  ),
+                  
                   // Add more admin tiles as needed
                 ],
               ),
@@ -91,87 +99,21 @@ class AdminPanel extends StatelessWidget {
       ),
     );
   }
-
-  void _showSeedDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Seed Activities'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('This will create sample activities for all approved clubs with facilities.'),
-            SizedBox(height: 16),
-            Text('Make sure you have:', style: TextStyle(fontWeight: FontWeight.bold)),
-            SizedBox(height: 8),
-            Text('• At least one approved club'),
-            Text('• At least one active facility per club'),
-            SizedBox(height: 16),
-            Text(
-              'Note: Activities will be created starting from tomorrow.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _performSeed(context);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
-            child: const Text('Seed Now'),
-          ),
-        ],
-      ),
-    );
+  
+  void _navigateToBookingsManagement(BuildContext context) {
+    // Navigate to bookings management
   }
-
-  Future<void> _performSeed(BuildContext context) async {
-    // Show loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Seeding activities...'),
-          ],
-        ),
-      ),
-    );
-
-    try {
-      await ActivitySeeder.seedActivities();
-
-      if (context.mounted) {
-        Navigator.pop(context); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Activities seeded successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        Navigator.pop(context); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error seeding activities: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+  
+  void _navigateToUserManagement(BuildContext context) {
+    // Navigate to user management
+  }
+  
+  void _navigateToAnalytics(BuildContext context) {
+    // Navigate to analytics
+  }
+  
+  void _navigateToAppConfig(BuildContext context) {
+    // Navigate to app configuration
   }
 }
 
