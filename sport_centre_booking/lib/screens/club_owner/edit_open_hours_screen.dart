@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sport_centre_booking/models/club.dart';
+import '../../services/blocking_service.dart';
 
 
 class EditOpenHoursScreen extends StatefulWidget {
@@ -19,7 +20,7 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
   @override
   void initState() {
     super.initState();
-    blockedTimes = List<Map<String, dynamic>>.from(widget.club.blockedTimes ?? []);
+    blockedTimes = List<Map<String, dynamic>>.from(widget.club.blockedTimes);
   }
 
   Future<void> _pickBlockedTime({Map<String, dynamic>? existing}) async {
@@ -277,7 +278,61 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
         );
       },
     ).then((result) async {
-  if (result != null) {
+      if (result != null) {
+        // NEW: Check for conflicting activities before saving
+        final conflicts = await BlockingService.getActivitiesInTimeRange(
+          clubId: widget.club.id,
+          blockData: result,
+        );
+
+        if (conflicts.isNotEmpty && mounted) {
+          // Show warning dialog
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Row(
+                children: [
+                  Icon(Icons.warning, color: Colors.orange),
+                  SizedBox(width: 8),
+                  Text('Cannot Block'),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Activities exist during this time. Remove them first:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 16),
+                    ...conflicts.map((activity) => Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        leading: const Icon(Icons.event, color: Colors.red),
+                        title: Text(activity.name),
+                        subtitle: Text(
+                          '${DateFormat('MMM dd, yyyy').format(activity.date)} at ${activity.time}\n${activity.facilityName}',
+                        ),
+                        isThreeLine: true,
+                      ),
+                    )),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+          return; // Don't save the block
+        }
+
+        // No conflicts - proceed with saving
         setState(() {
           if (existing != null) {
             final index = blockedTimes.indexOf(existing);

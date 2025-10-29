@@ -308,15 +308,58 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
   }
 
   void _navigateToEditFacility(Facility facility) async {
-    final result = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => EditFacilityScreen(facility: facility),
+    // Show loading indicator while fetching latest data
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
       ),
     );
 
-    if (result == true) {
-      setState(() => _loadFacilities());
+    try {
+      // Fetch the latest facility data from Firestore before editing
+      final latestFacility = await _facilityService.getFacility(
+        facilityId: facility.id,
+      );
+
+      if (!mounted) return;
+      
+      // Dismiss loading indicator
+      Navigator.pop(context);
+
+      if (latestFacility == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Facility not found'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      final result = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => EditFacilityScreen(facility: latestFacility),
+        ),
+      );
+
+      if (result == true && mounted) {
+        setState(() => _loadFacilities());
+      }
+    } catch (e) {
+      if (mounted) {
+        // Dismiss loading indicator
+        Navigator.pop(context);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading facility: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
