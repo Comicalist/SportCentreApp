@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../providers/auth_provider.dart';
+import '                    if (user.isMember) ...[
+                      _buildMembershipCard(user),
+                      const SizedBox(height: 24),
+                    ],
+                    _buildPointsCard(user),
+                    const SizedBox(height: 24),
+                    _buildSettingsCard(context),
+                  ],oviders/auth_provider.dart';
 import '../../utils/colors.dart';
-// pour AuthRequiredScreen
 import '../../models/app_user.dart';
+import 'notification_settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
