@@ -200,40 +200,45 @@ class ActivityCard extends StatelessWidget {
         fontWeight: FontWeight.bold,
         color: Colors.black87,
       ),
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
+      maxLines: 1, // Only one line
+      overflow: TextOverflow.ellipsis, // Show ... if too long
     );
   }
 
   /// Build date and time information row
   Widget _buildDateTimeInfo() {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          Icons.calendar_today,
-          size: 16,
-          color: Colors.grey[600],
+        // Date on first row
+        Row(
+          children: [
+            Icon(
+              Icons.calendar_today,
+              size: 16,
+              color: Colors.grey[600],
+            ),
+            const SizedBox(width: 4),
+            Text(
+              DateFormat('MMM dd').format(activity.date),
+              style: TextStyle(color: Colors.grey[600], fontSize: 14),
+            ),
+          ],
         ),
-        const SizedBox(width: 4),
-        Text(
-          DateFormat('MMM dd').format(activity.date),
-          style: TextStyle(color: Colors.grey[600], fontSize: 14),
-        ),
-        const SizedBox(width: 16),
-        Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
-        const SizedBox(width: 4),
-        Text(
-          '${activity.time} - ${activity.endTimeFormatted}',
-          style: TextStyle(color: Colors.grey[600], fontSize: 14),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          '(${activity.duration}min)',
-          style: TextStyle(
-            color: Colors.grey[500],
-            fontSize: 12,
-            fontStyle: FontStyle.italic,
-          ),
+        const SizedBox(height: 2),
+        // Time range on second row
+        Row(
+          children: [
+            Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                '${activity.time} - ${activity.endTimeFormatted}',
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -245,12 +250,15 @@ class ActivityCard extends StatelessWidget {
       children: [
         Icon(Icons.groups, size: 16, color: Colors.grey[600]),
         const SizedBox(width: 4),
-        Text(
-          activity.clubName,
-          style: TextStyle(
-            color: Colors.grey[600],
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
+        Expanded(
+          child: Text(
+            activity.clubName,
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
@@ -263,9 +271,12 @@ class ActivityCard extends StatelessWidget {
       children: [
         Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
         const SizedBox(width: 4),
-        Text(
-          activity.facilityName,
-          style: TextStyle(color: Colors.grey[600], fontSize: 14),
+        Expanded(
+          child: Text(
+            activity.facilityName,
+            style: TextStyle(color: Colors.grey[600], fontSize: 14),
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );
