@@ -62,9 +62,26 @@ class NotificationService {
   /// Save user preferences
   Future<void> savePreferences(
       String userId, NotificationPreferences prefs) async {
-    await _firestore.collection('users').doc(userId).update({
-      'notificationPreferences': prefs.toJson(),
-    });
+    try {
+      print('🔧 NotificationService: Saving preferences for user $userId');
+      print('   Method: ${prefs.method}');
+      print('   Hours: ${prefs.reminderHoursBefore}');
+      
+      // Use set with merge to create the field if it doesn't exist
+      await _firestore.collection('users').doc(userId).set({
+        'notificationPreferences': prefs.toJson(),
+      }, SetOptions(merge: true));
+      
+      print('✅ NotificationService: Preferences saved successfully');
+      
+      // Verify the save by reading it back
+      final doc = await _firestore.collection('users').doc(userId).get();
+      final savedData = doc.data()?['notificationPreferences'];
+      print('🔍 Verification: Saved data = $savedData');
+    } catch (e) {
+      print('❌ NotificationService: Error saving preferences: $e');
+      rethrow;
+    }
   }
 
   /// Get user preferences

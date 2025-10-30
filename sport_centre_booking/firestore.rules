@@ -182,14 +182,21 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && 
         request.auth.uid == resource.data.userId;
       
-      // Only Cloud Functions can create notifications (no direct user creation)
-      allow create: if false;
+      // Users can create test notifications for themselves (for debugging)
+      // Cloud Functions can create any notifications
+      allow create: if request.auth != null && 
+        request.resource.data.userId == request.auth.uid;
     }
     
-    // ========== PENDING NOTIFICATIONS (Cloud Functions only) ==========
+    // ========== PENDING NOTIFICATIONS ==========
     match /pendingNotifications/{notificationId} {
-      // Users cannot access pending notifications (Cloud Functions only)
-      allow read, write: if false;
+      // Users can create test pending notifications for themselves (for debugging)
+      allow create: if request.auth != null && 
+        request.resource.data.userId == request.auth.uid;
+      
+      // Cloud Functions can read/write all pending notifications
+      // Users cannot read pending notifications
+      allow read, update, delete: if false;
     }
   }
 }

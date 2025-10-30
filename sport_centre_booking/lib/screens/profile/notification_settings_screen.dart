@@ -38,19 +38,79 @@ class _NotificationSettingsScreenState
 
   Future<void> _savePreferences() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) return;
+    if (userId == null) {
+      print('❌ No user ID found');
+      return;
+    }
 
-    final prefs = NotificationPreferences(
-      method: _selectedMethod,
-      reminderHoursBefore: _selectedHours,
-    );
+    print('🔧 NotificationSettingsScreen: Starting save...');
+    print('   User ID: $userId');
+    print('   Selected method: $_selectedMethod');
+    print('   Selected hours: $_selectedHours');
 
-    await _notificationService.savePreferences(userId, prefs);
+    setState(() {
+      _isLoading = true;
+    });
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Preferences saved!')),
+    try {
+      final prefs = NotificationPreferences(
+        method: _selectedMethod,
+        reminderHoursBefore: _selectedHours,
       );
+
+      print('📦 Creating preferences object: ${prefs.toJson()}');
+
+      await _notificationService.savePreferences(userId, prefs);
+
+      print('✅ NotificationSettingsScreen: Save completed');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 12),
+                Text(
+                  'Preferences saved successfully!',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      print('❌ NotificationSettingsScreen: Error saving: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Failed to save preferences: $e',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -60,9 +120,30 @@ class _NotificationSettingsScreenState
       appBar: AppBar(
         title: const Text('Notifications'),
         actions: [
-          TextButton(
-            onPressed: _isLoading ? null : _savePreferences,
-            child: const Text('Save', style: TextStyle(color: Colors.white)),
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: ElevatedButton.icon(
+              onPressed: _isLoading ? null : _savePreferences,
+              icon: _isLoading 
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Icon(Icons.save, size: 20),
+              label: Text(_isLoading ? 'Saving...' : 'Save'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -104,32 +185,6 @@ class _NotificationSettingsScreenState
                     ),
                   ],
                 ),
-
-                // Email warning
-                if (_selectedMethod == NotificationMethod.email) ...[
-                  const SizedBox(height: 16),
-                  Card(
-                    color: Colors.orange.shade50,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          Icon(Icons.info_outline, color: Colors.orange.shade700),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Email notifications require Firebase Blaze plan',
-                              style: TextStyle(
-                                color: Colors.orange.shade900,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
 
                 const SizedBox(height: 32),
                 const Divider(),
