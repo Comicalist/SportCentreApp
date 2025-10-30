@@ -33,16 +33,17 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     super.dispose();
   }
 
+  /// Start periodic timer to check email verification status
+  /// 
+  /// Checks verification status every 3 seconds and automatically
+  /// navigates back to the main app when verification is detected.
   void _startEmailCheckTimer() {
     _timer = Timer.periodic(const Duration(seconds: 3), (timer) async {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-     
       await authProvider.checkEmailVerification();
-    
       
-      // If email is verified, navigate back
+      // If email is verified, navigate back to main app
       if (authProvider.isEmailVerified && mounted) {
-   
         timer.cancel();
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(

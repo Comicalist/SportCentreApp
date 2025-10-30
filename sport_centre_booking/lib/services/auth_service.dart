@@ -37,12 +37,22 @@ class AuthService {
     }
   }
 
-  /// Register new user with email and password - UPDATED with isClubOwner parameter
+  /// Register new user with email and password
+  /// 
+  /// Creates a new Firebase user account and automatically sends email verification.
+  /// 
+  /// Parameters:
+  /// - [email]: User's email address
+  /// - [password]: User's password (must meet validation requirements)
+  /// - [displayName]: User's full name
+  /// - [isClubOwner]: Optional flag to mark user as club owner (default: false)
+  /// 
+  /// Returns [UserCredential] on success or throws exception on failure.
   static Future<UserCredential?> registerWithEmail(
     String email,
     String password,
     String displayName, {
-    bool isClubOwner = false, // Add this named parameter
+    bool isClubOwner = false,
   }) async {
     try {
       final UserCredential result = await _auth.createUserWithEmailAndPassword(
@@ -57,7 +67,7 @@ class AuthService {
         await _createUserDocument(
           result.user!,
           displayName.trim(),
-          isClubOwner: isClubOwner, // Pass the parameter
+          isClubOwner: isClubOwner,
         );
 
         // Send email verification automatically
@@ -108,15 +118,30 @@ class AuthService {
   static bool get isEmailVerified => currentUser?.emailVerified ?? false;
 
   /// Reload current user to check verification status
+  /// 
+  /// Refreshes the current user's data from Firebase to get updated
+  /// email verification status and other user properties.
   static Future<void> reloadUser() async {
-    await currentUser?.reload();
+    try {
+      await currentUser?.reload();
+    } catch (e) {
+      // Silently fail - not critical for app functionality
+    }
   }
 
-  /// Create user document in Firestore with default values - UPDATED with isClubOwner
+  /// Create user document in Firestore with default values
+  /// 
+  /// Creates a comprehensive user profile document in Firestore with
+  /// default values for points, membership, and booking history.
+  /// 
+  /// Parameters:
+  /// - [user]: Firebase user instance
+  /// - [displayName]: User's display name
+  /// - [isClubOwner]: Flag indicating if user is a club owner
   static Future<void> _createUserDocument(
     User user,
     String displayName, {
-    bool isClubOwner = false, // Add this parameter
+    bool isClubOwner = false,
   }) async {
     final userDoc = _firestore.collection('users').doc(user.uid);
 
@@ -126,20 +151,23 @@ class AuthService {
       'displayName': displayName,
       'createdAt': FieldValue.serverTimestamp(),
       'lastLoginAt': FieldValue.serverTimestamp(),
-      'role': 'user', // Default role
+      'role': 'user',
       'isActive': true,
 
-      // Champs par défaut pour éviter les nulls
+      // Points and rewards system
       'totalPoints': 0,
       'availablePoints': 0,
       'lifetimePointsEarned': 0,
+      
+      // Membership system
       'isMember': false,
       'membershipType': null,
       'membershipExpiry': null,
-
-      // NEW: Club owner flag
-      'isClubOwner': isClubOwner, // Save the club owner status
-      // Add fields for UserProfile model
+      
+      // User type flags
+      'isClubOwner': isClubOwner,
+      
+      // Booking and profile data
       'bookingHistory': [],
       'upcomingBookings': [],
       'profileImageUrl': '',
@@ -150,9 +178,13 @@ class AuthService {
   static Future<void> updateLastLogin() async {
     final user = currentUser;
     if (user != null) {
-      await _firestore.collection('users').doc(user.uid).update({
-        'lastLoginAt': FieldValue.serverTimestamp(),
-      });
+      try {
+        await _firestore.collection('users').doc(user.uid).update({
+          'lastLoginAt': FieldValue.serverTimestamp(),
+        });
+      } catch (e) {
+        // Silently fail - not critical for user experience
+      }
     }
   }
 

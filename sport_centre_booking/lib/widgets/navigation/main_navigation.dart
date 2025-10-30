@@ -27,8 +27,6 @@ class _MainNavigationState extends State<MainNavigation> {
         final bool isAdmin = authProvider.isAdmin;
         final bool isClubOwner = authProvider.isClubOwner;
         
-     
-        
         final screens = _getScreens(isAdmin, isClubOwner);
         final navItems = _getNavItems(isAdmin, isClubOwner);
 
@@ -106,8 +104,6 @@ class _MainNavigationState extends State<MainNavigation> {
       ));
     }
 
-   
-    
     return items;
   }
 }
