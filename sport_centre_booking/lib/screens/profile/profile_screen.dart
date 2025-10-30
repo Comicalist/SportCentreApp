@@ -100,7 +100,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           // TODO: edit profile
                           break;
                         case 'settings':
-                          // TODO: settings
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const NotificationSettingsScreen(),
+                            ),
+                          );
                           break;
                         case 'logout':
                           _handleLogout();
