@@ -171,5 +171,25 @@ service cloud.firestore {
       // Users can't delete vouchers
       allow delete: if false;
     }
+    
+    // ========== NOTIFICATIONS ==========
+    match /notifications/{notificationId} {
+      // Users can only read their own notifications
+      allow read: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+      
+      // Users can update (mark as read) and delete their own notifications
+      allow update, delete: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+      
+      // Only Cloud Functions can create notifications (no direct user creation)
+      allow create: if false;
+    }
+    
+    // ========== PENDING NOTIFICATIONS (Cloud Functions only) ==========
+    match /pendingNotifications/{notificationId} {
+      // Users cannot access pending notifications (Cloud Functions only)
+      allow read, write: if false;
+    }
   }
 }
