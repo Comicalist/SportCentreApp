@@ -8,6 +8,7 @@ class Club {
   final bool isActive;
   final bool isApproved;
   final DateTime createdAt;
+  final List<Map<String, dynamic>> blockedTimes;
 
   Club({
     required this.id,
@@ -15,8 +16,9 @@ class Club {
     required this.ownerId,
     this.location,
     this.isActive = true,
-    this.isApproved = false, // Default to false
+    this.isApproved = false,
     required this.createdAt,
+    this.blockedTimes = const [],
   });
 
   Club copyWith({
@@ -27,6 +29,7 @@ class Club {
     bool? isActive,
     bool? isApproved,
     DateTime? createdAt,
+    List<Map<String, dynamic>>? blockedTimes,
   }) {
     return Club(
       id: id ?? this.id,
@@ -36,6 +39,7 @@ class Club {
       isActive: isActive ?? this.isActive,
       isApproved: isApproved ?? this.isApproved,
       createdAt: createdAt ?? this.createdAt,
+      blockedTimes: blockedTimes ?? this.blockedTimes,
     );
   }
 
@@ -49,6 +53,7 @@ class Club {
       isActive: data['isActive'] ?? true,
       isApproved: data['isApproved'] ?? false,
       createdAt: data['createdAt']?.toDate() ?? DateTime.now(),
+      blockedTimes: List<Map<String, dynamic>>.from(data['blockedTimes'] ?? []),
     );
   }
 
@@ -60,6 +65,7 @@ class Club {
       'isActive': isActive,
       'isApproved': isApproved,
       'createdAt': Timestamp.fromDate(createdAt),
+      'blockedTimes': blockedTimes,
     };
   }
 }

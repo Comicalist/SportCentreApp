@@ -8,6 +8,7 @@ class Facility {
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final List<Map<String, dynamic>> blockedTimes;
 
   const Facility({
     required this.id,
@@ -19,6 +20,7 @@ class Facility {
     this.isActive = true,
     required this.createdAt,
     required this.updatedAt,
+    this.blockedTimes = const [],
   });
 
   // Default images for different facility types (for when no image is provided)
@@ -68,6 +70,7 @@ class Facility {
       isActive: json['isActive'] as bool? ?? true,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
+      blockedTimes: List<Map<String, dynamic>>.from(json['blockedTimes'] ?? []),
     );
   }
 
@@ -81,6 +84,7 @@ class Facility {
       'isActive': isActive,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'blockedTimes': blockedTimes,
     };
   }
 
@@ -94,6 +98,7 @@ class Facility {
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
+    List<Map<String, dynamic>>? blockedTimes,
   }) {
     return Facility(
       id: id ?? this.id,
@@ -105,6 +110,7 @@ class Facility {
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
+      blockedTimes: blockedTimes ?? this.blockedTimes,
     );
   }
 }

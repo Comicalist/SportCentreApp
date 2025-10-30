@@ -28,14 +28,14 @@ class Activity {
   // === POINTS & REWARDS ===
   final int pointsReward;
   
-  // === RESOURCES ===
-  final List<String> requirements;  // Required equipment
+ 
+  final List<String> requirements;  
   final String? imageUrl;
   
-  // === METADATA ===
+  
   final DateTime createdAt;
   final DateTime updatedAt;
-  final String createdBy;           // UID of club owner who created this
+  final String createdBy;      
 
   Activity({
     required this.id,
