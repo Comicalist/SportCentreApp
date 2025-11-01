@@ -88,7 +88,7 @@ class AuthProvider extends ChangeNotifier {
 
     if (doc.exists) {
       _appUser = AppUser.fromFirestore(doc);
-      debugPrint("✅ Loaded user role: ${_appUser?.role}, isClubOwner: ${_appUser?.isClubOwner}");
+     
       notifyListeners();
       return;
     }

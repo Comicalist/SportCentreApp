@@ -112,6 +112,21 @@ class BookingService {
 
         final activityTime = activityData['time'] ?? '00:00';
 
+        // 🔥 NOUVEAU : Combiner date + time pour créer scheduledDate
+        DateTime scheduledDateTime;
+        try {
+          final timeParts = activityTime.split(':');
+          scheduledDateTime = DateTime(
+            activityDateTime.year,
+            activityDateTime.month,
+            activityDateTime.day,
+            int.parse(timeParts[0]), // Heure
+            int.parse(timeParts[1]), // Minutes
+          );
+        } catch (e) {
+          scheduledDateTime = activityDateTime;
+        }
+
         // ---------------- WRITES (after all reads) ----------------
 
         // Update activity capacity first
@@ -147,12 +162,14 @@ class BookingService {
           'activityTitle': activityTitle,
           'activityDate': Timestamp.fromDate(activityDateTime),
           'activityTime': activityTime,
+          'scheduledDate': Timestamp.fromDate(scheduledDateTime), // ← NOUVEAU pour notifications
           'totalPrice': totalPrice,
           // Denormalized club/facility data for display
           'clubId': clubId,
           'clubName': clubName,
           'facilityId': facilityId,
           'facilityName': facilityName,
+          'activityName': activityTitle, // ← NOUVEAU pour notifications
         };
 
         transaction.set(bookingRef, bookingData);

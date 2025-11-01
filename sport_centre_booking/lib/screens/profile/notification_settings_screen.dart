@@ -39,14 +39,11 @@ class _NotificationSettingsScreenState
   Future<void> _savePreferences() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) {
-      print('❌ No user ID found');
+   
       return;
     }
 
-    print('🔧 NotificationSettingsScreen: Starting save...');
-    print('   User ID: $userId');
-    print('   Selected method: $_selectedMethod');
-    print('   Selected hours: $_selectedHours');
+   
 
     setState(() {
       _isLoading = true;
@@ -58,11 +55,11 @@ class _NotificationSettingsScreenState
         reminderHoursBefore: _selectedHours,
       );
 
-      print('📦 Creating preferences object: ${prefs.toJson()}');
+     
 
       await _notificationService.savePreferences(userId, prefs);
 
-      print('✅ NotificationSettingsScreen: Save completed');
+    
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -83,7 +80,7 @@ class _NotificationSettingsScreenState
         );
       }
     } catch (e) {
-      print('❌ NotificationSettingsScreen: Error saving: $e');
+     
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

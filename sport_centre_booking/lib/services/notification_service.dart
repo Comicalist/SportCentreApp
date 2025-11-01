@@ -63,23 +63,20 @@ class NotificationService {
   Future<void> savePreferences(
       String userId, NotificationPreferences prefs) async {
     try {
-      print('🔧 NotificationService: Saving preferences for user $userId');
-      print('   Method: ${prefs.method}');
-      print('   Hours: ${prefs.reminderHoursBefore}');
-      
+    
       // Use set with merge to create the field if it doesn't exist
       await _firestore.collection('users').doc(userId).set({
         'notificationPreferences': prefs.toJson(),
       }, SetOptions(merge: true));
       
-      print('✅ NotificationService: Preferences saved successfully');
+      
       
       // Verify the save by reading it back
-      final doc = await _firestore.collection('users').doc(userId).get();
-      final savedData = doc.data()?['notificationPreferences'];
-      print('🔍 Verification: Saved data = $savedData');
+      
+     
+     
     } catch (e) {
-      print('❌ NotificationService: Error saving preferences: $e');
+     
       rethrow;
     }
   }
@@ -91,5 +88,26 @@ class NotificationService {
     return data != null
         ? NotificationPreferences.fromJson(data)
         : NotificationPreferences.defaults;
+  }
+
+  /// Delete all notifications for a user
+  Future<void> deleteAllNotifications(String userId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('notifications')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      final batch = _firestore.batch();
+      for (var doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+
+      await batch.commit();
+  
+    } catch (e) {
+  
+      rethrow;
+    }
   }
 }

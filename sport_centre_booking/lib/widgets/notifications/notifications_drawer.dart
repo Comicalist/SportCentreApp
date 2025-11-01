@@ -46,11 +46,61 @@ class NotificationsListView extends StatelessWidget {
             children: [
               Text('Notifications',
                   style: Theme.of(context).textTheme.headlineSmall),
-              TextButton(
-                onPressed: () {
-                  _notificationService.markAllAsRead(userId);
-                },
-                child: const Text('Mark all read'),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextButton.icon(
+                    onPressed: () async {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Clear All Notifications'),
+                          content: const Text(
+                            'This will delete all your notifications. This action cannot be undone.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Cancel'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                              ),
+                              child: const Text('Clear All'),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirmed == true) {
+                        await _notificationService.deleteAllNotifications(userId);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('All notifications cleared'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.clear_all, size: 18),
+                    label: const Text('Clear All'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.red,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: () {
+                      _notificationService.markAllAsRead(userId);
+                    },
+                    child: const Text('Mark all read'),
+                  ),
+                ],
               ),
             ],
           ),
