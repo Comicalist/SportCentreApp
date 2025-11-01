@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart'; // date/time formatting
 import 'package:table_calendar/table_calendar.dart'; // calendar widget
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
 import '../../providers/auth_provider.dart';
 import '../../providers/booking_provider.dart';
 import '../../models/booking.dart';
 import '../../services/booking_service.dart';
+import '../../services/notification_service.dart';
+import '../../widgets/notifications/notifications_drawer.dart';
 import '../../utils/colors.dart';
 import '../../screens/auth/login_screen.dart';
 
@@ -92,6 +95,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
         }
 
         // Logged-in view: calendar + filters + list
+        final userId = firebase_auth.FirebaseAuth.instance.currentUser?.uid;
+        
         return Scaffold(
           backgroundColor: Colors.grey[50],
           appBar: AppBar(
@@ -101,6 +106,54 @@ class _BookingsScreenState extends State<BookingsScreen> {
             ),
             backgroundColor: Colors.transparent,
             elevation: 0,
+            actions: [
+              if (userId != null)
+                // Bell icon with badge
+                StreamBuilder<int>(
+                  stream: NotificationService().getUnreadCount(userId),
+                  builder: (context, snapshot) {
+                    final unreadCount = snapshot.data ?? 0;
+
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.notifications_outlined),
+                          onPressed: () {
+                            showNotificationsDrawer(context);
+                          },
+                          tooltip: 'Notifications',
+                        ),
+                        if (unreadCount > 0)
+                          Positioned(
+                            right: 8,
+                            top: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 18,
+                                minHeight: 18,
+                              ),
+                              child: Text(
+                                unreadCount > 99 ? '99+' : '$unreadCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+            ],
           ),
           body: Consumer<BookingProvider>(
             builder: (context, bookingProvider, child) {

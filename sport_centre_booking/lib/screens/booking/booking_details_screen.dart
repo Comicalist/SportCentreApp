@@ -120,7 +120,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     return s;
   }
 
-  /// --- 📅 CALENDAR SECTION ---
+  /
   Widget _buildCalendarSection(BookingProvider bookingProvider) {
     final Stream<List<Booking>> safeStream =
         bookingProvider.userBookingsStream ?? Stream.value(const <Booking>[]);

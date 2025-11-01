@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/colors.dart';
-// pour AuthRequiredScreen
 import '../../models/app_user.dart';
+import '../../widgets/profile/testing_panel.dart';
+import 'notification_settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -18,7 +20,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, auth, _) {
-        // 1) Pas connecté => écran d’auth
+        // 1) Pas connecté => écran d'auth
         if (!auth.isLoggedIn) {
           return Scaffold(
             appBar: AppBar(title: const Text('Profile')),
@@ -93,7 +95,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           // TODO: edit profile
                           break;
                         case 'settings':
-                          // TODO: settings
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const NotificationSettingsScreen(),
+                            ),
+                          );
                           break;
                         case 'logout':
                           _handleLogout();
@@ -112,8 +119,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       PopupMenuItem(
                         value: 'settings',
                         child: ListTile(
-                          leading: Icon(Icons.settings),
-                          title: Text('Settings'),
+                          leading: Icon(Icons.notifications_outlined),
+                          title: Text('Notification Settings'),
                           contentPadding: EdgeInsets.zero,
                         ),
                       ),
@@ -141,9 +148,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       _buildMembershipCard(user),
                       const SizedBox(height: 24),
                     ],
-                    // Si tu veux enlever l’affichage des points du profil,
-                    // supprime simplement la ligne ci-dessous.
                     _buildPointsCard(user),
+                    const SizedBox(height: 24),
+                    _buildSettingsSection(context),
+                    
+                    // 🧪 Testing Panel (debug mode only)
+                    if (kDebugMode) ...[
+                      const SizedBox(height: 24),
+                      TestingPanel(userId: uid),
+                    ],
                   ],
                 ),
               ),
@@ -151,6 +164,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
           },
         );
       },
+    );
+  }
+
+  // Nouvelle section Settings avec accès facile aux notifications
+  Widget _buildSettingsSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            'Settings',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Column(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.notifications_outlined, color: AppColors.primary),
+                title: const Text('Notifications'),
+                subtitle: const Text('Email or in-app preferences'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NotificationSettingsScreen(),
+                    ),
+                  );
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.history, color: AppColors.primary),
+                title: const Text('Booking History'),
+                subtitle: const Text('View past activities'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Booking history coming soon!')),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -164,7 +230,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             CircleAvatar(
               radius: 40,
-              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+              backgroundColor: AppColors.primary.withOpacity(0.1),
               child: Text(
                 user.displayName.isNotEmpty
                     ? user.displayName[0].toUpperCase()
@@ -255,7 +321,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Text(
@@ -270,8 +336,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
             const SizedBox(height: 16),
-
-            // Big number = available/spendable points (same as Rewards page)
             Text(
               '${user.availablePoints}',
               style: const TextStyle(
@@ -284,11 +348,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               'Available Points',
               style: TextStyle(color: Colors.white70, fontSize: 14),
             ),
-
             const SizedBox(height: 16),
             Row(
               children: [
-                // Current balance (mirrors backend 'totalPoints')
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -308,7 +370,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                 ),
-                // Lifetime earned
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -328,7 +389,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                 ),
-
                 ElevatedButton(
                   onPressed: user.availablePoints > 0
                       ? () {
@@ -369,7 +429,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
+            colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
           ),
         ),
         padding: const EdgeInsets.all(20),
@@ -394,7 +454,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Text(
@@ -421,8 +481,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if (user.membershipExpiry != null)
               Text(
                 'Expires: ${_formatDate(user.membershipExpiry!)}',
-                style:
-                    const TextStyle(color: Colors.white70, fontSize: 14),
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
             const SizedBox(height: 16),
             const Row(
@@ -484,6 +543,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
-    return '${months[date.month - 1]} ${date.day}';
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 }

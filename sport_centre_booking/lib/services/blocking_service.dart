@@ -4,24 +4,24 @@ import '../models/activity.dart';
 class BlockingService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Check if a time slot is blocked (checks BOTH club AND facility blocks)
+  
   static Future<BlockStatus> isTimeSlotBlocked({
     required String facilityId,
     required DateTime activityDate,
-    required String activityTime, // Format: "HH:mm"
+    required String activityTime,
     required int durationMinutes,
   }) async {
     try {
-      print('🔍 Checking if blocked - facilityId: $facilityId, date: $activityDate, time: $activityTime, duration: $durationMinutes');
+     
       
-      // 1. Get facility to find clubId
+
       final facilityDoc = await _firestore
           .collection('facilities')
           .doc(facilityId)
           .get();
 
       if (!facilityDoc.exists) {
-        print('❌ Facility not found');
+       
         return BlockStatus(isBlocked: false);
       }
 
@@ -31,16 +31,14 @@ class BlockingService {
         facilityData['blockedTimes'] ?? [],
       );
       
-      print('📋 Facility has ${facilityBlockedTimes.length} blocked times');
-      for (var block in facilityBlockedTimes) {
-        print('  - Block: $block');
-      }
+    
+      
 
-      // 2. Get club's blockedTimes
+  
       final clubDoc = await _firestore.collection('clubs').doc(clubId).get();
 
       if (!clubDoc.exists) {
-        print('❌ Club not found');
+        
         return BlockStatus(isBlocked: false);
       }
 
@@ -48,8 +46,7 @@ class BlockingService {
       final clubBlockedTimes = List<Map<String, dynamic>>.from(
         clubData['blockedTimes'] ?? [],
       );
-      
-      print('📋 Club has ${clubBlockedTimes.length} blocked times');
+  
 
       // 3. Check club blocks first
       for (final block in clubBlockedTimes) {
@@ -59,9 +56,9 @@ class BlockingService {
           durationMinutes: durationMinutes,
           block: block,
         );
-        print('  - Club block check: $overlaps for $block');
+       
         if (overlaps) {
-          print('🚫 BLOCKED by club!');
+         
           return BlockStatus(
             isBlocked: true,
             reason: block['reason'] ?? 'Club blocked',
@@ -78,9 +75,9 @@ class BlockingService {
           durationMinutes: durationMinutes,
           block: block,
         );
-        print('  - Facility block check: $overlaps for $block');
+      
         if (overlaps) {
-          print('🚫 BLOCKED by facility!');
+      
           return BlockStatus(
             isBlocked: true,
             reason: block['reason'] ?? 'Facility blocked',
@@ -89,11 +86,10 @@ class BlockingService {
         }
       }
 
-      print('✅ NOT BLOCKED');
+ 
       return BlockStatus(isBlocked: false);
     } catch (e) {
-      print('❌ ERROR in isTimeSlotBlocked: $e');
-      // If error occurs, play it safe and don't block
+
       return BlockStatus(isBlocked: false);
     }
   }
@@ -270,13 +266,10 @@ class BlockingService {
     final blockStartTime = block['startTime'] as String?;
     final blockEndTime = block['endTime'] as String?;
 
-    print('    📅 One-time block check:');
-    print('       Activity: ${activityDate.toString().split(' ')[0]} $activityTime (${durationMinutes}min)');
-    print('       Block: $blockStartDate $blockStartTime to $blockEndDate $blockEndTime');
-
+   
     if (blockStartDate == null || blockEndDate == null || 
         blockStartTime == null || blockEndTime == null) {
-      print('       ⚠️ Missing block data - skipping');
+   
       return false;
     }
 
@@ -293,18 +286,16 @@ class BlockingService {
     final startDateOnly = DateTime(startDate.year, startDate.month, startDate.day);
     final endDateOnly = DateTime(endDate.year, endDate.month, endDate.day);
 
-    print('       Normalized dates:');
-    print('       Activity: $activityDateOnly');
-    print('       Block: $startDateOnly to $endDateOnly');
+   
 
     // Check if activity date is within blocked date range
     if (activityDateOnly.isBefore(startDateOnly) ||
         activityDateOnly.isAfter(endDateOnly)) {
-      print('       ✅ Activity date outside block range');
+     
       return false;
     }
 
-    print('       ⚠️ Activity date within block range - checking time overlap...');
+   
     
     // NEW LOGIC: Handle multi-day blocks properly
     final isFirstDay = activityDateOnly.isAtSameMomentAs(startDateOnly);
@@ -313,41 +304,40 @@ class BlockingService {
     
     if (isSingleDay) {
       // Single day block: check time range normally
-      print('       📍 Single day block - checking time range');
+     
       final timeOverlaps = _checkTimeOverlap(
         activityTime: activityTime,
         durationMinutes: durationMinutes,
         blockStartTime: blockStartTime,
         blockEndTime: blockEndTime,
       );
-      print('       ${timeOverlaps ? "🚫 TIME OVERLAPS!" : "✅ No time overlap"}');
+     
       return timeOverlaps;
     } else if (isFirstDay) {
       // First day: block from startTime to end of day
-      print('       📍 First day of multi-day block - checking from $blockStartTime to end of day');
+    
       final timeOverlaps = _checkTimeOverlap(
         activityTime: activityTime,
         durationMinutes: durationMinutes,
         blockStartTime: blockStartTime,
         blockEndTime: '23:59',
       );
-      print('       ${timeOverlaps ? "🚫 TIME OVERLAPS!" : "✅ No time overlap"}');
+     
       return timeOverlaps;
     } else if (isLastDay) {
       // Last day: block from start of day to endTime
-      print('       📍 Last day of multi-day block - checking from start of day to $blockEndTime');
+    
       final timeOverlaps = _checkTimeOverlap(
         activityTime: activityTime,
         durationMinutes: durationMinutes,
         blockStartTime: '00:00',
         blockEndTime: blockEndTime,
       );
-      print('       ${timeOverlaps ? "🚫 TIME OVERLAPS!" : "✅ No time overlap"}');
+    
       return timeOverlaps;
     } else {
-      // Middle day: entire day is blocked
-      print('       📍 Middle day of multi-day block - ENTIRE DAY BLOCKED');
-      print('       🚫 BLOCKED!');
+      
+     
       return true;
     }
   }
@@ -365,15 +355,13 @@ class BlockingService {
     final blockStartMinutes = _timeToMinutes(blockStartTime);
     final blockEndMinutes = _timeToMinutes(blockEndTime);
 
-    print('          ⏰ Time overlap check:');
-    print('             Activity: $activityTime (${activityStartMinutes}min) to ${activityEndMinutes}min');
-    print('             Block: $blockStartTime (${blockStartMinutes}min) to $blockEndTime (${blockEndMinutes}min)');
+   
 
     // Check for overlap: activity starts before block ends AND activity ends after block starts
     final overlaps = activityStartMinutes < blockEndMinutes &&
         activityEndMinutes > blockStartMinutes;
         
-    print('             Result: $overlaps');
+   
     return overlaps;
   }
 
