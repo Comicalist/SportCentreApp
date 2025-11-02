@@ -28,7 +28,9 @@ class Activity {
   // === POINTS & REWARDS ===
   final int pointsReward;
   
- 
+  // === VOUCHER SETTINGS ===
+  final bool allowVouchers;         // Whether vouchers can be used for this activity
+  
   final List<String> requirements;  
   final String? imageUrl;
   
@@ -55,6 +57,7 @@ class Activity {
     required this.guestPrice,
     required this.memberPrice,
     required this.pointsReward,
+    this.allowVouchers = true,
     this.requirements = const [],
     this.imageUrl,
     required this.createdAt,
@@ -138,6 +141,7 @@ class Activity {
       guestPrice: (json['guestPrice'] ?? 0).toDouble(),
       memberPrice: (json['memberPrice'] ?? 0).toDouble(),
       pointsReward: json['pointsReward'] ?? 0,
+      allowVouchers: json['allowVouchers'] ?? true,
       requirements: List<String>.from(json['requirements'] ?? []),
       imageUrl: json['imageUrl'] ?? '',
       createdAt: json['createdAt'] is String
@@ -169,6 +173,7 @@ class Activity {
       'guestPrice': guestPrice,
       'memberPrice': memberPrice,
       'pointsReward': pointsReward,
+      'allowVouchers': allowVouchers,
       'requirements': requirements,
       'imageUrl': imageUrl,
       'createdAt': createdAt.toIso8601String(),
@@ -196,6 +201,7 @@ class Activity {
     double? guestPrice,
     double? memberPrice,
     int? pointsReward,
+    bool? allowVouchers,
     List<String>? requirements,
     String? imageUrl,
     DateTime? createdAt,
@@ -220,6 +226,7 @@ class Activity {
       guestPrice: guestPrice ?? this.guestPrice,
       memberPrice: memberPrice ?? this.memberPrice,
       pointsReward: pointsReward ?? this.pointsReward,
+      allowVouchers: allowVouchers ?? this.allowVouchers,
       requirements: requirements ?? this.requirements,
       imageUrl: imageUrl ?? this.imageUrl,
       createdAt: createdAt ?? this.createdAt,
