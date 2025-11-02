@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
@@ -366,11 +367,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (success && mounted) {
         // Navigate to email verification screen
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => EmailVerificationScreen(
-              isClubOwner:
-                  _isClubOwner, // Pass the flag to show appropriate message
+        unawaited(
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => EmailVerificationScreen(
+                isClubOwner:
+                    _isClubOwner, // Pass the flag to show appropriate message
+              ),
             ),
           ),
         );

@@ -200,7 +200,7 @@ class BookingProvider extends ChangeNotifier {
 
     try {
       // Cancel existing subscription
-      _bookingsSubscription?.cancel();
+      await _bookingsSubscription?.cancel();
 
       // Listen to real-time updates
       _bookingsSubscription = BookingService.getUserBookings(userId).listen(

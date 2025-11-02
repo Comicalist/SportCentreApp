@@ -28,7 +28,8 @@ class ActivitySeeder {
         return;
       }
 
-      var totalActivitiesCreated = 0;
+      // Remove unused variable since we're not tracking the count
+      // var totalActivitiesCreated = 0;
 
       for (final clubDoc in clubsSnapshot.docs) {
         final clubData = clubDoc.data();
@@ -66,11 +67,11 @@ class ActivitySeeder {
 
           for (final activity in activities) {
             try {
-              final activityData = activity.toJson();
-              activityData.remove('id'); // Firestore will generate ID
+              final activityData = activity.toJson()
+                ..remove('id'); // Use cascade to avoid duplication
 
               await _firestore.collection('activities').add(activityData);
-              totalActivitiesCreated++;
+
             } catch (e) {
               // Log error but continue with other activities
             }

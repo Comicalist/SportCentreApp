@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -40,14 +41,13 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       final bookingProvider = Provider.of<BookingProvider>(
         context,
         listen: false,
-      );
-      bookingProvider.startBooking(widget.activity, authProvider);
+      )..startBooking(widget.activity, authProvider);
 
       // Make sure the bookings stream is initialized (even if empty)
       final uid = authProvider.firebaseUser?.uid;
       if (uid != null) {
         bookingProvider.loadUserBookings(uid);
-        _loadAvailableVouchers(uid);
+        _loadAvailableVouchers(uid); // Call the local method, not on bookingProvider
       }
     });
   }
@@ -196,11 +196,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   }
 
   Widget _buildCalendarSection(BookingProvider bookingProvider) {
-    final safeStream =
-        bookingProvider.userBookingsStream ?? Stream.value(const <Booking>[]);
 
     return StreamBuilder<List<Booking>>(
-      stream: safeStream,
+      stream: bookingProvider.userBookingsStream,
       initialData: const <Booking>[],
       builder: (context, snapshot) {
         if (snapshot.hasError) {
@@ -236,7 +234,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
@@ -269,7 +267,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 ),
                 calendarStyle: CalendarStyle(
                   todayDecoration: BoxDecoration(
-                    color: Colors.teal.withOpacity(0.3),
+                    color: Colors.teal.withValues(alpha: 0.3),
                     shape: BoxShape.circle,
                   ),
                   markerDecoration: const BoxDecoration(
@@ -410,7 +408,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -1426,13 +1424,12 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     });
 
     // Update final booking details with voucher information
-    bookingProvider.updateBookingDetails(
-      participantCount: _participantCount,
-      voucherId: _selectedVoucher?.id,
-    );
-
-    // Set the selected voucher in the provider
-    bookingProvider.setSelectedVoucher(_selectedVoucher);
+    bookingProvider
+      ..updateBookingDetails(
+        participantCount: _participantCount,
+        voucherId: _selectedVoucher?.id,
+      )
+      ..setSelectedVoucher(_selectedVoucher);
 
     try {
       final success = await bookingProvider.confirmBooking();
@@ -1444,12 +1441,14 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
         if (success && bookingProvider.lastCreatedBooking != null) {
           // Navigate directly to success screen since booking is already confirmed
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => BookingSuccessScreen(
-                activity: widget.activity,
-                booking: bookingProvider.lastCreatedBooking!,
+          unawaited(
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => BookingSuccessScreen(
+                  activity: widget.activity,
+                  booking: bookingProvider.lastCreatedBooking!,
+                ),
               ),
             ),
           );

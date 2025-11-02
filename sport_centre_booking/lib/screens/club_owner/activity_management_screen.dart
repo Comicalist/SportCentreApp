@@ -681,10 +681,8 @@ class _ActivityCard extends StatelessWidget {
     );
 
     // If edit was successful, refresh the parent list
-    if (result == false && context.mounted) {
-      if (onEdit != null) {
-        onEdit!(); // Call parent refresh callback
-      }
+    if (result == true && context.mounted) {
+      onEdit(); // ✅ Remove null check and ! operator
     }
   }
 

@@ -33,8 +33,6 @@ class ClubService {
           .orderBy('createdAt', descending: true)
           .get();
 
-      for (final doc in snapshot.docs) {}
-
       return snapshot.docs.map(Club.fromFirestore).toList();
     } catch (e) {
       // Fallback: try without ordering

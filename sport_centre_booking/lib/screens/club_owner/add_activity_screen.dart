@@ -8,7 +8,7 @@ import '../../models/facility.dart';
 import '../../services/activity_service.dart';
 import '../../services/club_service.dart';
 import '../../services/facility_service.dart';
-import '../../services/imageUpload_service.dart';
+import '../../services/image_upload_service.dart';
 
 class AddActivityScreen extends StatefulWidget {
   const AddActivityScreen({super.key});
@@ -44,7 +44,6 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
   TimeOfDay _selectedTime = const TimeOfDay(hour: 9, minute: 0);
   final List<String> _requirements = [];
   bool _isLoading = false;
-  bool _isLoadingClubs = true;
 
   String? _uploadedImageUrl;
   bool _isUploadingImage = false;
@@ -71,7 +70,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
   }
 
   Future<void> _loadOwnedClubs() async {
-    setState(() => _isLoadingClubs = true);
+    setState(() => _isLoading = true);
 
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -84,7 +83,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
 
       setState(() {
         _ownedClubs = clubs;
-        _isLoadingClubs = false;
+        _isLoading = false;
       });
 
       if (clubs.isEmpty) {
@@ -100,7 +99,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
         }
       }
     } catch (e) {
-      setState(() => _isLoadingClubs = false);
+      setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

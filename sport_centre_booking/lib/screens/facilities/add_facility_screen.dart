@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/club.dart';
 import '../../models/facility.dart';
 import '../../services/facility_service.dart';
-import '../../services/imageUpload_service.dart'; // Add this import
+import '../../services/image_upload_service.dart'; // Add this import
 
 class AddFacilityScreen extends StatefulWidget {
   const AddFacilityScreen({super.key, required this.club});

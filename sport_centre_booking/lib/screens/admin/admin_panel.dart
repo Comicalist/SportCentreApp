@@ -105,22 +105,6 @@ class AdminPanel extends StatelessWidget {
     );
   }
 
-  void _navigateToBookingsManagement(BuildContext context) {
-    // Navigate to bookings management
-  }
-
-  void _navigateToUserManagement(BuildContext context) {
-    // Navigate to user management
-  }
-
-  void _navigateToAnalytics(BuildContext context) {
-    // Navigate to analytics
-  }
-
-  void _navigateToAppConfig(BuildContext context) {
-    // Navigate to app configuration
-  }
-
   void _showSeedDialog(BuildContext context) {
     showDialog(
       context: context,

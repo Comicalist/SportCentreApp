@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -463,12 +464,14 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
 
     if (success && mounted) {
       // Navigate to success screen
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => BookingSuccessScreen(
-            booking: bookingProvider.lastCreatedBooking!,
-            activity: widget.activity,
+      unawaited(
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BookingSuccessScreen(
+              booking: bookingProvider.lastCreatedBooking!,
+              activity: widget.activity,
+            ),
           ),
         ),
       );

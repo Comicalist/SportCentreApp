@@ -201,14 +201,18 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                         ? () async {
                             final success = await authProvider
                                 .sendEmailVerification();
-                            if (success && mounted) {
+                            if (!mounted) return;
+                            
+                            if (success) {
                               _startResendCooldown();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Verification email sent!'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Verification email sent!'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
                             }
                           }
                         : null,
@@ -242,23 +246,29 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                   child: OutlinedButton(
                     onPressed: () async {
                       await authProvider.checkEmailVerification();
-                      if (authProvider.isEmailVerified && mounted) {
-                        Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Email verified successfully!'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      } else if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Email not yet verified. Please check your inbox.',
+                      if (!mounted) return;
+                      
+                      if (authProvider.isEmailVerified) {
+                        if (mounted) {
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Email verified successfully!'),
+                              backgroundColor: Colors.green,
                             ),
-                            backgroundColor: Colors.orange,
-                          ),
-                        );
+                          );
+                        }
+                      } else {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Email not yet verified. Please check your inbox.',
+                              ),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                        }
                       }
                     },
                     style: OutlinedButton.styleFrom(

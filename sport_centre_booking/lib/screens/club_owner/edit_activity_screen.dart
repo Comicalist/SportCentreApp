@@ -6,7 +6,7 @@ import '../../models/activity.dart';
 import '../../models/facility.dart';
 import '../../services/activity_service.dart';
 import '../../services/facility_service.dart';
-import '../../services/imageUpload_service.dart';
+import '../../services/image_upload_service.dart';
 
 class EditActivityScreen extends StatefulWidget {
   const EditActivityScreen({super.key, required this.activity});

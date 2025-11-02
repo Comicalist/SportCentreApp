@@ -9,7 +9,11 @@ import 'providers/booking_provider.dart';
 import 'widgets/auth/auth_wrapper.dart';
 
 // Global logger instance
-final logger = Logger(printer: PrettyPrinter(printTime: true));
+final logger = Logger(
+  printer: PrettyPrinter(
+    dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart,
+  ),
+);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,11 +24,13 @@ void main() async {
     );
     logger.i('Firebase initialized successfully');
   } catch (e, stackTrace) {
-    logger.e(
-      'Firebase initialization failed',
-      error: e,
-      stackTrace: stackTrace,
-    );
+    logger
+      ..e(
+        'Firebase initialization failed',
+        error: e,
+        stackTrace: stackTrace,
+      )
+      ..w('Continuing app startup despite Firebase initialization failure');
 
     // In a production app, you might want to:
     // 1. Show an error dialog to the user
@@ -32,7 +38,6 @@ void main() async {
     // 3. Send crash reports to a service like Firebase Crashlytics
 
     // For now, we'll continue but the app might not work properly
-    logger.w('Continuing app startup despite Firebase initialization failure');
   }
 
   runApp(const MyApp());

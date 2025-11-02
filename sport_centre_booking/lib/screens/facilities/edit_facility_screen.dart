@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import '../../models/facility.dart';
 import '../../services/blocking_service.dart';
 import '../../services/facility_service.dart';
-import '../../services/imageUpload_service.dart';
+import '../../services/image_upload_service.dart';
 
 class EditFacilityScreen extends StatefulWidget {
   const EditFacilityScreen({super.key, required this.facility});
@@ -425,26 +425,6 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
         });
       }
     }
-  }
-
-  String _getDefaultImagePreview() {
-    final title = _titleController.text.toLowerCase();
-    if (title.contains('gym') || title.contains('weight')) {
-      return Facility.defaultImages['gym']!;
-    } else if (title.contains('pool') || title.contains('swim')) {
-      return Facility.defaultImages['pool']!;
-    } else if (title.contains('court') ||
-        title.contains('tennis') ||
-        title.contains('basketball') ||
-        title.contains('badminton')) {
-      return Facility.defaultImages['court']!;
-    } else if (title.contains('studio') ||
-        title.contains('yoga') ||
-        title.contains('dance') ||
-        title.contains('class')) {
-      return Facility.defaultImages['studio']!;
-    }
-    return Facility.defaultImages['default']!;
   }
 
   Widget _buildUpdateButton() {

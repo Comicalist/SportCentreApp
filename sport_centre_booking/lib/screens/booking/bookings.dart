@@ -202,7 +202,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
 
                     // ---- Bookings list (with safe date handling) ----
                     StreamBuilder<List<Booking>>(
-                      stream: bookingProvider.userBookingsStream,
+                      stream: bookingProvider.userBookingsStream, // ✅ This is fine since userBookingsStream is never null
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
@@ -372,12 +372,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
 
   /// Calendar card: same behavior as the working page
   Widget _buildCalendarSection(BookingProvider bookingProvider) {
-    // Fallback to an immediate empty stream if provider hasn't set one yet
-    final safeStream =
-        bookingProvider.userBookingsStream ?? Stream.value(const <Booking>[]);
-
     return StreamBuilder<List<Booking>>(
-      stream: safeStream,
+      stream: bookingProvider.userBookingsStream,
       initialData: const <Booking>[],
       builder: (context, snapshot) {
         if (snapshot.hasError) {
@@ -386,7 +382,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
 
         final bookings = snapshot.data ?? const <Booking>[];
         final isLoading = snapshot.connectionState == ConnectionState.waiting;
-
+        
         // Map day -> list of bookings (skip rows without valid date)
         final byDay = <DateTime, List<Booking>>{};
         for (final b in bookings) {
@@ -415,7 +411,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
@@ -448,7 +444,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 ),
                 calendarStyle: CalendarStyle(
                   todayDecoration: BoxDecoration(
-                    color: Colors.teal.withOpacity(0.3),
+                    color: Colors.teal.withValues(alpha: 0.3),
                     shape: BoxShape.circle,
                   ),
                   markerDecoration: const BoxDecoration(
@@ -579,53 +575,6 @@ class _BookingsScreenState extends State<BookingsScreen> {
           ),
         );
       },
-    );
-  }
-
-  /// Minimal empty calendar used for errors or no data
-  Widget _buildEmptyCalendar({String? message}) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'My Bookings Calendar',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 12),
-          TableCalendar(
-            focusedDay: _focusedDay,
-            firstDay: DateTime.now().subtract(const Duration(days: 365)),
-            lastDay: DateTime.now().add(const Duration(days: 365)),
-            headerStyle: const HeaderStyle(
-              formatButtonVisible: false,
-              titleCentered: true,
-            ),
-            eventLoader: (_) => const [],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            message ?? 'No bookings yet.',
-            style: TextStyle(color: Colors.grey[600]),
-          ),
-        ],
-      ),
     );
   }
 
@@ -1012,6 +961,53 @@ class _BookingsScreenState extends State<BookingsScreen> {
               foregroundColor: Colors.white,
             ),
             child: const Text('Cancel Booking'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Minimal empty calendar used for errors or no data
+  Widget _buildEmptyCalendar({String? message}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'My Bookings Calendar',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TableCalendar(
+            focusedDay: _focusedDay,
+            firstDay: DateTime.now().subtract(const Duration(days: 365)),
+            lastDay: DateTime.now().add(const Duration(days: 365)),
+            headerStyle: const HeaderStyle(
+              formatButtonVisible: false,
+              titleCentered: true,
+            ),
+            eventLoader: (_) => const [],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message ?? 'No bookings yet.',
+            style: TextStyle(color: Colors.grey[600]),
           ),
         ],
       ),

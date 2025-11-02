@@ -342,7 +342,7 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
         ),
       );
 
-      if (result ?? false && mounted) {
+      if ((result == true) && mounted) {
         setState(_loadFacilities);
       }
     } catch (e) {

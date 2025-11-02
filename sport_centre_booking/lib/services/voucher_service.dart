@@ -164,7 +164,6 @@ class VoucherService {
 
         // Generate voucher code and set purchase/expiration dates
         final voucherCode = Voucher.generateVoucherCode();
-        final purchaseDate = DateTime.now();
         final expirationDate = Voucher.calculateExpirationDate();
 
         // Update voucher with purchase information

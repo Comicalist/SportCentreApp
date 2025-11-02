@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../models/booking.dart';
@@ -175,9 +176,9 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -470,7 +471,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: _getStatusColor(status).withOpacity(0.2),
+        color: _getStatusColor(status).withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: _getStatusColor(status)),
       ),
@@ -535,7 +536,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
 
       if (success) {
         _showSnackBar('Participant updated successfully', Colors.green);
-        _loadStats(); // Refresh stats
+        unawaited(_loadStats()); // Fix: Use unawaited for fire-and-forget
       } else {
         _showSnackBar('Failed to update participant', Colors.red);
       }
@@ -557,7 +558,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
 
       if (success) {
         _showSnackBar('Status updated successfully', Colors.green);
-        _loadStats(); // Refresh stats
+        unawaited(_loadStats()); // Fix: Use unawaited for fire-and-forget
       } else {
         _showSnackBar('Failed to update status', Colors.red);
       }
@@ -590,14 +591,14 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
       ),
     );
 
-    if (confirmed == true && mounted) {
+    if ((confirmed ?? false) && mounted) { // Fix: Use if-null operator
       final success = await ParticipantService.removeParticipant(
         participant.id,
       );
 
       if (success) {
         _showSnackBar('Participant removed successfully', Colors.green);
-        _loadStats(); // Refresh stats
+        unawaited(_loadStats()); // Fix: Use unawaited for fire-and-forget
       } else {
         _showSnackBar('Failed to remove participant', Colors.red);
       }
@@ -793,13 +794,9 @@ class ChangeStatusDialog extends StatelessWidget {
           ...BookingStatus.values.map((status) {
             return ListTile(
               title: Text(status.value.toUpperCase()),
-              leading: Radio<BookingStatus>(
-                value: status,
-                onChanged: (value) {
-                  if (value != null) {
-                    Navigator.pop(context, value);
-                  }
-                },
+              leading: Icon(
+                status == currentStatus ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                color: status == currentStatus ? Theme.of(context).primaryColor : null,
               ),
               onTap: () => Navigator.pop(context, status),
             );
