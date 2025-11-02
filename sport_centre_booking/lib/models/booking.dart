@@ -117,6 +117,10 @@ class Booking {
   final String confirmationNumber;
   final Map<String, dynamic>? metadata;
   
+  // Voucher information
+  final String? voucherId;          // ID of voucher used
+  final double? voucherDiscount;    // Amount discounted by voucher
+  
   // Activity details for display
   final String activityTitle;
   final DateTime activityDate;
@@ -145,6 +149,8 @@ class Booking {
     this.cancelledAt,
     required this.confirmationNumber,
     this.metadata,
+    this.voucherId,
+    this.voucherDiscount,
     required this.activityTitle,
     required this.activityDate,
     required this.activityTime,
@@ -175,6 +181,8 @@ class Booking {
           : null,
       confirmationNumber: data['confirmationNumber'] ?? '',
       metadata: data['metadata'],
+      voucherId: data['voucherId'],
+      voucherDiscount: data['voucherDiscount']?.toDouble(),
       activityTitle: data['activityTitle'] ?? 'Unknown Activity',
       activityDate: data['activityDate'] != null 
           ? (data['activityDate'] as Timestamp).toDate()
@@ -207,6 +215,8 @@ class Booking {
           : null,
       confirmationNumber: json['confirmationNumber'] ?? '',
       metadata: json['metadata'],
+      voucherId: json['voucherId'],
+      voucherDiscount: json['voucherDiscount']?.toDouble(),
       activityTitle: json['activityTitle'] ?? 'Unknown Activity',
       activityDate: json['activityDate'] != null 
           ? DateTime.parse(json['activityDate'])
@@ -237,6 +247,8 @@ class Booking {
       'cancelledAt': cancelledAt != null ? Timestamp.fromDate(cancelledAt!) : null,
       'confirmationNumber': confirmationNumber,
       'metadata': metadata,
+      'voucherId': voucherId,
+      'voucherDiscount': voucherDiscount,
       'activityTitle': activityTitle,
       'activityDate': Timestamp.fromDate(activityDate),
       'activityTime': activityTime,
@@ -301,6 +313,10 @@ class BookingDetails {
   final double totalPrice;
   final int expectedPoints;
   final Map<String, dynamic>? additionalInfo;
+  
+  // Voucher information
+  final String? voucherId;
+  final double? voucherDiscount;
 
   BookingDetails({
     required this.activityId,
@@ -311,6 +327,8 @@ class BookingDetails {
     required this.totalPrice,
     required this.expectedPoints,
     this.additionalInfo,
+    this.voucherId,
+    this.voucherDiscount,
   });
 
   BookingDetails copyWith({
@@ -322,6 +340,8 @@ class BookingDetails {
     double? totalPrice,
     int? expectedPoints,
     Map<String, dynamic>? additionalInfo,
+    String? voucherId,
+    double? voucherDiscount,
   }) {
     return BookingDetails(
       activityId: activityId ?? this.activityId,
@@ -332,6 +352,8 @@ class BookingDetails {
       totalPrice: totalPrice ?? this.totalPrice,
       expectedPoints: expectedPoints ?? this.expectedPoints,
       additionalInfo: additionalInfo ?? this.additionalInfo,
+      voucherId: voucherId ?? this.voucherId,
+      voucherDiscount: voucherDiscount ?? this.voucherDiscount,
     );
   }
 }

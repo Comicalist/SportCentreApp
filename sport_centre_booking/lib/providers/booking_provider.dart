@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../models/booking.dart';
 import '../models/activity.dart';
+import '../models/voucher.dart';
 import '../services/booking_service.dart';
 import '../providers/auth_provider.dart';
 
@@ -20,6 +21,9 @@ class BookingProvider extends ChangeNotifier {
   
   // Booking confirmation
   Booking? _lastCreatedBooking;
+  
+  // Voucher handling
+  Voucher? _selectedVoucher;
 
   // Getters
   BookingDetails? get currentBookingDetails => _currentBookingDetails;
@@ -29,6 +33,7 @@ class BookingProvider extends ChangeNotifier {
   List<Booking> get userBookings => _userBookings;
   bool get bookingsLoading => _bookingsLoading;
   Booking? get lastCreatedBooking => _lastCreatedBooking;
+  Voucher? get selectedVoucher => _selectedVoucher;
   
   // Stream for user bookings
   Stream<List<Booking>> get userBookingsStream => 
@@ -67,11 +72,18 @@ class BookingProvider extends ChangeNotifier {
     int? participantCount,
     bool? isMemberBooking,
     Map<String, dynamic>? additionalInfo,
+    String? voucherId,
   }) {
     if (_currentBookingDetails == null || _selectedActivity == null) return;
 
     final newParticipantCount = participantCount ?? _currentBookingDetails!.participantCount;
     final newIsMemberBooking = isMemberBooking ?? _currentBookingDetails!.isMemberBooking;
+    
+    // Update selected voucher if provided
+    if (voucherId != null) {
+      // Note: In a real implementation, you might want to fetch the voucher details here
+      // For now, we'll store the voucherId
+    }
     
     _currentBookingDetails = _currentBookingDetails!.copyWith(
       timeSlotId: timeSlotId,
@@ -81,7 +93,20 @@ class BookingProvider extends ChangeNotifier {
       totalPrice: _calculatePrice(_selectedActivity!, newIsMemberBooking, newParticipantCount),
       expectedPoints: _calculatePoints(_selectedActivity!, newIsMemberBooking, newParticipantCount),
       additionalInfo: additionalInfo,
+      voucherId: voucherId,
     );
+    
+    notifyListeners();
+  }
+
+  /// Set selected voucher for the booking
+  void setSelectedVoucher(Voucher? voucher) {
+    _selectedVoucher = voucher;
+    
+    // Update booking details with voucher ID
+    if (_currentBookingDetails != null) {
+      updateBookingDetails(voucherId: voucher?.id);
+    }
     
     notifyListeners();
   }

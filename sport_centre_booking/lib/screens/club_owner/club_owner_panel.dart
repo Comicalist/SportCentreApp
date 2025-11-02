@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'club_management_screen.dart';
 import 'activity_management_screen.dart';
+import 'voucher_management_screen.dart';
 
 class ClubOwnerPanel extends StatelessWidget {
   const ClubOwnerPanel({super.key});
@@ -38,6 +39,13 @@ class ClubOwnerPanel extends StatelessWidget {
                     onTap: () => _navigateToActivityManagement(context),
                   ),
                   _OwnerTile(
+                    icon: Icons.card_giftcard,
+                    title: 'Manage Vouchers',
+                    subtitle: 'Create and manage vouchers for your clubs',
+                    color: Colors.green,
+                    onTap: () => _navigateToVoucherManagement(context),
+                  ),
+                  _OwnerTile(
                     icon: Icons.analytics,
                     title: 'Analytics',
                     subtitle: 'View performance of your clubs',
@@ -72,6 +80,15 @@ class ClubOwnerPanel extends StatelessWidget {
       context,
       MaterialPageRoute(
         builder: (context) => const ActivityManagementScreen(),
+      ),
+    );
+  }
+
+  void _navigateToVoucherManagement(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const VoucherManagementScreen(),
       ),
     );
   }
