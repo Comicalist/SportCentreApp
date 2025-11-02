@@ -661,10 +661,12 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                         validator: (value) {
                           if (value?.isEmpty ?? false) return 'Required';
                           final duration = int.tryParse(value!);
-                          if (duration == null || duration <= 0)
+                          if (duration == null || duration <= 0) {
                             return 'Enter valid duration';
-                          if (duration > 480)
+                          }
+                          if (duration > 480) {
                             return 'Duration cannot exceed 8 hours';
+                          }
                           return null;
                         },
                       ),
@@ -698,8 +700,9 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                         validator: (value) {
                           if (value?.isEmpty ?? false) return 'Required';
                           final capacity = int.tryParse(value!);
-                          if (capacity == null || capacity <= 0)
+                          if (capacity == null || capacity <= 0) {
                             return 'Enter valid capacity';
+                          }
                           if (capacity < widget.activity.bookedCount) {
                             return 'Cannot be less than current bookings (${widget.activity.bookedCount})';
                           }
@@ -727,8 +730,9 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                               validator: (value) {
                                 if (value?.isEmpty ?? false) return 'Required';
                                 final price = double.tryParse(value!);
-                                if (price == null || price < 0)
+                                if (price == null || price < 0) {
                                   return 'Enter valid price';
+                                }
                                 return null;
                               },
                             ),
@@ -746,8 +750,9 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                               validator: (value) {
                                 if (value?.isEmpty ?? false) return 'Required';
                                 final price = double.tryParse(value!);
-                                if (price == null || price < 0)
+                                if (price == null || price < 0) {
                                   return 'Enter valid price';
+                                }
                                 return null;
                               },
                             ),
@@ -768,8 +773,9 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                         validator: (value) {
                           if (value?.isEmpty ?? false) return 'Required';
                           final points = int.tryParse(value!);
-                          if (points == null || points < 0)
+                          if (points == null || points < 0) {
                             return 'Enter valid points';
+                          }
                           return null;
                         },
                       ),

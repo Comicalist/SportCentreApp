@@ -252,7 +252,7 @@ class _MethodCard extends StatelessWidget {
             width: 2,
           ),
           borderRadius: BorderRadius.circular(12),
-          color: isSelected ? Colors.teal.withOpacity(0.1) : Colors.transparent,
+          color: isSelected ? Colors.teal.withValues(alpha: 0.1) : Colors.transparent,
         ),
         child: Column(
           children: [
