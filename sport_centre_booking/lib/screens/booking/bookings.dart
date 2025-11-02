@@ -1,17 +1,17 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:intl/intl.dart'; // date/time formatting
-import 'package:table_calendar/table_calendar.dart'; // calendar widget
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // date/time formatting
+import 'package:provider/provider.dart';
+import 'package:table_calendar/table_calendar.dart'; // calendar widget
 
+import '../../models/booking.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/booking_provider.dart';
-import '../../models/booking.dart';
+import '../../screens/auth/login_screen.dart';
 import '../../services/booking_service.dart';
 import '../../services/notification_service.dart';
-import '../../widgets/notifications/notifications_drawer.dart';
 import '../../utils/colors.dart';
-import '../../screens/auth/login_screen.dart';
+import '../../widgets/notifications/notifications_drawer.dart';
 
 class BookingsScreen extends StatefulWidget {
   const BookingsScreen({super.key});
@@ -23,7 +23,12 @@ class BookingsScreen extends StatefulWidget {
 class _BookingsScreenState extends State<BookingsScreen> {
   // ---- Filters (original feature) ----
   String selectedFilter = 'All';
-  final List<String> filterOptions = ['All', 'Confirmed', 'Completed', 'Cancelled'];
+  final List<String> filterOptions = [
+    'All',
+    'Confirmed',
+    'Completed',
+    'Cancelled',
+  ];
 
   // ---- Calendar state (required by TableCalendar) ----
   DateTime _focusedDay = DateTime.now(); // must be non-null
@@ -36,8 +41,10 @@ class _BookingsScreenState extends State<BookingsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       if (authProvider.appUser != null) {
-        Provider.of<BookingProvider>(context, listen: false)
-            .loadUserBookings(authProvider.firebaseUser!.uid);
+        Provider.of<BookingProvider>(
+          context,
+          listen: false,
+        ).loadUserBookings(authProvider.firebaseUser!.uid);
       }
     });
   }
@@ -77,14 +84,18 @@ class _BookingsScreenState extends State<BookingsScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const LoginScreen(isSignUp: false),
+                          builder: (context) =>
+                              const LoginScreen(isSignUp: false),
                         ),
                       );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 12,
+                      ),
                     ),
                     child: const Text('Sign In'),
                   ),
@@ -96,7 +107,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
 
         // Logged-in view: calendar + filters + list
         final userId = firebase_auth.FirebaseAuth.instance.currentUser?.uid;
-        
+
         return Scaffold(
           backgroundColor: Colors.grey[50],
           appBar: AppBar(
@@ -176,8 +187,11 @@ class _BookingsScreenState extends State<BookingsScreen> {
                             child: FilterChip(
                               label: Text(filter),
                               selected: selectedFilter == filter,
-                              onSelected: (_) => setState(() => selectedFilter = filter),
-                              selectedColor: AppColors.primary.withValues(alpha: 0.2),
+                              onSelected: (_) =>
+                                  setState(() => selectedFilter = filter),
+                              selectedColor: AppColors.primary.withValues(
+                                alpha: 0.2,
+                              ),
                               checkmarkColor: AppColors.primary,
                             ),
                           );
@@ -190,7 +204,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     StreamBuilder<List<Booking>>(
                       stream: bookingProvider.userBookingsStream,
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
                           return const Center(
                             child: Padding(
                               padding: EdgeInsets.all(32),
@@ -205,7 +220,11 @@ class _BookingsScreenState extends State<BookingsScreen> {
                               padding: const EdgeInsets.all(32),
                               child: Column(
                                 children: [
-                                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                                  const Icon(
+                                    Icons.error_outline,
+                                    size: 48,
+                                    color: Colors.red,
+                                  ),
                                   const SizedBox(height: 16),
                                   Text(
                                     'Error loading bookings: ${snapshot.error}',
@@ -227,7 +246,11 @@ class _BookingsScreenState extends State<BookingsScreen> {
                               padding: const EdgeInsets.all(32),
                               child: Column(
                                 children: [
-                                  Icon(Icons.event_busy, size: 64, color: Colors.grey[400]),
+                                  Icon(
+                                    Icons.event_busy,
+                                    size: 64,
+                                    color: Colors.grey[400],
+                                  ),
                                   const SizedBox(height: 16),
                                   Text(
                                     selectedFilter == 'All'
@@ -241,7 +264,10 @@ class _BookingsScreenState extends State<BookingsScreen> {
                                   const SizedBox(height: 8),
                                   Text(
                                     'Start booking activities to see them here',
-                                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[600],
+                                    ),
                                   ),
                                 ],
                               ),
@@ -340,14 +366,14 @@ class _BookingsScreenState extends State<BookingsScreen> {
       final e = DateFormat('HH:mm').format(end);
       return '$s – $e';
     }
-    if (dur != null) return '$s • ${dur} min';
+    if (dur != null) return '$s • $dur min';
     return s;
   }
 
   /// Calendar card: same behavior as the working page
   Widget _buildCalendarSection(BookingProvider bookingProvider) {
     // Fallback to an immediate empty stream if provider hasn't set one yet
-    final Stream<List<Booking>> safeStream =
+    final safeStream =
         bookingProvider.userBookingsStream ?? Stream.value(const <Booking>[]);
 
     return StreamBuilder<List<Booking>>(
@@ -362,7 +388,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
         final isLoading = snapshot.connectionState == ConnectionState.waiting;
 
         // Map day -> list of bookings (skip rows without valid date)
-        final Map<DateTime, List<Booking>> byDay = {};
+        final byDay = <DateTime, List<Booking>>{};
         for (final b in bookings) {
           final start = _getStartDate(b);
           if (start == null) continue;
@@ -401,7 +427,11 @@ class _BookingsScreenState extends State<BookingsScreen> {
             children: [
               const Text(
                 'My Bookings Calendar',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
               ),
               const SizedBox(height: 12),
 
@@ -410,7 +440,6 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 focusedDay: _focusedDay,
                 firstDay: DateTime.now().subtract(const Duration(days: 365)),
                 lastDay: DateTime.now().add(const Duration(days: 365)),
-                calendarFormat: CalendarFormat.month,
                 startingDayOfWeek: StartingDayOfWeek.monday,
                 availableGestures: AvailableGestures.horizontalSwipe,
                 headerStyle: const HeaderStyle(
@@ -439,7 +468,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
                   });
                 },
                 // Return the list of bookings for that day
-                eventLoader: (day) => byDay[_atMidnight(day)] ?? const <Booking>[],
+                eventLoader: (day) =>
+                    byDay[_atMidnight(day)] ?? const <Booking>[],
               ),
 
               const SizedBox(height: 12),
@@ -453,18 +483,27 @@ class _BookingsScreenState extends State<BookingsScreen> {
                   ),
                 )
               else if (bookings.isEmpty) ...[
-                const Text('No bookings yet.', style: TextStyle(color: Colors.grey)),
+                const Text(
+                  'No bookings yet.',
+                  style: TextStyle(color: Colors.grey),
+                ),
               ] else ...[
                 // Selected day title
                 Text(
                   DateFormat('EEEE, MMMM d, yyyy').format(_selectedDay!),
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 8),
 
                 // Selected day bookings list
                 if (selectedBookings.isEmpty)
-                  const Text('No bookings this day.', style: TextStyle(color: Colors.grey))
+                  const Text(
+                    'No bookings this day.',
+                    style: TextStyle(color: Colors.grey),
+                  )
                 else
                   ListView.separated(
                     shrinkWrap: true,
@@ -475,7 +514,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                       final b = selectedBookings[i];
 
                       // Optional fields depending on your Booking model
-                      String title = 'Booking';
+                      var title = 'Booking';
                       String? place;
                       try {
                         title = (b as dynamic).activityName as String? ?? title;
@@ -487,7 +526,10 @@ class _BookingsScreenState extends State<BookingsScreen> {
                       return ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: const CircleAvatar(child: Icon(Icons.event)),
-                        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                        title: Text(
+                          title,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
                         subtitle: Padding(
                           padding: const EdgeInsets.only(top: 6),
                           child: Wrap(
@@ -497,11 +539,17 @@ class _BookingsScreenState extends State<BookingsScreen> {
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.access_time, size: 16, color: Colors.teal),
+                                  const Icon(
+                                    Icons.access_time,
+                                    size: 16,
+                                    color: Colors.teal,
+                                  ),
                                   const SizedBox(width: 6),
                                   Text(
                                     _formatTimeRange(b),
-                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -510,9 +558,13 @@ class _BookingsScreenState extends State<BookingsScreen> {
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.location_on, size: 16, color: Colors.teal),
+                                    const Icon(
+                                      Icons.location_on,
+                                      size: 16,
+                                      color: Colors.teal,
+                                    ),
                                     const SizedBox(width: 6),
-                                    Text(place!),
+                                    Text(place),
                                   ],
                                 ),
                               ],
@@ -550,19 +602,28 @@ class _BookingsScreenState extends State<BookingsScreen> {
         children: [
           const Text(
             'My Bookings Calendar',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
           ),
           const SizedBox(height: 12),
           TableCalendar(
             focusedDay: _focusedDay,
             firstDay: DateTime.now().subtract(const Duration(days: 365)),
             lastDay: DateTime.now().add(const Duration(days: 365)),
-            calendarFormat: CalendarFormat.month,
-            headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
+            headerStyle: const HeaderStyle(
+              formatButtonVisible: false,
+              titleCentered: true,
+            ),
             eventLoader: (_) => const [],
           ),
           const SizedBox(height: 8),
-          Text(message ?? 'No bookings yet.', style: TextStyle(color: Colors.grey[600])),
+          Text(
+            message ?? 'No bookings yet.',
+            style: TextStyle(color: Colors.grey[600]),
+          ),
         ],
       ),
     );
@@ -575,14 +636,17 @@ class _BookingsScreenState extends State<BookingsScreen> {
   Widget _buildBookingCard(Booking booking) {
     // Safely derive date + time for the card
     final startForList = _getStartDate(booking);
-    final dateLabel = startForList != null ? _formatDate(startForList) : 'Date TBA';
+    final dateLabel = startForList != null
+        ? _formatDate(startForList)
+        : 'Date TBA';
     // If activityTime is missing, reuse computed time range as a fallback
     String? activityTime;
     try {
       activityTime = (booking as dynamic).activityTime as String?;
     } catch (_) {}
-    final timeLabel =
-        (activityTime == null || activityTime.isEmpty) ? _formatTimeRange(booking) : activityTime;
+    final timeLabel = (activityTime == null || activityTime.isEmpty)
+        ? _formatTimeRange(booking)
+        : activityTime;
 
     return Card(
       elevation: 1,
@@ -602,7 +666,10 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     children: [
                       Text(
                         booking.activityTitle,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -636,15 +703,20 @@ class _BookingsScreenState extends State<BookingsScreen> {
               ],
             ),
             // Points for completed bookings
-            if (booking.pointsEarned > 0 && booking.status == BookingStatus.completed) ...[
+            if (booking.pointsEarned > 0 &&
+                booking.status == BookingStatus.completed) ...[
               const SizedBox(height: 8),
-              Row(
-                children: const [
+              const Row(
+                children: [
                   Icon(Icons.star, size: 16, color: Colors.orange),
                   SizedBox(width: 4),
                   Text(
                     '+ points earned',
-                    style: TextStyle(fontSize: 14, color: Colors.orange, fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.orange,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
@@ -659,7 +731,9 @@ class _BookingsScreenState extends State<BookingsScreen> {
                       onPressed: () => _showBookingDetails(booking),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: AppColors.primary),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                       child: const Text('View Details'),
                     ),
@@ -672,7 +746,9 @@ class _BookingsScreenState extends State<BookingsScreen> {
                         backgroundColor: Colors.red[50],
                         foregroundColor: Colors.red[700],
                         elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                       child: const Text('Cancel'),
                     ),
@@ -689,9 +765,13 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
                     elevation: 2,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
-                  child: Text('Complete Booking (+${booking.pointsEarned} pts)'),
+                  child: Text(
+                    'Complete Booking (+${booking.pointsEarned} pts)',
+                  ),
                 ),
               ),
             ],
@@ -736,15 +816,27 @@ class _BookingsScreenState extends State<BookingsScreen> {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: backgroundColor, borderRadius: BorderRadius.circular(12)),
-      child: Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor)),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        ),
+      ),
     );
   }
 
   List<Booking> _filterBookings(List<Booking> bookings) {
     if (selectedFilter == 'All') return bookings;
     final status = BookingStatus.values.firstWhere(
-      (s) => s.toString().split('.').last.toLowerCase() == selectedFilter.toLowerCase(),
+      (s) =>
+          s.toString().split('.').last.toLowerCase() ==
+          selectedFilter.toLowerCase(),
     );
     return bookings.where((booking) => booking.status == status).toList();
   }
@@ -757,8 +849,9 @@ class _BookingsScreenState extends State<BookingsScreen> {
     try {
       activityTime = (booking as dynamic).activityTime as String?;
     } catch (_) {}
-    final timeLabel =
-        (activityTime == null || activityTime.isEmpty) ? _formatTimeRange(booking) : activityTime;
+    final timeLabel = (activityTime == null || activityTime.isEmpty)
+        ? _formatTimeRange(booking)
+        : activityTime;
 
     showDialog(
       context: context,
@@ -772,13 +865,17 @@ class _BookingsScreenState extends State<BookingsScreen> {
             Text('Time: $timeLabel'),
             Text('Participants: ${booking.participantCount}'),
             Text('Total Price: \$${booking.totalPrice.toStringAsFixed(2)}'),
-            if (booking.pointsEarned > 0) Text('Points Earned: ${booking.pointsEarned}'),
+            if (booking.pointsEarned > 0)
+              Text('Points Earned: ${booking.pointsEarned}'),
             const SizedBox(height: 8),
             Text('Booking ID: ${booking.id}'),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
         ],
       ),
     );
@@ -790,21 +887,28 @@ class _BookingsScreenState extends State<BookingsScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Complete Booking'),
         content: Text(
-            'Mark "${booking.activityTitle}" as completed and credit ${booking.pointsEarned} points?'),
+          'Mark "${booking.activityTitle}" as completed and credit ${booking.pointsEarned} points?',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () async {
               Navigator.of(context).pop();
               try {
-                final success = await BookingService.completeBooking(booking.id);
+                final success = await BookingService.completeBooking(
+                  booking.id,
+                );
                 if (!mounted) return;
                 if (success) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content:
-                            Text('Booking completed! ${booking.pointsEarned} points credited'),
+                        content: Text(
+                          'Booking completed! ${booking.pointsEarned} points credited',
+                        ),
                         backgroundColor: Colors.green,
                       ),
                     );
@@ -813,7 +917,9 @@ class _BookingsScreenState extends State<BookingsScreen> {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Failed to complete booking. Please try again.'),
+                        content: Text(
+                          'Failed to complete booking. Please try again.',
+                        ),
                         backgroundColor: Colors.red,
                       ),
                     );
@@ -824,14 +930,19 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Error: ${e.toString().replaceAll('Exception: ', '')}'),
+                      content: Text(
+                        'Error: ${e.toString().replaceAll('Exception: ', '')}',
+                      ),
                       backgroundColor: Colors.red,
                     ),
                   );
                 }
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Complete & Credit Points'),
           ),
         ],
@@ -845,15 +956,21 @@ class _BookingsScreenState extends State<BookingsScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Cancel Booking'),
         content: Text(
-            'Are you sure you want to cancel your booking for "${booking.activityTitle}"?'),
+          'Are you sure you want to cancel your booking for "${booking.activityTitle}"?',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Keep Booking')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Keep Booking'),
+          ),
           ElevatedButton(
             onPressed: () async {
               Navigator.of(context).pop();
               try {
-                final success = await Provider.of<BookingProvider>(context, listen: false)
-                    .cancelBooking(booking.id);
+                final success = await Provider.of<BookingProvider>(
+                  context,
+                  listen: false,
+                ).cancelBooking(booking.id);
                 if (!mounted) return;
                 if (success) {
                   if (context.mounted) {
@@ -868,7 +985,9 @@ class _BookingsScreenState extends State<BookingsScreen> {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Failed to cancel booking. Please try again.'),
+                        content: Text(
+                          'Failed to cancel booking. Please try again.',
+                        ),
                         backgroundColor: Colors.red,
                       ),
                     );
@@ -879,14 +998,19 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Error: ${e.toString().replaceAll('Exception: ', '')}'),
+                      content: Text(
+                        'Error: ${e.toString().replaceAll('Exception: ', '')}',
+                      ),
                       backgroundColor: Colors.red,
                     ),
                   );
                 }
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Cancel Booking'),
           ),
         ],
@@ -897,8 +1021,18 @@ class _BookingsScreenState extends State<BookingsScreen> {
   // Format a DateTime for list cards
   String _formatDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[date.month - 1]} ${date.day}';
   }

@@ -16,7 +16,7 @@ class ActivityService {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.map((doc) {
-        Map<String, dynamic> data = doc.data();
+        final data = doc.data();
         data['id'] = doc.id; // Use Firestore document ID
         return Activity.fromJson(data);
       }).toList();
@@ -36,7 +36,7 @@ class ActivityService {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.map((doc) {
-        Map<String, dynamic> data = doc.data();
+        final data = doc.data();
         data['id'] = doc.id;
         return Activity.fromJson(data);
       }).toList();
@@ -121,7 +121,7 @@ class ActivityService {
     try {
       final doc = await _firestore.collection(_collection).doc(activityId).get();
       if (doc.exists) {
-        Map<String, dynamic> data = doc.data()!;
+        final data = doc.data()!;
         data['id'] = doc.id;
         return Activity.fromJson(data);
       }
@@ -147,7 +147,7 @@ class ActivityService {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.map((doc) {
-        Map<String, dynamic> data = doc.data();
+        final data = doc.data();
         data['id'] = doc.id;
         return Activity.fromJson(data);
       }).toList();
@@ -163,7 +163,7 @@ class ActivityService {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.map((doc) {
-        Map<String, dynamic> data = doc.data();
+        final data = doc.data();
         data['id'] = doc.id;
         return Activity.fromJson(data);
       }).toList();
@@ -379,7 +379,7 @@ class ActivityService {
   /// Add a new activity (simple version without validation - for admin use)
   static Future<void> addActivity(Activity activity) async {
     try {
-      Map<String, dynamic> activityData = activity.toJson();
+      final activityData = activity.toJson();
       activityData.remove('id'); // Don't include the ID in the document data
       
       await _firestore.collection(_collection).add(activityData);
@@ -393,17 +393,17 @@ class ActivityService {
   /// Get unique clubs for dropdown (using clubName from activities)
   static Future<List<String>> getAvailableClubs() async {
     try {
-      QuerySnapshot snapshot = await _firestore.collection(_collection).get();
-      Set<String> clubs = {};
+      final QuerySnapshot snapshot = await _firestore.collection(_collection).get();
+      final clubs = <String>{};
       
-      for (QueryDocumentSnapshot doc in snapshot.docs) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+      for (final doc in snapshot.docs) {
+        final data = doc.data()! as Map<String, dynamic>;
         if (data['clubName'] != null) {
           clubs.add(data['clubName']);
         }
       }
       
-      List<String> clubList = clubs.toList();
+      final clubList = clubs.toList();
       clubList.sort();
       return clubList;
     } catch (e) {
@@ -414,16 +414,16 @@ class ActivityService {
   /// Get unique clubs as a real-time stream
   static Stream<List<String>> getAvailableClubsStream() {
     return _firestore.collection(_collection).snapshots().map((snapshot) {
-      Set<String> clubs = {};
+      final clubs = <String>{};
       
-      for (QueryDocumentSnapshot doc in snapshot.docs) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+      for (final QueryDocumentSnapshot doc in snapshot.docs) {
+        final data = doc.data()! as Map<String, dynamic>;
         if (data['clubName'] != null) {
           clubs.add(data['clubName']);
         }
       }
       
-      List<String> clubList = clubs.toList();
+      final clubList = clubs.toList();
       clubList.sort();
       return clubList;
     });
@@ -432,17 +432,17 @@ class ActivityService {
   /// Get unique facilities for dropdown (using facilityName from activities)
   static Future<List<String>> getAvailableFacilities() async {
     try {
-      QuerySnapshot snapshot = await _firestore.collection(_collection).get();
-      Set<String> facilities = {};
+      final QuerySnapshot snapshot = await _firestore.collection(_collection).get();
+      final facilities = <String>{};
       
-      for (QueryDocumentSnapshot doc in snapshot.docs) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+      for (final doc in snapshot.docs) {
+        final data = doc.data()! as Map<String, dynamic>;
         if (data['facilityName'] != null) {
           facilities.add(data['facilityName']);
         }
       }
       
-      List<String> facilityList = facilities.toList();
+      final facilityList = facilities.toList();
       facilityList.sort();
       return facilityList;
     } catch (e) {
@@ -453,56 +453,56 @@ class ActivityService {
   /// Get unique facilities as a real-time stream
   static Stream<List<String>> getAvailableFacilitiesStream() {
     return _firestore.collection(_collection).snapshots().map((snapshot) {
-      Set<String> facilities = {};
+      final facilities = <String>{};
       
-      for (QueryDocumentSnapshot doc in snapshot.docs) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+      for (final QueryDocumentSnapshot doc in snapshot.docs) {
+        final data = doc.data()! as Map<String, dynamic>;
         if (data['facilityName'] != null) {
           facilities.add(data['facilityName']);
         }
       }
       
-      List<String> facilityList = facilities.toList();
+      final facilityList = facilities.toList();
       facilityList.sort();
       return facilityList;
     });
   }
 
   /// Get unique facilities for a specific club as a real-time stream
-  static Stream<List<String>> getAvailableFacilitiesStreamByClub(String clubName) {
+  static Stream<List<String>> getAvailableFacilitiesStreamByClub(String clubId) {
     return _firestore
         .collection(_collection)
-        .where('clubName', isEqualTo: clubName)
+        .where('clubId', isEqualTo: clubId)
         .snapshots()
         .map((snapshot) {
-      Set<String> facilities = {};
+      final facilities = <String>{};
       
-      for (QueryDocumentSnapshot doc in snapshot.docs) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+      for (final QueryDocumentSnapshot doc in snapshot.docs) {
+        final data = doc.data()! as Map<String, dynamic>;
         if (data['facilityName'] != null) {
           facilities.add(data['facilityName']);
         }
       }
       
-      List<String> facilityList = facilities.toList();
+      final facilityList = facilities.toList();
       facilityList.sort();
       return facilityList;
     });
   }
 
-  /// Get unique categories from database
+  /// Get unique categories (cached)
   static Future<List<String>> getAvailableCategories() async {
     final snapshot = await _firestore.collection(_collection).get();
-    Set<String> categories = {};
+    final categories = <String>{};
     
-    for (QueryDocumentSnapshot doc in snapshot.docs) {
-      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    for (final QueryDocumentSnapshot doc in snapshot.docs) {
+      final data = doc.data()! as Map<String, dynamic>;
       if (data['category'] != null) {
         categories.add(data['category']);
       }
     }
     
-    List<String> categoryList = categories.toList();
+    final categoryList = categories.toList();
     categoryList.sort();
     return categoryList;
   }
@@ -510,16 +510,16 @@ class ActivityService {
   /// Get unique categories as a real-time stream
   static Stream<List<String>> getAvailableCategoriesStream() {
     return _firestore.collection(_collection).snapshots().map((snapshot) {
-      Set<String> categories = {};
+      final categories = <String>{};
       
-      for (QueryDocumentSnapshot doc in snapshot.docs) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+      for (final QueryDocumentSnapshot doc in snapshot.docs) {
+        final data = doc.data()! as Map<String, dynamic>;
         if (data['category'] != null) {
           categories.add(data['category']);
         }
       }
       
-      List<String> categoryList = categories.toList();
+      final categoryList = categories.toList();
       categoryList.sort();
       return categoryList;
     });

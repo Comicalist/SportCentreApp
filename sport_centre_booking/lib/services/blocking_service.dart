@@ -4,7 +4,6 @@ import '../models/activity.dart';
 class BlockingService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  
   static Future<BlockStatus> isTimeSlotBlocked({
     required String facilityId,
     required DateTime activityDate,
@@ -12,16 +11,12 @@ class BlockingService {
     required int durationMinutes,
   }) async {
     try {
-     
-      
-
       final facilityDoc = await _firestore
           .collection('facilities')
           .doc(facilityId)
           .get();
 
       if (!facilityDoc.exists) {
-       
         return BlockStatus(isBlocked: false);
       }
 
@@ -30,15 +25,10 @@ class BlockingService {
       final facilityBlockedTimes = List<Map<String, dynamic>>.from(
         facilityData['blockedTimes'] ?? [],
       );
-      
-    
-      
 
-  
       final clubDoc = await _firestore.collection('clubs').doc(clubId).get();
 
       if (!clubDoc.exists) {
-        
         return BlockStatus(isBlocked: false);
       }
 
@@ -46,7 +36,6 @@ class BlockingService {
       final clubBlockedTimes = List<Map<String, dynamic>>.from(
         clubData['blockedTimes'] ?? [],
       );
-  
 
       // 3. Check club blocks first
       for (final block in clubBlockedTimes) {
@@ -56,9 +45,8 @@ class BlockingService {
           durationMinutes: durationMinutes,
           block: block,
         );
-       
+
         if (overlaps) {
-         
           return BlockStatus(
             isBlocked: true,
             reason: block['reason'] ?? 'Club blocked',
@@ -75,9 +63,8 @@ class BlockingService {
           durationMinutes: durationMinutes,
           block: block,
         );
-      
+
         if (overlaps) {
-      
           return BlockStatus(
             isBlocked: true,
             reason: block['reason'] ?? 'Facility blocked',
@@ -86,10 +73,8 @@ class BlockingService {
         }
       }
 
- 
       return BlockStatus(isBlocked: false);
     } catch (e) {
-
       return BlockStatus(isBlocked: false);
     }
   }
@@ -206,8 +191,10 @@ class BlockingService {
     final blockStartTime = block['startTime'] as String?;
     final blockEndTime = block['endTime'] as String?;
 
-    if (startDayOfWeek == null || endDayOfWeek == null || 
-        blockStartTime == null || blockEndTime == null) {
+    if (startDayOfWeek == null ||
+        endDayOfWeek == null ||
+        blockStartTime == null ||
+        blockEndTime == null) {
       return false;
     }
 
@@ -222,7 +209,7 @@ class BlockingService {
       'Thursday',
       'Friday',
       'Saturday',
-      'Sunday'
+      'Sunday',
     ];
     final startIndex = daysOfWeek.indexOf(startDayOfWeek);
     final endIndex = daysOfWeek.indexOf(endDayOfWeek);
@@ -266,10 +253,10 @@ class BlockingService {
     final blockStartTime = block['startTime'] as String?;
     final blockEndTime = block['endTime'] as String?;
 
-   
-    if (blockStartDate == null || blockEndDate == null || 
-        blockStartTime == null || blockEndTime == null) {
-   
+    if (blockStartDate == null ||
+        blockEndDate == null ||
+        blockStartTime == null ||
+        blockEndTime == null) {
       return false;
     }
 
@@ -283,61 +270,58 @@ class BlockingService {
       activityDate.month,
       activityDate.day,
     );
-    final startDateOnly = DateTime(startDate.year, startDate.month, startDate.day);
+    final startDateOnly = DateTime(
+      startDate.year,
+      startDate.month,
+      startDate.day,
+    );
     final endDateOnly = DateTime(endDate.year, endDate.month, endDate.day);
-
-   
 
     // Check if activity date is within blocked date range
     if (activityDateOnly.isBefore(startDateOnly) ||
         activityDateOnly.isAfter(endDateOnly)) {
-     
       return false;
     }
 
-   
-    
     // NEW LOGIC: Handle multi-day blocks properly
     final isFirstDay = activityDateOnly.isAtSameMomentAs(startDateOnly);
     final isLastDay = activityDateOnly.isAtSameMomentAs(endDateOnly);
     final isSingleDay = startDateOnly.isAtSameMomentAs(endDateOnly);
-    
+
     if (isSingleDay) {
       // Single day block: check time range normally
-     
+
       final timeOverlaps = _checkTimeOverlap(
         activityTime: activityTime,
         durationMinutes: durationMinutes,
         blockStartTime: blockStartTime,
         blockEndTime: blockEndTime,
       );
-     
+
       return timeOverlaps;
     } else if (isFirstDay) {
       // First day: block from startTime to end of day
-    
+
       final timeOverlaps = _checkTimeOverlap(
         activityTime: activityTime,
         durationMinutes: durationMinutes,
         blockStartTime: blockStartTime,
         blockEndTime: '23:59',
       );
-     
+
       return timeOverlaps;
     } else if (isLastDay) {
       // Last day: block from start of day to endTime
-    
+
       final timeOverlaps = _checkTimeOverlap(
         activityTime: activityTime,
         durationMinutes: durationMinutes,
         blockStartTime: '00:00',
         blockEndTime: blockEndTime,
       );
-    
+
       return timeOverlaps;
     } else {
-      
-     
       return true;
     }
   }
@@ -355,13 +339,11 @@ class BlockingService {
     final blockStartMinutes = _timeToMinutes(blockStartTime);
     final blockEndMinutes = _timeToMinutes(blockEndTime);
 
-   
-
     // Check for overlap: activity starts before block ends AND activity ends after block starts
-    final overlaps = activityStartMinutes < blockEndMinutes &&
+    final overlaps =
+        activityStartMinutes < blockEndMinutes &&
         activityEndMinutes > blockStartMinutes;
-        
-   
+
     return overlaps;
   }
 
@@ -383,7 +365,7 @@ class BlockingService {
       'Thursday',
       'Friday',
       'Saturday',
-      'Sunday'
+      'Sunday',
     ];
     return days[weekday - 1];
   }
@@ -391,13 +373,10 @@ class BlockingService {
 
 /// Result class for blocking status
 class BlockStatus {
+  // 'club' or 'facility'
+
+  BlockStatus({required this.isBlocked, this.reason, this.source});
   final bool isBlocked;
   final String? reason;
-  final String? source; // 'club' or 'facility'
-
-  BlockStatus({
-    required this.isBlocked,
-    this.reason,
-    this.source,
-  });
+  final String? source;
 }

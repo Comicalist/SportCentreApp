@@ -5,7 +5,7 @@ class AppConstants {
   // Time categories for filtering
   static const List<String> timeCategories = [
     'Morning',
-    'Afternoon', 
+    'Afternoon',
     'Evening',
   ];
 
@@ -14,7 +14,7 @@ class AppConstants {
   static const double categoryBadgeRadius = 20.0;
   static const double filterBorderRadius = 12.0;
   static const double buttonBorderRadius = 8.0;
-  
+
   // Spacing
   static const double defaultPadding = 20.0;
   static const double cardPadding = 8.0;
@@ -26,7 +26,7 @@ class AppConstants {
   // Image
   static const double activityImageHeight = 120.0;
   static const double categoryIconSize = 60.0;
-  
+
   // Shadow
   static const double shadowBlurRadius = 10.0;
   static const Offset shadowOffset = Offset(0, 2);
@@ -47,7 +47,7 @@ class CategoryColors {
   }
 }
 
-/// Category icon mappings  
+/// Category icon mappings
 class CategoryIcons {
   static const Map<String, IconData> icons = {
     'Wellness': Icons.self_improvement,

@@ -1,15 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Club {
-  final String id;
-  final String name;
-  final String ownerId;
-  final String? location;
-  final bool isActive;
-  final bool isApproved;
-  final DateTime createdAt;
-  final List<Map<String, dynamic>> blockedTimes;
-
   Club({
     required this.id,
     required this.name,
@@ -20,6 +11,28 @@ class Club {
     required this.createdAt,
     this.blockedTimes = const [],
   });
+
+  factory Club.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data()! as Map<String, dynamic>;
+    return Club(
+      id: doc.id,
+      name: data['name'] ?? '',
+      ownerId: data['ownerId'] ?? '',
+      location: data['location'],
+      isActive: data['isActive'] ?? true,
+      isApproved: data['isApproved'] ?? false,
+      createdAt: data['createdAt']?.toDate() ?? DateTime.now(),
+      blockedTimes: List<Map<String, dynamic>>.from(data['blockedTimes'] ?? []),
+    );
+  }
+  final String id;
+  final String name;
+  final String ownerId;
+  final String? location;
+  final bool isActive;
+  final bool isApproved;
+  final DateTime createdAt;
+  final List<Map<String, dynamic>> blockedTimes;
 
   Club copyWith({
     String? id,
@@ -40,20 +53,6 @@ class Club {
       isApproved: isApproved ?? this.isApproved,
       createdAt: createdAt ?? this.createdAt,
       blockedTimes: blockedTimes ?? this.blockedTimes,
-    );
-  }
-
-  factory Club.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return Club(
-      id: doc.id,
-      name: data['name'] ?? '',
-      ownerId: data['ownerId'] ?? '',
-      location: data['location'],
-      isActive: data['isActive'] ?? true,
-      isApproved: data['isApproved'] ?? false,
-      createdAt: data['createdAt']?.toDate() ?? DateTime.now(),
-      blockedTimes: List<Map<String, dynamic>>.from(data['blockedTimes'] ?? []),
     );
   }
 

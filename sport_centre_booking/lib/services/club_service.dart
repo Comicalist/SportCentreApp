@@ -19,7 +19,6 @@ class ClubService {
       );
 
       await docRef.set(pendingClub.toMap());
-
     } catch (e) {
       rethrow;
     }
@@ -28,40 +27,28 @@ class ClubService {
   /// Admin: Get all pending clubs for approval
   Future<List<Club>> getPendingClubs() async {
     try {
-    
-
       final snapshot = await _firestore
           .collection('clubs')
           .where('isApproved', isEqualTo: false)
           .orderBy('createdAt', descending: true)
           .get();
 
-    
-      for (var doc in snapshot.docs) {
-   
-      }
+      for (final doc in snapshot.docs) {}
 
-      return snapshot.docs.map((doc) => Club.fromFirestore(doc)).toList();
+      return snapshot.docs.map(Club.fromFirestore).toList();
     } catch (e) {
- 
-
       // Fallback: try without ordering
       try {
-     
         final snapshot = await _firestore
             .collection('clubs')
             .where('isApproved', isEqualTo: false)
             .get();
 
-        final clubs = snapshot.docs
-            .map((doc) => Club.fromFirestore(doc))
-            .toList();
+        final clubs = snapshot.docs.map(Club.fromFirestore).toList();
         clubs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
- 
         return clubs;
       } catch (fallbackError) {
-
         return [];
       }
     }
@@ -70,14 +57,11 @@ class ClubService {
   /// Admin: Approve a club
   Future<void> approveClub(String clubId) async {
     try {
-
       await _firestore.collection('clubs').doc(clubId).update({
         'isApproved': true,
         'isActive': true,
       });
-
     } catch (e) {
-  
       rethrow;
     }
   }
@@ -85,11 +69,8 @@ class ClubService {
   /// Admin: Reject a club
   Future<void> rejectClub(String clubId) async {
     try {
-    
       await _firestore.collection('clubs').doc(clubId).delete();
-
     } catch (e) {
-     
       rethrow;
     }
   }
@@ -103,9 +84,8 @@ class ClubService {
           .where('isActive', isEqualTo: true)
           .get();
 
-      return snapshot.docs.map((doc) => Club.fromFirestore(doc)).toList();
+      return snapshot.docs.map(Club.fromFirestore).toList();
     } catch (e) {
-     
       return [];
     }
   }
@@ -120,23 +100,19 @@ class ClubService {
           .where('ownerId', isEqualTo: ownerId)
           .get();
 
-      final clubs = snapshot.docs
-          .map((doc) => Club.fromFirestore(doc))
-          .toList();
-      
+      final clubs = snapshot.docs.map(Club.fromFirestore).toList();
+
       // Sort manually to avoid needing composite index
       clubs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       return clubs;
     } catch (e) {
-   
       return [];
     }
   }
 
   /// Fetch only approved clubs owned by a specific user
   Future<List<Club>> getApprovedOwnedClubs({required String ownerId}) async {
-    
     // Use manual filtering approach to avoid composite index issues
     // Once the composite index is fully built, this can be optimized
     try {
@@ -144,14 +120,14 @@ class ClubService {
           .collection('clubs')
           .where('ownerId', isEqualTo: ownerId)
           .get();
-      
+
       final clubs = snapshot.docs
-          .map((doc) => Club.fromFirestore(doc))
+          .map(Club.fromFirestore)
           .where((club) => club.isApproved && club.isActive)
           .toList();
-      
+
       clubs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      
+
       return clubs;
     } catch (e) {
       return [];
@@ -218,8 +194,8 @@ class ClubService {
           .get();
 
       final now = DateTime.now();
-      
-      for (var activityDoc in activitiesSnapshot.docs) {
+
+      for (final activityDoc in activitiesSnapshot.docs) {
         final activityData = activityDoc.data();
         final activityDate = activityData['date'] is String
             ? DateTime.parse(activityData['date'])
@@ -237,7 +213,7 @@ class ClubService {
           if (bookingsSnapshot.docs.isNotEmpty) {
             throw Exception(
               'Cannot delete club: Activity "${activityData['name']}" has ${bookingsSnapshot.docs.length} active booking(s). '
-              'Please cancel all future bookings first.'
+              'Please cancel all future bookings first.',
             );
           }
         }
@@ -245,8 +221,8 @@ class ClubService {
 
       // 2️⃣ Delete all activities (no active future bookings at this point)
       final batch = _firestore.batch();
-      
-      for (var activityDoc in activitiesSnapshot.docs) {
+
+      for (final activityDoc in activitiesSnapshot.docs) {
         batch.delete(activityDoc.reference);
       }
 
@@ -256,7 +232,7 @@ class ClubService {
           .where('clubId', isEqualTo: clubId)
           .get();
 
-      for (var facilityDoc in facilitiesSnapshot.docs) {
+      for (final facilityDoc in facilitiesSnapshot.docs) {
         batch.delete(facilityDoc.reference);
       }
 
@@ -265,7 +241,6 @@ class ClubService {
 
       // Commit all deletions
       await batch.commit();
-      
     } catch (e) {
       throw Exception('Failed to delete club: $e');
     }

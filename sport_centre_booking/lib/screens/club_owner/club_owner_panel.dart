@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'club_management_screen.dart';
+
 import 'activity_management_screen.dart';
+import 'club_management_screen.dart';
 import 'voucher_management_screen.dart';
 
 class ClubOwnerPanel extends StatelessWidget {
@@ -53,7 +54,9 @@ class ClubOwnerPanel extends StatelessWidget {
                     onTap: () {
                       // TODO: Navigate to analytics screen
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Analytics feature coming soon!')),
+                        const SnackBar(
+                          content: Text('Analytics feature coming soon!'),
+                        ),
                       );
                     },
                   ),
@@ -69,38 +72,26 @@ class ClubOwnerPanel extends StatelessWidget {
   void _navigateToClubManagement(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const ClubManagementScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const ClubManagementScreen()),
     );
   }
 
   void _navigateToActivityManagement(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const ActivityManagementScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const ActivityManagementScreen()),
     );
   }
 
   void _navigateToVoucherManagement(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const VoucherManagementScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const VoucherManagementScreen()),
     );
   }
 }
 
 class _OwnerTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-  final Color color;
-
   const _OwnerTile({
     required this.icon,
     required this.title,
@@ -108,6 +99,11 @@ class _OwnerTile extends StatelessWidget {
     required this.onTap,
     required this.color,
   });
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {

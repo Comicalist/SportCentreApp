@@ -18,9 +18,7 @@ class VoucherService {
           .orderBy('amount')
           .get();
 
-      return querySnapshot.docs
-          .map((doc) => Voucher.fromFirestore(doc))
-          .toList();
+      return querySnapshot.docs.map(Voucher.fromFirestore).toList();
     } catch (e) {
       throw Exception('Failed to load available vouchers: $e');
     }
@@ -35,16 +33,17 @@ class VoucherService {
           .orderBy('purchasedAt', descending: true)
           .get();
 
-      return querySnapshot.docs
-          .map((doc) => Voucher.fromFirestore(doc))
-          .toList();
+      return querySnapshot.docs.map(Voucher.fromFirestore).toList();
     } catch (e) {
       throw Exception('Failed to load user vouchers: $e');
     }
   }
 
   /// Get unused vouchers for a user that can be used for bookings
-  static Future<List<Voucher>> getUsableVouchers(String userId, String clubId) async {
+  static Future<List<Voucher>> getUsableVouchers(
+    String userId,
+    String clubId,
+  ) async {
     try {
       final querySnapshot = await _firestore
           .collection('vouchers')
@@ -55,9 +54,7 @@ class VoucherService {
           .where('expiresAt', isGreaterThan: Timestamp.fromDate(DateTime.now()))
           .get();
 
-      return querySnapshot.docs
-          .map((doc) => Voucher.fromFirestore(doc))
-          .toList();
+      return querySnapshot.docs.map(Voucher.fromFirestore).toList();
     } catch (e) {
       throw Exception('Failed to load usable vouchers: $e');
     }
@@ -72,9 +69,7 @@ class VoucherService {
           .orderBy('createdAt', descending: true)
           .get();
 
-      return querySnapshot.docs
-          .map((doc) => Voucher.fromFirestore(doc))
-          .toList();
+      return querySnapshot.docs.map(Voucher.fromFirestore).toList();
     } catch (e) {
       throw Exception('Failed to load club vouchers: $e');
     }
@@ -88,17 +83,15 @@ class VoucherService {
         .where('purchasedBy', isEqualTo: null)
         .snapshots()
         .map((snapshot) {
-          final vouchers = snapshot.docs
-              .map((doc) => Voucher.fromFirestore(doc))
-              .toList();
-          
+          final vouchers = snapshot.docs.map(Voucher.fromFirestore).toList();
+
           // Sort in memory to avoid index requirements
           vouchers.sort((a, b) {
             final clubNameComparison = a.clubName.compareTo(b.clubName);
             if (clubNameComparison != 0) return clubNameComparison;
             return a.amount.compareTo(b.amount);
           });
-          
+
           return vouchers;
         });
   }
@@ -110,13 +103,14 @@ class VoucherService {
         .where('purchasedBy', isEqualTo: userId)
         .snapshots()
         .map((snapshot) {
-          final vouchers = snapshot.docs
-              .map((doc) => Voucher.fromFirestore(doc))
-              .toList();
-          
+          final vouchers = snapshot.docs.map(Voucher.fromFirestore).toList();
+
           // Sort in memory to avoid index requirements
-          vouchers.sort((a, b) => b.purchasedAt?.compareTo(a.purchasedAt ?? DateTime.now()) ?? 0);
-          
+          vouchers.sort(
+            (a, b) =>
+                b.purchasedAt?.compareTo(a.purchasedAt ?? DateTime.now()) ?? 0,
+          );
+
           return vouchers;
         });
   }
@@ -163,7 +157,9 @@ class VoucherService {
 
         // Check if user has enough points
         if (availablePoints < voucher.pointsCost) {
-          throw Exception('Insufficient points. You need ${voucher.pointsCost} points but only have $availablePoints.');
+          throw Exception(
+            'Insufficient points. You need ${voucher.pointsCost} points but only have $availablePoints.',
+          );
         }
 
         // Generate voucher code and set purchase/expiration dates
@@ -182,9 +178,7 @@ class VoucherService {
 
         // Deduct points from user
         final newAvailablePoints = availablePoints - voucher.pointsCost;
-        transaction.update(userRef, {
-          'availablePoints': newAvailablePoints,
-        });
+        transaction.update(userRef, {'availablePoints': newAvailablePoints});
       });
     } catch (e) {
       throw Exception('Failed to purchase voucher: $e');
@@ -301,9 +295,7 @@ class VoucherService {
           .orderBy('createdAt', descending: true)
           .get();
 
-      return querySnapshot.docs
-          .map((doc) => Voucher.fromFirestore(doc))
-          .toList();
+      return querySnapshot.docs.map(Voucher.fromFirestore).toList();
     } catch (e) {
       throw Exception('Failed to load vouchers by club owner: $e');
     }
@@ -317,7 +309,7 @@ class VoucherService {
     required String title,
     required String description,
     required double amount,
-    required int pointsCost,  // Changed from 'value' to 'pointsCost'
+    required int pointsCost, // Changed from 'value' to 'pointsCost'
   }) async {
     try {
       // Get club information for denormalized data
@@ -325,7 +317,7 @@ class VoucherService {
       if (!clubDoc.exists) {
         throw Exception('Club not found');
       }
-      
+
       final clubData = clubDoc.data()!;
       final clubName = clubData['name'] as String;
 
@@ -340,16 +332,15 @@ class VoucherService {
         'type': type.toString().split('.').last,
         'title': title,
         'description': description,
-        'pointsCost': pointsCost,  // Changed from 'value' to 'pointsCost'
+        'pointsCost': pointsCost, // Changed from 'value' to 'pointsCost'
         'amount': amount,
         'isActive': true,
         'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),  // Add updatedAt
-        
+        'updatedAt': FieldValue.serverTimestamp(), // Add updatedAt
         // Purchase info (null until purchased)
         'purchasedBy': null,
         'purchasedAt': null,
-        
+
         // Usage info (null until used)
         'usedAt': null,
         'usedForBooking': null,
@@ -364,12 +355,12 @@ class VoucherService {
   }
 
   /// Update voucher
-  static Future<void> updateVoucher(String voucherId, Map<String, dynamic> data) async {
+  static Future<void> updateVoucher(
+    String voucherId,
+    Map<String, dynamic> data,
+  ) async {
     try {
-      await _firestore
-          .collection('vouchers')
-          .doc(voucherId)
-          .update(data);
+      await _firestore.collection('vouchers').doc(voucherId).update(data);
     } catch (e) {
       throw Exception('Failed to update voucher: $e');
     }
@@ -410,10 +401,10 @@ class VoucherService {
           .where('clubId', isEqualTo: clubId)
           .get();
 
-      int totalCreated = 0;
-      int totalPurchased = 0;
-      int totalUsed = 0;
-      double totalRevenue = 0.0;
+      var totalCreated = 0;
+      var totalPurchased = 0;
+      var totalUsed = 0;
+      var totalRevenue = 0.0;
 
       for (final doc in querySnapshot.docs) {
         final voucher = Voucher.fromFirestore(doc);
@@ -434,7 +425,9 @@ class VoucherService {
         'totalPurchased': totalPurchased,
         'totalUsed': totalUsed,
         'totalRevenue': totalRevenue,
-        'purchaseRate': totalCreated > 0 ? (totalPurchased / totalCreated) : 0.0,
+        'purchaseRate': totalCreated > 0
+            ? (totalPurchased / totalCreated)
+            : 0.0,
         'usageRate': totalPurchased > 0 ? (totalUsed / totalPurchased) : 0.0,
       };
     } catch (e) {

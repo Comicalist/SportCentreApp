@@ -1,12 +1,13 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // For kDebugMode
-import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../providers/auth_provider.dart';
-import '../../utils/colors.dart';
+import 'package:flutter/foundation.dart'; // For kDebugMode
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import '../../models/app_user.dart';
 import '../../models/voucher.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/voucher_service.dart';
+import '../../utils/colors.dart';
 import '../../widgets/profile/testing_panel.dart';
 import 'notification_settings_screen.dart';
 
@@ -66,7 +67,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           stream: userDocStream,
           builder: (context, snapshot) {
             // fallback si le stream n'a rien encore
-            AppUser user = auth.appUser!;
+            var user = auth.appUser!;
 
             if (snapshot.hasError) {
               // En cas d'erreur de stream, on affiche tout de même les infos connues
@@ -100,7 +101,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const NotificationSettingsScreen(),
+                              builder: (context) =>
+                                  const NotificationSettingsScreen(),
                             ),
                           );
                           break;
@@ -130,8 +132,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         value: 'logout',
                         child: ListTile(
                           leading: Icon(Icons.logout, color: Colors.red),
-                          title: Text('Sign Out',
-                              style: TextStyle(color: Colors.red)),
+                          title: Text(
+                            'Sign Out',
+                            style: TextStyle(color: Colors.red),
+                          ),
                           contentPadding: EdgeInsets.zero,
                         ),
                       ),
@@ -155,7 +159,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _buildVouchersSection(user.uid),
                     const SizedBox(height: 24),
                     _buildSettingsSection(context),
-                    
+
                     // 🧪 Testing Panel (debug mode only)
                     if (kDebugMode) ...[
                       const SizedBox(height: 24),
@@ -180,19 +184,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
           padding: EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
             'Settings',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ),
         Card(
           elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Column(
             children: [
               ListTile(
-                leading: const Icon(Icons.notifications_outlined, color: AppColors.primary),
+                leading: const Icon(
+                  Icons.notifications_outlined,
+                  color: AppColors.primary,
+                ),
                 title: const Text('Notifications'),
                 subtitle: const Text('Email or in-app preferences'),
                 trailing: const Icon(Icons.chevron_right),
@@ -213,7 +219,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Booking history coming soon!')),
+                    const SnackBar(
+                      content: Text('Booking history coming soon!'),
+                    ),
                   );
                 },
               ),
@@ -265,11 +273,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 8),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color:
-                          user.isMember ? AppColors.primary : Colors.grey[200],
+                      color: user.isMember
+                          ? AppColors.primary
+                          : Colors.grey[200],
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -322,8 +333,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const Spacer(),
                 if (user.isMember)
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
@@ -397,8 +410,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onPressed: user.availablePoints > 0
                       ? () {
                           // Navigate to rewards screen
-                          Navigator.of(context).popUntil((route) => route.isFirst);
-                          DefaultTabController.of(context).animateTo(2); // Rewards tab
+                          Navigator.of(
+                            context,
+                          ).popUntil((route) => route.isFirst);
+                          DefaultTabController.of(
+                            context,
+                          ).animateTo(2); // Rewards tab
                         }
                       : null,
                   style: ElevatedButton.styleFrom(
@@ -440,8 +457,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             Row(
               children: [
-                const Icon(Icons.card_membership,
-                    color: Colors.white, size: 28),
+                const Icon(
+                  Icons.card_membership,
+                  color: Colors.white,
+                  size: 28,
+                ),
                 const SizedBox(width: 8),
                 const Text(
                   'Membership',
@@ -453,8 +473,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const Spacer(),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
@@ -528,23 +550,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(width: 12),
                 const Text(
                   'My Vouchers',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
                 TextButton(
                   onPressed: () {
                     // Navigate to rewards screen to buy more vouchers
-                    DefaultTabController.of(context).animateTo(2); // Rewards tab
+                    DefaultTabController.of(
+                      context,
+                    ).animateTo(2); // Rewards tab
                   },
                   child: const Text(
                     'Get More',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -568,7 +586,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       padding: const EdgeInsets.all(20),
                       child: Column(
                         children: [
-                          Icon(Icons.error_outline, size: 40, color: Colors.grey[400]),
+                          Icon(
+                            Icons.error_outline,
+                            size: 40,
+                            color: Colors.grey[400],
+                          ),
                           const SizedBox(height: 8),
                           const Text('Failed to load vouchers'),
                         ],
@@ -578,8 +600,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 }
 
                 final vouchers = snapshot.data ?? [];
-                final unusedVouchers = vouchers.where((v) => !v.isUsed && !v.isExpired).toList();
-                final usedVouchers = vouchers.where((v) => v.isUsed || v.isExpired).toList();
+                final unusedVouchers = vouchers
+                    .where((v) => !v.isUsed && !v.isExpired)
+                    .toList();
+                final usedVouchers = vouchers
+                    .where((v) => v.isUsed || v.isExpired)
+                    .toList();
 
                 if (vouchers.isEmpty) {
                   return Center(
@@ -587,7 +613,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       padding: const EdgeInsets.all(20),
                       child: Column(
                         children: [
-                          Icon(Icons.card_giftcard_outlined, size: 48, color: Colors.grey[400]),
+                          Icon(
+                            Icons.card_giftcard_outlined,
+                            size: 48,
+                            color: Colors.grey[400],
+                          ),
                           const SizedBox(height: 8),
                           Text(
                             'No vouchers yet',
@@ -624,7 +654,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      ...unusedVouchers.map((voucher) => _buildVoucherItem(voucher, true)),
+                      ...unusedVouchers.map(
+                        (voucher) => _buildVoucherItem(voucher, true),
+                      ),
                       const SizedBox(height: 16),
                     ],
 
@@ -641,7 +673,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             color: Colors.grey[600],
                           ),
                         ),
-                        children: usedVouchers.map((voucher) => _buildVoucherItem(voucher, false)).toList(),
+                        children: usedVouchers
+                            .map((voucher) => _buildVoucherItem(voucher, false))
+                            .toList(),
                       ),
                     ],
                   ],
@@ -659,10 +693,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isActive ? Colors.teal.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.05),
+        color: isActive
+            ? Colors.teal.withValues(alpha: 0.05)
+            : Colors.grey.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isActive ? Colors.teal.withValues(alpha: 0.2) : Colors.grey.withValues(alpha: 0.2),
+          color: isActive
+              ? Colors.teal.withValues(alpha: 0.2)
+              : Colors.grey.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
@@ -697,10 +735,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 Text(
                   voucher.clubName,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -759,10 +794,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              voucher.description,
-              style: const TextStyle(fontSize: 16),
-            ),
+            Text(voucher.description, style: const TextStyle(fontSize: 16)),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
@@ -796,14 +828,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 12),
             Row(
               children: [
-                const Text('Value: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                const Text(
+                  'Value: ',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
                 Text('${voucher.amount.toStringAsFixed(2)} CHF'),
               ],
             ),
             const SizedBox(height: 4),
             Row(
               children: [
-                const Text('Club: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                const Text(
+                  'Club: ',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
                 Text(voucher.clubName),
               ],
             ),
@@ -811,7 +849,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 4),
               Row(
                 children: [
-                  const Text('Expires: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                  const Text(
+                    'Expires: ',
+                    style: TextStyle(fontWeight: FontWeight.w500),
+                  ),
                   Text(_formatDate(voucher.expiresAt!)),
                 ],
               ),
@@ -857,8 +898,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   String _formatDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }

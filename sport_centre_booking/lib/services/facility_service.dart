@@ -7,14 +7,13 @@ class FacilityService {
   /// Get all facilities for a specific club
   Future<List<Facility>> getClubFacilities({required String clubId}) async {
     try {
-
       final querySnapshot = await _firestore
           .collection('facilities')
           .where('clubId', isEqualTo: clubId)
           .get();
 
       final facilities = <Facility>[];
-      for (var doc in querySnapshot.docs) {
+      for (final doc in querySnapshot.docs) {
         try {
           final facility = Facility.fromJson(doc.data(), doc.id);
           facilities.add(facility);
@@ -82,8 +81,8 @@ class FacilityService {
           .get();
 
       final now = DateTime.now();
-      
-      for (var activityDoc in activitiesSnapshot.docs) {
+
+      for (final activityDoc in activitiesSnapshot.docs) {
         final activityData = activityDoc.data();
         final activityDate = activityData['date'] is String
             ? DateTime.parse(activityData['date'])
@@ -101,7 +100,7 @@ class FacilityService {
           if (bookingsSnapshot.docs.isNotEmpty) {
             throw Exception(
               'Cannot delete facility: Activity "${activityData['name']}" has ${bookingsSnapshot.docs.length} active booking(s). '
-              'Please cancel all future bookings first.'
+              'Please cancel all future bookings first.',
             );
           }
         }
@@ -109,8 +108,8 @@ class FacilityService {
 
       // 2️⃣ Delete all activities (no active future bookings at this point)
       final batch = _firestore.batch();
-      
-      for (var activityDoc in activitiesSnapshot.docs) {
+
+      for (final activityDoc in activitiesSnapshot.docs) {
         batch.delete(activityDoc.reference);
       }
 
@@ -119,7 +118,6 @@ class FacilityService {
 
       // Commit all deletions
       await batch.commit();
-      
     } catch (e) {
       throw Exception('Failed to delete facility: $e');
     }

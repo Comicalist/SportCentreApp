@@ -4,15 +4,14 @@ import 'club_approval_screen.dart';
 import 'participants_management_screen.dart';
 
 class AdminPanel extends StatelessWidget {
-  final ClubService _clubService = ClubService();
-
   AdminPanel({super.key});
+  final ClubService _clubService = ClubService();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Admin Panel'),
+        title: const Text('Admin Panel'),
         backgroundColor: Colors.red,
         elevation: 0,
       ),
@@ -21,16 +20,16 @@ class AdminPanel extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'Admin Dashboard',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 20),
-            
+            const SizedBox(height: 20),
+
             // Quick Stats Row
             Row(
               children: [
-                Expanded(
+                const Expanded(
                   child: _StatCard(
                     title: 'Total Activities',
                     value: '24', // You'd fetch this from your service
@@ -38,20 +37,21 @@ class AdminPanel extends StatelessWidget {
                     color: Colors.blue,
                   ),
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Expanded(
                   child: _StatCard(
                     title: 'Pending Clubs',
                     value: '0', // We'll make this dynamic
                     icon: Icons.pending_actions,
                     color: Colors.orange,
-                    future: _clubService.getPendingClubsCount(), // Add future for real data
+                    future: _clubService
+                        .getPendingClubsCount(), // Add future for real data
                   ),
                 ),
               ],
             ),
-            SizedBox(height: 20),
-            
+            const SizedBox(height: 20),
+
             // Admin Actions
             Expanded(
               child: ListView(
@@ -64,7 +64,7 @@ class AdminPanel extends StatelessWidget {
                     color: Colors.orange,
                     badgeFuture: _clubService.getPendingClubsCount(),
                   ),
-                  
+
                   _AdminTile(
                     icon: Icons.add_circle_outline,
                     title: 'Seed Activities',
@@ -72,7 +72,7 @@ class AdminPanel extends StatelessWidget {
                     onTap: () => _showSeedDialog(context),
                     color: Colors.teal,
                   ),
-                  
+
                   _AdminTile(
                     icon: Icons.people,
                     title: 'Event Participants',
@@ -80,7 +80,7 @@ class AdminPanel extends StatelessWidget {
                     onTap: () => _navigateToParticipants(context),
                     color: Colors.green,
                   ),
-                  
+
                   // Add more admin tiles as needed
                 ],
               ),
@@ -90,47 +90,45 @@ class AdminPanel extends StatelessWidget {
       ),
     );
   }
-  
+
   void _navigateToClubApprovals(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const ClubApprovalScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const ClubApprovalScreen()),
     );
   }
-  
+
   void _navigateToParticipants(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const AdminParticipantsScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const AdminParticipantsScreen()),
     );
   }
-  
+
   void _navigateToBookingsManagement(BuildContext context) {
     // Navigate to bookings management
   }
-  
+
   void _navigateToUserManagement(BuildContext context) {
     // Navigate to user management
   }
-  
+
   void _navigateToAnalytics(BuildContext context) {
     // Navigate to analytics
   }
-  
+
   void _navigateToAppConfig(BuildContext context) {
     // Navigate to app configuration
   }
-  
+
   void _showSeedDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Seed Activities'),
-        content: const Text('This feature is not yet implemented. It will generate sample activities for testing.'),
+        content: const Text(
+          'This feature is not yet implemented. It will generate sample activities for testing.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -143,11 +141,7 @@ class AdminPanel extends StatelessWidget {
 }
 
 class _StatCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
-  final Future<int>? future; // Add optional future for dynamic data
+  // Add optional future for dynamic data
 
   const _StatCard({
     required this.title,
@@ -156,13 +150,18 @@ class _StatCard extends StatelessWidget {
     required this.color,
     this.future,
   });
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+  final Future<int>? future;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: future != null 
+        child: future != null
             ? FutureBuilder<int>(
                 future: future,
                 builder: (context, snapshot) {
@@ -180,21 +179,19 @@ class _StatCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon, color: color, size: 30),
-        SizedBox(height: 8),
-        Text(displayValue, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        Text(title, style: TextStyle(color: Colors.grey)),
+        const SizedBox(height: 8),
+        Text(
+          displayValue,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        Text(title, style: const TextStyle(color: Colors.grey)),
       ],
     );
   }
 }
 
 class _AdminTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-  final Color color;
-  final Future<int>? badgeFuture; // Add badge for notification counts
+  // Add badge for notification counts
 
   const _AdminTile({
     required this.icon,
@@ -204,18 +201,27 @@ class _AdminTile extends StatelessWidget {
     required this.color,
     this.badgeFuture,
   });
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final Color color;
+  final Future<int>? badgeFuture;
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 8),
       child: Stack(
         children: [
           ListTile(
             leading: Icon(icon, color: color),
-            title: Text(title, style: TextStyle(fontWeight: FontWeight.w500)),
+            title: Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
             subtitle: Text(subtitle),
-            trailing: Icon(Icons.arrow_forward_ios, size: 16),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: onTap,
           ),
           if (badgeFuture != null)
@@ -228,14 +234,17 @@ class _AdminTile extends StatelessWidget {
                   final count = snapshot.data ?? 0;
                   if (count > 0) {
                     return Container(
-                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.red,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
                         count.toString(),
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -243,7 +252,7 @@ class _AdminTile extends StatelessWidget {
                       ),
                     );
                   }
-                  return SizedBox.shrink();
+                  return const SizedBox.shrink();
                 },
               ),
             ),

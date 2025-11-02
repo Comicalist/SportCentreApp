@@ -1,18 +1,15 @@
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+
 import '../../services/notification_service.dart';
 import '../notifications/notifications_drawer.dart';
 
 /// AppBar with notification bell icon
-class AppBarWithNotifications extends StatelessWidget implements PreferredSizeWidget {
+class AppBarWithNotifications extends StatelessWidget
+    implements PreferredSizeWidget {
+  const AppBarWithNotifications({super.key, required this.title, this.actions});
   final String title;
   final List<Widget>? actions;
-  
-  const AppBarWithNotifications({
-    super.key,
-    required this.title,
-    this.actions,
-  });
 
   @override
   Widget build(BuildContext context) {

@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../models/voucher.dart';
-import '../../services/voucher_service.dart';
+
 import '../../models/club.dart';
+import '../../models/voucher.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/club_service.dart';
+import '../../services/voucher_service.dart';
 
 class VoucherManagementScreen extends StatefulWidget {
   const VoucherManagementScreen({super.key});
 
   @override
-  State<VoucherManagementScreen> createState() => _VoucherManagementScreenState();
+  State<VoucherManagementScreen> createState() =>
+      _VoucherManagementScreenState();
 }
 
 class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
@@ -28,23 +30,23 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final authProvider = context.read<AuthProvider>();
       final userId = authProvider.firebaseUser?.uid;
-      
+
       if (userId != null) {
         // Load clubs owned by this user - use instance method
         _clubs = await _clubService.getApprovedOwnedClubs(ownerId: userId);
-        
+
         // Load vouchers for all clubs - using static method
         _vouchers = await VoucherService.getVouchersByClubOwner(userId);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading data: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading data: $e')));
       }
     } finally {
       setState(() => _isLoading = false);
@@ -61,11 +63,11 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _clubs.isEmpty
-              ? _buildNoClubsMessage()
-              : _buildVoucherList(),
+          ? _buildNoClubsMessage()
+          : _buildVoucherList(),
       floatingActionButton: _clubs.isNotEmpty
           ? FloatingActionButton.extended(
-              onPressed: () => _showCreateVoucherDialog(),
+              onPressed: _showCreateVoucherDialog,
               icon: const Icon(Icons.add),
               label: const Text('Create Voucher'),
               backgroundColor: Colors.green,
@@ -116,7 +118,7 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () => _showCreateVoucherDialog(),
+              onPressed: _showCreateVoucherDialog,
               icon: const Icon(Icons.add),
               label: const Text('Create First Voucher'),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
@@ -162,18 +164,21 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: voucher.type == VoucherType.fitness 
-                        ? Colors.teal.shade100 
+                    color: voucher.type == VoucherType.fitness
+                        ? Colors.teal.shade100
                         : Colors.orange.shade100,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     voucher.type == VoucherType.fitness ? 'FITNESS' : 'STUFF',
                     style: TextStyle(
-                      color: voucher.type == VoucherType.fitness 
-                          ? Colors.teal.shade700 
+                      color: voucher.type == VoucherType.fitness
+                          ? Colors.teal.shade700
                           : Colors.orange.shade700,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
@@ -221,10 +226,7 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
             const SizedBox(height: 12),
             Text(
               voucher.title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             Text(
@@ -242,15 +244,11 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
                 const SizedBox(width: 8),
                 _buildInfoChip(
                   Icons.stars,
-                  '${voucher.pointsCost} points',  // Changed from voucher.value to voucher.pointsCost
+                  '${voucher.pointsCost} points', // Changed from voucher.value to voucher.pointsCost
                   Colors.orange,
                 ),
                 const SizedBox(width: 8),
-                _buildInfoChip(
-                  Icons.business,
-                  club.name,
-                  Colors.blue,
-                ),
+                _buildInfoChip(Icons.business, club.name, Colors.blue),
               ],
             ),
             const SizedBox(height: 8),
@@ -272,10 +270,7 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
                 const Spacer(),
                 Text(
                   'Created: ${_formatDate(voucher.createdAt)}',
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                 ),
               ],
             ),
@@ -314,10 +309,8 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
   void _showCreateVoucherDialog() {
     showDialog(
       context: context,
-      builder: (context) => _CreateVoucherDialog(
-        clubs: _clubs,
-        onVoucherCreated: _loadData,
-      ),
+      builder: (context) =>
+          _CreateVoucherDialog(clubs: _clubs, onVoucherCreated: _loadData),
     );
   }
 
@@ -348,27 +341,24 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
 
   Future<void> _toggleVoucherStatus(Voucher voucher) async {
     try {
-      await VoucherService.updateVoucher(
-        voucher.id,
-        {'isActive': !voucher.isActive},
-      );
+      await VoucherService.updateVoucher(voucher.id, {
+        'isActive': !voucher.isActive,
+      });
       await _loadData();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              voucher.isActive 
-                  ? 'Voucher deactivated' 
-                  : 'Voucher activated',
+              voucher.isActive ? 'Voucher deactivated' : 'Voucher activated',
             ),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating voucher: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error updating voucher: $e')));
       }
     }
   }
@@ -410,9 +400,9 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deleting voucher: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error deleting voucher: $e')));
       }
     }
   }
@@ -423,15 +413,14 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
 }
 
 class _CreateVoucherDialog extends StatefulWidget {
-  final List<Club> clubs;
-  final VoidCallback onVoucherCreated;
-  final Voucher? existingVoucher;
-
   const _CreateVoucherDialog({
     required this.clubs,
     required this.onVoucherCreated,
     this.existingVoucher,
   });
+  final List<Club> clubs;
+  final VoidCallback onVoucherCreated;
+  final Voucher? existingVoucher;
 
   @override
   State<_CreateVoucherDialog> createState() => _CreateVoucherDialogState();
@@ -442,7 +431,7 @@ class _CreateVoucherDialogState extends State<_CreateVoucherDialog> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _amountController = TextEditingController();
-  
+
   String? _selectedClubId;
   VoucherType _selectedType = VoucherType.fitness;
   bool _isLoading = false;
@@ -463,7 +452,9 @@ class _CreateVoucherDialogState extends State<_CreateVoucherDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.existingVoucher != null ? 'Edit Voucher' : 'Create New Voucher'),
+      title: Text(
+        widget.existingVoucher != null ? 'Edit Voucher' : 'Create New Voucher',
+      ),
       content: SizedBox(
         width: 400,
         child: Form(
@@ -472,7 +463,7 @@ class _CreateVoucherDialogState extends State<_CreateVoucherDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<String>(
-                value: _selectedClubId,
+                initialValue: _selectedClubId,
                 decoration: const InputDecoration(
                   labelText: 'Select Club',
                   border: OutlineInputBorder(),
@@ -484,11 +475,12 @@ class _CreateVoucherDialogState extends State<_CreateVoucherDialog> {
                   );
                 }).toList(),
                 onChanged: (value) => setState(() => _selectedClubId = value),
-                validator: (value) => value == null ? 'Please select a club' : null,
+                validator: (value) =>
+                    value == null ? 'Please select a club' : null,
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<VoucherType>(
-                value: _selectedType,
+                initialValue: _selectedType,
                 decoration: const InputDecoration(
                   labelText: 'Voucher Type',
                   border: OutlineInputBorder(),
@@ -513,7 +505,8 @@ class _CreateVoucherDialogState extends State<_CreateVoucherDialog> {
                   hintText: 'e.g., 5 CHF off Fitness Classes',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) => value?.isEmpty == true ? 'Please enter a title' : null,
+                validator: (value) =>
+                    value?.isEmpty ?? false ? 'Please enter a title' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -524,7 +517,9 @@ class _CreateVoucherDialogState extends State<_CreateVoucherDialog> {
                   border: OutlineInputBorder(),
                 ),
                 maxLines: 2,
-                validator: (value) => value?.isEmpty == true ? 'Please enter a description' : null,
+                validator: (value) => value?.isEmpty ?? false
+                    ? 'Please enter a description'
+                    : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -537,19 +532,17 @@ class _CreateVoucherDialogState extends State<_CreateVoucherDialog> {
                 ),
                 keyboardType: TextInputType.number,
                 validator: (value) {
-                  if (value?.isEmpty == true) return 'Please enter an amount';
+                  if (value?.isEmpty ?? false) return 'Please enter an amount';
                   final amount = double.tryParse(value!);
-                  if (amount == null || amount <= 0) return 'Please enter a valid amount';
+                  if (amount == null || amount <= 0)
+                    return 'Please enter a valid amount';
                   return null;
                 },
               ),
               const SizedBox(height: 8),
               Text(
                 'Points cost: ${_calculatePoints()} points (100 points = 1 CHF)',
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
               ),
             ],
           ),
@@ -588,7 +581,7 @@ class _CreateVoucherDialogState extends State<_CreateVoucherDialog> {
     try {
       final authProvider = context.read<AuthProvider>();
       final userId = authProvider.firebaseUser?.uid;
-      
+
       if (userId == null) throw Exception('User not authenticated');
 
       final amount = double.parse(_amountController.text);
@@ -597,12 +590,12 @@ class _CreateVoucherDialogState extends State<_CreateVoucherDialog> {
       if (widget.existingVoucher != null) {
         // Update existing voucher
         await VoucherService.updateVoucher(widget.existingVoucher!.id, {
-          'clubId': _selectedClubId!,
+          'clubId': _selectedClubId,
           'type': _selectedType.toString().split('.').last,
           'title': _titleController.text.trim(),
           'description': _descriptionController.text.trim(),
           'amount': amount,
-          'pointsCost': points,  // Changed from 'value' to 'pointsCost'
+          'pointsCost': points, // Changed from 'value' to 'pointsCost'
         });
       } else {
         // Create new voucher
@@ -613,7 +606,7 @@ class _CreateVoucherDialogState extends State<_CreateVoucherDialog> {
           title: _titleController.text.trim(),
           description: _descriptionController.text.trim(),
           amount: amount,
-          pointsCost: points,  // Changed from 'value' to 'pointsCost'
+          pointsCost: points, // Changed from 'value' to 'pointsCost'
         );
       }
 
@@ -623,8 +616,8 @@ class _CreateVoucherDialogState extends State<_CreateVoucherDialog> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              widget.existingVoucher != null 
-                  ? 'Voucher updated successfully!' 
+              widget.existingVoucher != null
+                  ? 'Voucher updated successfully!'
                   : 'Voucher created successfully!',
             ),
           ),
@@ -632,9 +625,9 @@ class _CreateVoucherDialogState extends State<_CreateVoucherDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving voucher: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving voucher: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

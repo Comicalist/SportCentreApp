@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+
 import '../../models/app_notification.dart';
 import '../../services/notification_service.dart';
 
@@ -24,10 +25,9 @@ void showNotificationsDrawer(BuildContext context) {
 }
 
 class NotificationsListView extends StatelessWidget {
+  NotificationsListView({super.key, required this.scrollController});
   final ScrollController scrollController;
   final NotificationService _notificationService = NotificationService();
-
-  NotificationsListView({super.key, required this.scrollController});
 
   @override
   Widget build(BuildContext context) {
@@ -44,8 +44,10 @@ class NotificationsListView extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Notifications',
-                  style: Theme.of(context).textTheme.headlineSmall),
+              Text(
+                'Notifications',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -75,8 +77,10 @@ class NotificationsListView extends StatelessWidget {
                         ),
                       );
 
-                      if (confirmed == true) {
-                        await _notificationService.deleteAllNotifications(userId);
+                      if (confirmed ?? false) {
+                        await _notificationService.deleteAllNotifications(
+                          userId,
+                        );
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -89,9 +93,7 @@ class NotificationsListView extends StatelessWidget {
                     },
                     icon: const Icon(Icons.clear_all, size: 18),
                     label: const Text('Clear All'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.red,
-                    ),
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
                   ),
                   const SizedBox(width: 8),
                   TextButton(
@@ -126,11 +128,16 @@ class NotificationsListView extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.notifications_off,
-                          size: 64, color: Colors.grey.shade400),
+                      Icon(
+                        Icons.notifications_off,
+                        size: 64,
+                        color: Colors.grey.shade400,
+                      ),
                       const SizedBox(height: 16),
-                      Text('No notifications yet',
-                          style: TextStyle(color: Colors.grey.shade600)),
+                      Text(
+                        'No notifications yet',
+                        style: TextStyle(color: Colors.grey.shade600),
+                      ),
                     ],
                   ),
                 );
@@ -152,10 +159,9 @@ class NotificationsListView extends StatelessWidget {
 }
 
 class NotificationTile extends StatelessWidget {
+  NotificationTile({super.key, required this.notification});
   final AppNotification notification;
   final NotificationService _notificationService = NotificationService();
-
-  NotificationTile({super.key, required this.notification});
 
   @override
   Widget build(BuildContext context) {
@@ -164,9 +170,9 @@ class NotificationTile extends StatelessWidget {
       direction: DismissDirection.endToStart,
       onDismissed: (_) {
         _notificationService.deleteNotification(notification.id);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Notification deleted')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Notification deleted')));
       },
       background: Container(
         color: Colors.red,
@@ -176,8 +182,9 @@ class NotificationTile extends StatelessWidget {
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor:
-              notification.isRead ? Colors.grey.shade300 : Colors.teal,
+          backgroundColor: notification.isRead
+              ? Colors.grey.shade300
+              : Colors.teal,
           child: Icon(
             notification.type == NotificationType.bookingReminder
                 ? Icons.access_time
@@ -189,8 +196,9 @@ class NotificationTile extends StatelessWidget {
         title: Text(
           notification.title,
           style: TextStyle(
-            fontWeight:
-                notification.isRead ? FontWeight.normal : FontWeight.bold,
+            fontWeight: notification.isRead
+                ? FontWeight.normal
+                : FontWeight.bold,
           ),
         ),
         subtitle: Column(

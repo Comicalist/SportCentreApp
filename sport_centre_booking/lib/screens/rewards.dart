@@ -1,9 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
+import '../models/voucher.dart';
 import '../services/notification_service.dart';
 import '../services/voucher_service.dart';
-import '../models/voucher.dart';
 import '../widgets/notifications/notifications_drawer.dart';
 
 class RewardsScreen extends StatelessWidget {
@@ -13,7 +14,10 @@ class RewardsScreen extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return null;
 
-    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
     return doc.data();
   }
 
@@ -26,10 +30,7 @@ class RewardsScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text(
           'Rewards',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -101,11 +102,18 @@ class RewardsScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+                    Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.grey[400],
+                    ),
                     const SizedBox(height: 16),
                     const Text(
                       'Failed to load your rewards.',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -139,9 +147,17 @@ class RewardsScreen extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 // Cards (match card style used elsewhere)
-                _buildPointsCard('Available Points', availablePoints, Colors.green),
+                _buildPointsCard(
+                  'Available Points',
+                  availablePoints,
+                  Colors.green,
+                ),
                 const SizedBox(height: 12),
-                _buildPointsCard('Lifetime Points Earned', lifetimePoints, Colors.orange),
+                _buildPointsCard(
+                  'Lifetime Points Earned',
+                  lifetimePoints,
+                  Colors.orange,
+                ),
 
                 const SizedBox(height: 32),
 
@@ -161,10 +177,9 @@ class RewardsScreen extends StatelessWidget {
                   child: StreamBuilder<List<Voucher>>(
                     stream: VoucherService.streamAvailableVouchers(),
                     builder: (context, voucherSnapshot) {
-                      if (voucherSnapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(
-                          child: CircularProgressIndicator(),
-                        );
+                      if (voucherSnapshot.connectionState ==
+                          ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
                       }
 
                       if (voucherSnapshot.hasError) {
@@ -172,7 +187,11 @@ class RewardsScreen extends StatelessWidget {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.error_outline, size: 48, color: Colors.grey[400]),
+                              Icon(
+                                Icons.error_outline,
+                                size: 48,
+                                color: Colors.grey[400],
+                              ),
                               const SizedBox(height: 8),
                               const Text('Failed to load vouchers'),
                             ],
@@ -187,16 +206,26 @@ class RewardsScreen extends StatelessWidget {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.card_giftcard_outlined, size: 64, color: Colors.grey[400]),
+                              Icon(
+                                Icons.card_giftcard_outlined,
+                                size: 64,
+                                color: Colors.grey[400],
+                              ),
                               const SizedBox(height: 16),
                               const Text(
                                 'No vouchers available',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                               const SizedBox(height: 8),
                               Text(
                                 'Check back later for new vouchers!',
-                                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
                               ),
                             ],
                           ),
@@ -207,7 +236,11 @@ class RewardsScreen extends StatelessWidget {
                         itemCount: vouchers.length,
                         itemBuilder: (context, index) {
                           final voucher = vouchers[index];
-                          return _buildVoucherCard(context, voucher, availablePoints);
+                          return _buildVoucherCard(
+                            context,
+                            voucher,
+                            availablePoints,
+                          );
                         },
                       );
                     },
@@ -258,7 +291,11 @@ class RewardsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildVoucherCard(BuildContext context, Voucher voucher, int userPoints) {
+  Widget _buildVoucherCard(
+    BuildContext context,
+    Voucher voucher,
+    int userPoints,
+  ) {
     final canAfford = userPoints >= voucher.pointsCost;
     final userId = FirebaseAuth.instance.currentUser?.uid;
 
@@ -275,9 +312,14 @@ class RewardsScreen extends StatelessWidget {
               children: [
                 // Voucher type badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: _getVoucherTypeColor(voucher.type).withValues(alpha: 0.12),
+                    color: _getVoucherTypeColor(
+                      voucher.type,
+                    ).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -302,7 +344,7 @@ class RewardsScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            
+
             // Voucher title
             Text(
               voucher.title,
@@ -313,7 +355,7 @@ class RewardsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            
+
             // Voucher description
             Text(
               voucher.description,
@@ -324,13 +366,16 @@ class RewardsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Value and cost row
             Row(
               children: [
                 // Value
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.green.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(6),
@@ -345,7 +390,7 @@ class RewardsScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                
+
                 // Points cost
                 Row(
                   children: [
@@ -361,24 +406,35 @@ class RewardsScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                
+
                 const Spacer(),
-                
+
                 // Purchase button
                 if (userId != null)
                   ElevatedButton(
-                    onPressed: canAfford ? () => _purchaseVoucher(context, voucher, userId) : null,
+                    onPressed: canAfford
+                        ? () => _purchaseVoucher(context, voucher, userId)
+                        : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: canAfford ? Colors.teal : Colors.grey[300],
-                      foregroundColor: canAfford ? Colors.white : Colors.grey[600],
+                      backgroundColor: canAfford
+                          ? Colors.teal
+                          : Colors.grey[300],
+                      foregroundColor: canAfford
+                          ? Colors.white
+                          : Colors.grey[600],
                       elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                     child: Text(
-                      canAfford ? 'Redeem' : 'Need ${voucher.pointsCost - userPoints} pts',
+                      canAfford
+                          ? 'Redeem'
+                          : 'Need ${voucher.pointsCost - userPoints} pts',
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -402,22 +458,24 @@ class RewardsScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _purchaseVoucher(BuildContext context, Voucher voucher, String userId) async {
+  Future<void> _purchaseVoucher(
+    BuildContext context,
+    Voucher voucher,
+    String userId,
+  ) async {
     try {
       // Show loading dialog
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
       // Purchase the voucher
       await VoucherService.purchaseVoucher(voucher.id, userId);
-      
+
       Navigator.of(context).pop(); // Close loading dialog
-      
+
       // Show success dialog
       _showSuccessDialog(context, voucher);
     } catch (e) {
@@ -479,18 +537,12 @@ class RewardsScreen extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               'Expires: ${voucher.expiresAt != null ? _formatDate(voucher.expiresAt!) : 'N/A'}',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
             const SizedBox(height: 8),
             Text(
               'You can view and use your vouchers in your profile.',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
           ],
         ),

@@ -1,10 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../models/activity.dart';
 import '../../models/club.dart';
 import '../../services/activity_service.dart';
 import '../../services/club_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'add_activity_screen.dart';
 import 'edit_activity_screen.dart';
 
@@ -12,7 +13,8 @@ class ActivityManagementScreen extends StatefulWidget {
   const ActivityManagementScreen({super.key});
 
   @override
-  State<ActivityManagementScreen> createState() => _ActivityManagementScreenState();
+  State<ActivityManagementScreen> createState() =>
+      _ActivityManagementScreenState();
 }
 
 class _ActivityManagementScreenState extends State<ActivityManagementScreen> {
@@ -49,7 +51,10 @@ class _ActivityManagementScreenState extends State<ActivityManagementScreen> {
       setState(() => _isLoadingClubs = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading clubs: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error loading clubs: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -130,156 +135,179 @@ class _ActivityManagementScreenState extends State<ActivityManagementScreen> {
       body: _isLoadingClubs
           ? const Center(child: CircularProgressIndicator())
           : _ownedClubs.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.business, size: 64, color: Colors.grey),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'No Approved Clubs',
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'You need at least one approved club to manage activities.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton.icon(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.arrow_back),
-                          label: const Text('Go Back'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.teal,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : Column(
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Club filter
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      color: Colors.grey.shade100,
-                      child: Row(
-                        children: [
-                          const Icon(Icons.filter_list, color: Colors.teal),
-                          const SizedBox(width: 12),
-                          const Text(
-                            'Filter by Club:',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: DropdownButton<Club>(
-                              value: _selectedClub,
-                              isExpanded: true,
-                              items: _ownedClubs.map((club) {
-                                return DropdownMenuItem(
-                                  value: club,
-                                  child: Text(club.name),
-                                );
-                              }).toList(),
-                              onChanged: (club) {
-                                setState(() => _selectedClub = club);
-                              },
-                            ),
-                          ),
-                        ],
+                    const Icon(Icons.business, size: 64, color: Colors.grey),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'No Approved Clubs',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-
-                    // Activities list
-                    Expanded(
-                      child: _selectedClub == null
-                          ? const Center(child: Text('Select a club'))
-                          : StreamBuilder<List<Activity>>(
-                              stream: ActivityService.getActivitiesByClub(_selectedClub!.id),
-                              builder: (context, snapshot) {
-                                if (snapshot.connectionState == ConnectionState.waiting) {
-                                  return const Center(child: CircularProgressIndicator());
-                                }
-
-                                if (snapshot.hasError) {
-                                  return Center(
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        const Icon(Icons.error, size: 64, color: Colors.red),
-                                        const SizedBox(height: 16),
-                                        Text('Error: ${snapshot.error}'),
-                                      ],
-                                    ),
-                                  );
-                                }
-
-                                final activities = snapshot.data ?? [];
-
-                                if (activities.isEmpty) {
-                                  return Center(
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        const Icon(Icons.event_busy, size: 64, color: Colors.grey),
-                                        const SizedBox(height: 16),
-                                        const Text(
-                                          'No activities yet',
-                                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          'Create your first activity for ${_selectedClub!.name}',
-                                          textAlign: TextAlign.center,
-                                          style: const TextStyle(color: Colors.grey),
-                                        ),
-                                        const SizedBox(height: 24),
-                                        ElevatedButton.icon(
-                                          onPressed: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) => const AddActivityScreen(),
-                                              ),
-                                            );
-                                          },
-                                          icon: const Icon(Icons.add),
-                                          label: const Text('Create Activity'),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.teal,
-                                            foregroundColor: Colors.white,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }
-
-                                // Sort activities by date
-                                activities.sort((a, b) => a.date.compareTo(b.date));
-
-                                return ListView.builder(
-                                  padding: const EdgeInsets.all(16),
-                                  itemCount: activities.length,
-                                  itemBuilder: (context, index) {
-                                    final activity = activities[index];
-                                    return _ActivityCard(
-                                      activity: activity,
-                                      onDelete: () => _deleteActivity(activity),
-                                    );
-                                  },
-                                );
-                              },
-                            ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'You need at least one approved club to manage activities.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.arrow_back),
+                      label: const Text('Go Back'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.teal,
+                        foregroundColor: Colors.white,
+                      ),
                     ),
                   ],
                 ),
+              ),
+            )
+          : Column(
+              children: [
+                // Club filter
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  color: Colors.grey.shade100,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.filter_list, color: Colors.teal),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Filter by Club:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButton<Club>(
+                          value: _selectedClub,
+                          isExpanded: true,
+                          items: _ownedClubs.map((club) {
+                            return DropdownMenuItem(
+                              value: club,
+                              child: Text(club.name),
+                            );
+                          }).toList(),
+                          onChanged: (club) {
+                            setState(() => _selectedClub = club);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Activities list
+                Expanded(
+                  child: _selectedClub == null
+                      ? const Center(child: Text('Select a club'))
+                      : StreamBuilder<List<Activity>>(
+                          stream: ActivityService.getActivitiesByClub(
+                            _selectedClub!.id,
+                          ),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            }
+
+                            if (snapshot.hasError) {
+                              return Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.error,
+                                      size: 64,
+                                      color: Colors.red,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text('Error: ${snapshot.error}'),
+                                  ],
+                                ),
+                              );
+                            }
+
+                            final activities = snapshot.data ?? [];
+
+                            if (activities.isEmpty) {
+                              return Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.event_busy,
+                                      size: 64,
+                                      color: Colors.grey,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    const Text(
+                                      'No activities yet',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Create your first activity for ${_selectedClub!.name}',
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 24),
+                                    ElevatedButton.icon(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                const AddActivityScreen(),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.add),
+                                      label: const Text('Create Activity'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.teal,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+
+                            // Sort activities by date
+                            activities.sort((a, b) => a.date.compareTo(b.date));
+
+                            return ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: activities.length,
+                              itemBuilder: (context, index) {
+                                final activity = activities[index];
+                                return _ActivityCard(
+                                  activity: activity,
+                                  onDelete: () => _deleteActivity(activity),
+                                  onEdit: () {}, // Provide a default value
+                                );
+                              },
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
       floatingActionButton: _ownedClubs.isNotEmpty
           ? FloatingActionButton.extended(
               onPressed: () {
@@ -298,15 +326,15 @@ class _ActivityManagementScreenState extends State<ActivityManagementScreen> {
 }
 
 class _ActivityCard extends StatelessWidget {
-  final Activity activity;
-  final VoidCallback onDelete;
-  final VoidCallback? onEdit; // Add this parameter
-
   const _ActivityCard({
     required this.activity,
     required this.onDelete,
-    this.onEdit, // Add this parameter
+    required this.onEdit, // ✅ Add this required parameter
   });
+  
+  final Activity activity;
+  final VoidCallback onDelete;
+  final VoidCallback onEdit; // ✅ Remove the '?' to make it required OR add it to constructor
 
   @override
   Widget build(BuildContext context) {
@@ -324,7 +352,9 @@ class _ActivityCard extends StatelessWidget {
           Stack(
             children: [
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(4),
+                ),
                 child: Image.network(
                   activity.displayImageUrl,
                   height: 150,
@@ -339,7 +369,7 @@ class _ActivityCard extends StatelessWidget {
                         child: CircularProgressIndicator(
                           value: loadingProgress.expectedTotalBytes != null
                               ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
+                                    loadingProgress.expectedTotalBytes!
                               : null,
                           color: Colors.teal,
                         ),
@@ -354,8 +384,12 @@ class _ActivityCard extends StatelessWidget {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            _getCategoryColor(activity.category).withValues(alpha: 0.7),
-                            _getCategoryColor(activity.category).withValues(alpha: 0.4),
+                            _getCategoryColor(
+                              activity.category,
+                            ).withValues(alpha: 0.7),
+                            _getCategoryColor(
+                              activity.category,
+                            ).withValues(alpha: 0.4),
                           ],
                         ),
                       ),
@@ -383,13 +417,16 @@ class _ActivityCard extends StatelessWidget {
                   },
                 ),
               ),
-              
+
               // Category badge
               Positioned(
                 top: 8,
                 right: 8,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: _getCategoryColor(activity.category),
                     borderRadius: BorderRadius.circular(12),
@@ -404,14 +441,17 @@ class _ActivityCard extends StatelessWidget {
                   ),
                 ),
               ),
-              
+
               // Past activity badge
               if (isPast)
                 Positioned(
                   bottom: 8,
                   left: 8,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.grey.shade700,
                       borderRadius: BorderRadius.circular(12),
@@ -428,7 +468,7 @@ class _ActivityCard extends StatelessWidget {
                 ),
             ],
           ),
-          
+
           // Activity details
           Padding(
             padding: const EdgeInsets.all(16),
@@ -471,7 +511,7 @@ class _ActivityCard extends StatelessWidget {
                               ],
                             ),
                           ),
-                        
+
                         // Delete option
                         const PopupMenuItem<String>(
                           value: 'delete',
@@ -495,14 +535,22 @@ class _ActivityCard extends StatelessWidget {
                 // Date and time
                 Row(
                   children: [
-                    Icon(Icons.calendar_today, size: 16, color: Colors.grey.shade600),
+                    Icon(
+                      Icons.calendar_today,
+                      size: 16,
+                      color: Colors.grey.shade600,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       dateFormat.format(activity.date),
                       style: TextStyle(color: Colors.grey.shade600),
                     ),
                     const SizedBox(width: 16),
-                    Icon(Icons.access_time, size: 16, color: Colors.grey.shade600),
+                    Icon(
+                      Icons.access_time,
+                      size: 16,
+                      color: Colors.grey.shade600,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       '${activity.time} - ${activity.endTimeFormatted}',
@@ -515,7 +563,11 @@ class _ActivityCard extends StatelessWidget {
                 // Location
                 Row(
                   children: [
-                    Icon(Icons.location_on, size: 16, color: Colors.grey.shade600),
+                    Icon(
+                      Icons.location_on,
+                      size: 16,
+                      color: Colors.grey.shade600,
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
@@ -537,14 +589,18 @@ class _ActivityCard extends StatelessWidget {
                       '${activity.bookedCount}/${activity.capacity}',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: isFull ? Colors.red.shade600 : Colors.blue.shade600,
+                        color: isFull
+                            ? Colors.red.shade600
+                            : Colors.blue.shade600,
                       ),
                     ),
                     const SizedBox(width: 4),
                     Text(
                       isFull ? 'Full' : 'spots',
                       style: TextStyle(
-                        color: isFull ? Colors.red.shade600 : Colors.blue.shade600,
+                        color: isFull
+                            ? Colors.red.shade600
+                            : Colors.blue.shade600,
                       ),
                     ),
                   ],
@@ -555,7 +611,10 @@ class _ActivityCard extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.orange.shade100,
                         borderRadius: BorderRadius.circular(8),
@@ -570,7 +629,10 @@ class _ActivityCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.purple.shade100,
                         borderRadius: BorderRadius.circular(8),
@@ -617,9 +679,9 @@ class _ActivityCard extends StatelessWidget {
         builder: (context) => EditActivityScreen(activity: activity),
       ),
     );
-    
+
     // If edit was successful, refresh the parent list
-    if (result == true && context.mounted) {
+    if (result == false && context.mounted) {
       if (onEdit != null) {
         onEdit!(); // Call parent refresh callback
       }

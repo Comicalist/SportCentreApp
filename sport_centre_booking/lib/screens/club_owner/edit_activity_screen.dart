@@ -1,6 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+
 import '../../models/activity.dart';
 import '../../models/facility.dart';
 import '../../services/activity_service.dart';
@@ -8,9 +9,8 @@ import '../../services/facility_service.dart';
 import '../../services/imageUpload_service.dart';
 
 class EditActivityScreen extends StatefulWidget {
-  final Activity activity;
-
   const EditActivityScreen({super.key, required this.activity});
+  final Activity activity;
 
   @override
   State<EditActivityScreen> createState() => _EditActivityScreenState();
@@ -19,7 +19,7 @@ class EditActivityScreen extends StatefulWidget {
 class _EditActivityScreenState extends State<EditActivityScreen> {
   final _formKey = GlobalKey<FormState>();
   final _facilityService = FacilityService();
-  
+
   // Form controllers
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -28,7 +28,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
   final _capacityController = TextEditingController();
   final _pointsController = TextEditingController();
   final _durationController = TextEditingController();
-  
+
   // Form state
   List<Facility> _facilities = [];
   Facility? _selectedFacility;
@@ -37,22 +37,22 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
   TimeOfDay _selectedTime = const TimeOfDay(hour: 9, minute: 0);
   final List<String> _requirements = [];
   bool _isLoading = false;
-  
+
   String? _newImageUrl; // For tracking new uploaded image
   bool _isUploadingImage = false;
-  
+
   final List<String> _categories = ['Wellness', 'Fitness', 'Kids', 'Workshops'];
-  
+
   @override
   void initState() {
     super.initState();
     _initializeForm();
     _loadFacilities();
   }
-  
+
   void _initializeForm() {
     final activity = widget.activity;
-    
+
     _nameController.text = activity.name;
     _descriptionController.text = activity.description;
     _guestPriceController.text = activity.guestPrice.toString();
@@ -60,22 +60,22 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
     _capacityController.text = activity.capacity.toString();
     _pointsController.text = activity.pointsReward.toString();
     _durationController.text = activity.duration.toString();
-    
+
     _selectedCategory = activity.category;
     _selectedDate = activity.date;
     _requirements.addAll(activity.requirements);
-    
+
     // Parse time
-   
-      final timeParts = activity.time.split(':');
-      if (timeParts.length == 2) {
-        _selectedTime = TimeOfDay(
-          hour: int.parse(timeParts[0]),
-          minute: int.parse(timeParts[1]),
-        );
-      }
+
+    final timeParts = activity.time.split(':');
+    if (timeParts.length == 2) {
+      _selectedTime = TimeOfDay(
+        hour: int.parse(timeParts[0]),
+        minute: int.parse(timeParts[1]),
+      );
+    }
   }
-  
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -87,68 +87,78 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
     _durationController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _loadFacilities() async {
     try {
-      final facilities = await _facilityService.getClubFacilities(clubId: widget.activity.clubId);
+      final facilities = await _facilityService.getClubFacilities(
+        clubId: widget.activity.clubId,
+      );
       final activeFacilities = facilities.where((f) => f.isActive).toList();
-      
+
       setState(() {
         _facilities = activeFacilities;
         // Find current facility
         _selectedFacility = activeFacilities.firstWhere(
           (f) => f.id == widget.activity.facilityId,
-          orElse: () => activeFacilities.isNotEmpty ? activeFacilities.first : throw Exception('No facilities available'),
+          orElse: () => activeFacilities.isNotEmpty
+              ? activeFacilities.first
+              : throw Exception('No facilities available'),
         );
       });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading facilities: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error loading facilities: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
   }
-  
+
   Future<void> _selectDate() async {
     // Don't allow editing past activities
     if (widget.activity.isPast) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cannot edit past activities'), backgroundColor: Colors.orange),
+        const SnackBar(
+          content: Text('Cannot edit past activities'),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
     }
-    
-    final DateTime? picked = await showDatePicker(
+
+    final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    
+
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
       });
     }
   }
-  
+
   Future<void> _selectTime() async {
-    final TimeOfDay? picked = await showTimePicker(
+    final picked = await showTimePicker(
       context: context,
       initialTime: _selectedTime,
     );
-    
+
     if (picked != null && picked != _selectedTime) {
       setState(() {
         _selectedTime = picked;
       });
     }
   }
-  
+
   Widget _buildImageSection() {
     final currentImageUrl = _newImageUrl ?? widget.activity.displayImageUrl;
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -157,7 +167,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
           children: [
             _buildSectionTitle('Activity Image'),
             const SizedBox(height: 12),
-            
+
             // Current image preview
             Container(
               width: double.infinity,
@@ -179,7 +189,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                         child: CircularProgressIndicator(
                           value: loadingProgress.expectedTotalBytes != null
                               ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
+                                    loadingProgress.expectedTotalBytes!
                               : null,
                           color: Colors.teal,
                         ),
@@ -192,9 +202,16 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.image_not_supported, size: 48, color: Colors.grey[400]),
+                          Icon(
+                            Icons.image_not_supported,
+                            size: 48,
+                            color: Colors.grey[400],
+                          ),
                           const SizedBox(height: 8),
-                          Text('Image not available', style: TextStyle(color: Colors.grey[600])),
+                          Text(
+                            'Image not available',
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
                         ],
                       ),
                     );
@@ -202,13 +219,13 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Upload new image button
             ElevatedButton.icon(
               onPressed: _isUploadingImage ? null : _uploadNewImage,
-              icon: _isUploadingImage 
+              icon: _isUploadingImage
                   ? const SizedBox(
                       width: 16,
                       height: 16,
@@ -221,7 +238,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                 foregroundColor: Colors.white,
               ),
             ),
-            
+
             if (_newImageUrl != null) ...[
               const SizedBox(height: 8),
               Container(
@@ -233,7 +250,11 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.check_circle, color: Colors.green[600], size: 16),
+                    Icon(
+                      Icons.check_circle,
+                      color: Colors.green[600],
+                      size: 16,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -271,7 +292,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
         setState(() {
           _newImageUrl = imageUrl;
         });
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -298,42 +319,50 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
       }
     }
   }
-  
+
   Future<void> _updateActivity() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    
+
     if (_selectedFacility == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a facility'), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('Please select a facility'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
-    
+
     setState(() => _isLoading = true);
-    
+
     try {
       // Get current user
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         throw Exception('User not authenticated');
       }
-      
+
       // Validate capacity
       final newCapacity = int.parse(_capacityController.text);
       if (newCapacity < widget.activity.bookedCount) {
-        throw Exception('Capacity cannot be less than current bookings (${widget.activity.bookedCount})');
+        throw Exception(
+          'Capacity cannot be less than current bookings (${widget.activity.bookedCount})',
+        );
       }
-      
+
       if (newCapacity > _selectedFacility!.maxCapacity) {
-        throw Exception('Capacity ($newCapacity) exceeds facility maximum (${_selectedFacility!.maxCapacity})');
+        throw Exception(
+          'Capacity ($newCapacity) exceeds facility maximum (${_selectedFacility!.maxCapacity})',
+        );
       }
-      
+
       // Create time string
-      final timeString = '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
+      final timeString =
+          '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
       final duration = int.parse(_durationController.text);
-      
+
       // Create updated activity
       final updatedActivity = widget.activity.copyWith(
         facilityId: _selectedFacility!.id,
@@ -353,13 +382,13 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
         imageUrl: _newImageUrl ?? widget.activity.imageUrl,
         updatedAt: DateTime.now(),
       );
-      
+
       // ✅ Fix: Pass the required currentUserId parameter
       await ActivityService.updateActivity(
         activity: updatedActivity,
         currentUserId: user.uid,
       );
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -384,17 +413,14 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
       }
     }
   }
-  
+
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: const TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-      ),
+      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
     );
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -452,7 +478,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                 ),
                 const SizedBox(height: 16),
               ],
-              
+
               // Current bookings info
               if (widget.activity.bookedCount > 0) ...[
                 Card(
@@ -478,7 +504,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                 ),
                 const SizedBox(height: 16),
               ],
-              
+
               // Basic Information
               Card(
                 child: Padding(
@@ -488,18 +514,19 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                     children: [
                       _buildSectionTitle('Basic Information'),
                       const SizedBox(height: 16),
-                      
+
                       TextFormField(
                         controller: _nameController,
                         decoration: const InputDecoration(
                           labelText: 'Activity Name *',
                           border: OutlineInputBorder(),
                         ),
-                        validator: (value) => value?.isEmpty == true ? 'Required' : null,
+                        validator: (value) =>
+                            value?.isEmpty ?? false ? 'Required' : null,
                       ),
-                      
+
                       const SizedBox(height: 16),
-                      
+
                       TextFormField(
                         controller: _descriptionController,
                         decoration: const InputDecoration(
@@ -507,11 +534,12 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                           border: OutlineInputBorder(),
                         ),
                         maxLines: 3,
-                        validator: (value) => value?.isEmpty == true ? 'Required' : null,
+                        validator: (value) =>
+                            value?.isEmpty ?? false ? 'Required' : null,
                       ),
-                      
+
                       const SizedBox(height: 16),
-                      
+
                       DropdownButtonFormField<String>(
                         initialValue: _selectedCategory,
                         decoration: const InputDecoration(
@@ -534,9 +562,9 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Facility Selection
               Card(
                 child: Padding(
@@ -546,7 +574,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                     children: [
                       _buildSectionTitle('Facility'),
                       const SizedBox(height: 16),
-                      
+
                       DropdownButtonFormField<Facility>(
                         initialValue: _selectedFacility,
                         decoration: const InputDecoration(
@@ -556,21 +584,24 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                         items: _facilities.map((facility) {
                           return DropdownMenuItem(
                             value: facility,
-                            child: Text('${facility.title} (Max: ${facility.maxCapacity})'),
+                            child: Text(
+                              '${facility.title} (Max: ${facility.maxCapacity})',
+                            ),
                           );
                         }).toList(),
                         onChanged: (facility) {
                           setState(() => _selectedFacility = facility);
                         },
-                        validator: (value) => value == null ? 'Please select a facility' : null,
+                        validator: (value) =>
+                            value == null ? 'Please select a facility' : null,
                       ),
                     ],
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Date & Time
               Card(
                 child: Padding(
@@ -580,7 +611,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                     children: [
                       _buildSectionTitle('Schedule'),
                       const SizedBox(height: 16),
-                      
+
                       Row(
                         children: [
                           Expanded(
@@ -593,7 +624,9 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                                   suffixIcon: Icon(Icons.calendar_today),
                                 ),
                                 child: Text(
-                                  DateFormat('MMM dd, yyyy').format(_selectedDate),
+                                  DateFormat(
+                                    'MMM dd, yyyy',
+                                  ).format(_selectedDate),
                                 ),
                               ),
                             ),
@@ -614,9 +647,9 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                           ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: 16),
-                      
+
                       TextFormField(
                         controller: _durationController,
                         decoration: const InputDecoration(
@@ -626,10 +659,12 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                         ),
                         keyboardType: TextInputType.number,
                         validator: (value) {
-                          if (value?.isEmpty == true) return 'Required';
+                          if (value?.isEmpty ?? false) return 'Required';
                           final duration = int.tryParse(value!);
-                          if (duration == null || duration <= 0) return 'Enter valid duration';
-                          if (duration > 480) return 'Duration cannot exceed 8 hours';
+                          if (duration == null || duration <= 0)
+                            return 'Enter valid duration';
+                          if (duration > 480)
+                            return 'Duration cannot exceed 8 hours';
                           return null;
                         },
                       ),
@@ -637,9 +672,9 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Capacity & Pricing
               Card(
                 child: Padding(
@@ -649,33 +684,35 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                     children: [
                       _buildSectionTitle('Capacity & Pricing'),
                       const SizedBox(height: 16),
-                      
+
                       TextFormField(
                         controller: _capacityController,
                         decoration: InputDecoration(
                           labelText: 'Capacity *',
                           border: const OutlineInputBorder(),
-                          helperText: widget.activity.bookedCount > 0 
+                          helperText: widget.activity.bookedCount > 0
                               ? 'Minimum: ${widget.activity.bookedCount} (current bookings)'
                               : null,
                         ),
                         keyboardType: TextInputType.number,
                         validator: (value) {
-                          if (value?.isEmpty == true) return 'Required';
+                          if (value?.isEmpty ?? false) return 'Required';
                           final capacity = int.tryParse(value!);
-                          if (capacity == null || capacity <= 0) return 'Enter valid capacity';
+                          if (capacity == null || capacity <= 0)
+                            return 'Enter valid capacity';
                           if (capacity < widget.activity.bookedCount) {
                             return 'Cannot be less than current bookings (${widget.activity.bookedCount})';
                           }
-                          if (_selectedFacility != null && capacity > _selectedFacility!.maxCapacity) {
+                          if (_selectedFacility != null &&
+                              capacity > _selectedFacility!.maxCapacity) {
                             return 'Exceeds facility maximum (${_selectedFacility!.maxCapacity})';
                           }
                           return null;
                         },
                       ),
-                      
+
                       const SizedBox(height: 16),
-                      
+
                       Row(
                         children: [
                           Expanded(
@@ -684,13 +721,14 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                               decoration: const InputDecoration(
                                 labelText: 'Guest Price *',
                                 border: OutlineInputBorder(),
-                                prefixText: '\$',
+                                prefixText: r'$',
                               ),
                               keyboardType: TextInputType.number,
                               validator: (value) {
-                                if (value?.isEmpty == true) return 'Required';
+                                if (value?.isEmpty ?? false) return 'Required';
                                 final price = double.tryParse(value!);
-                                if (price == null || price < 0) return 'Enter valid price';
+                                if (price == null || price < 0)
+                                  return 'Enter valid price';
                                 return null;
                               },
                             ),
@@ -702,22 +740,23 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                               decoration: const InputDecoration(
                                 labelText: 'Member Price *',
                                 border: OutlineInputBorder(),
-                                prefixText: '\$',
+                                prefixText: r'$',
                               ),
                               keyboardType: TextInputType.number,
                               validator: (value) {
-                                if (value?.isEmpty == true) return 'Required';
+                                if (value?.isEmpty ?? false) return 'Required';
                                 final price = double.tryParse(value!);
-                                if (price == null || price < 0) return 'Enter valid price';
+                                if (price == null || price < 0)
+                                  return 'Enter valid price';
                                 return null;
                               },
                             ),
                           ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: 16),
-                      
+
                       TextFormField(
                         controller: _pointsController,
                         decoration: const InputDecoration(
@@ -727,9 +766,10 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                         ),
                         keyboardType: TextInputType.number,
                         validator: (value) {
-                          if (value?.isEmpty == true) return 'Required';
+                          if (value?.isEmpty ?? false) return 'Required';
                           final points = int.tryParse(value!);
-                          if (points == null || points < 0) return 'Enter valid points';
+                          if (points == null || points < 0)
+                            return 'Enter valid points';
                           return null;
                         },
                       ),
@@ -737,14 +777,14 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Image Section
               _buildImageSection(),
-              
+
               const SizedBox(height: 32),
-              
+
               // Update Button
               SizedBox(
                 width: double.infinity,
@@ -762,7 +802,10 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text(
                           'Update Activity',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                 ),
               ),

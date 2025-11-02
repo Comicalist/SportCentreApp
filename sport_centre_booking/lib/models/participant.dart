@@ -4,24 +4,6 @@ import 'booking.dart';
 /// Participant model for admin management
 /// Combines booking and user information for event participant management
 class Participant {
-  final String id; // Booking ID
-  final String userId;
-  final String userName;
-  final String userEmail;
-  final String activityId;
-  final String activityTitle;
-  final DateTime activityDate;
-  final String activityTime;
-  final DateTime bookingDate;
-  final BookingStatus status;
-  final int participantCount;
-  final double amountPaid;
-  final int pointsEarned;
-  final bool isMemberBooking;
-  final String confirmationNumber;
-  final String? phoneNumber;
-  final String? notes;
-
   Participant({
     required this.id,
     required this.userId,
@@ -47,8 +29,8 @@ class Participant {
     DocumentSnapshot bookingDoc,
     Map<String, dynamic> userData,
   ) {
-    final bookingData = bookingDoc.data() as Map<String, dynamic>;
-    
+    final bookingData = bookingDoc.data()! as Map<String, dynamic>;
+
     return Participant(
       id: bookingDoc.id,
       userId: bookingData['userId'] ?? '',
@@ -59,7 +41,9 @@ class Participant {
       activityDate: _parseDateTime(bookingData['activityDate']),
       activityTime: bookingData['activityTime'] ?? '',
       bookingDate: _parseDateTime(bookingData['bookingDate']),
-      status: BookingStatusExtension.fromString(bookingData['status'] ?? 'pending'),
+      status: BookingStatusExtension.fromString(
+        bookingData['status'] ?? 'pending',
+      ),
       participantCount: bookingData['participantCount'] ?? 1,
       amountPaid: (bookingData['amountPaid'] ?? 0).toDouble(),
       pointsEarned: bookingData['pointsEarned'] ?? 0,
@@ -69,11 +53,28 @@ class Participant {
       notes: bookingData['notes'],
     );
   }
+  final String id; // Booking ID
+  final String userId;
+  final String userName;
+  final String userEmail;
+  final String activityId;
+  final String activityTitle;
+  final DateTime activityDate;
+  final String activityTime;
+  final DateTime bookingDate;
+  final BookingStatus status;
+  final int participantCount;
+  final double amountPaid;
+  final int pointsEarned;
+  final bool isMemberBooking;
+  final String confirmationNumber;
+  final String? phoneNumber;
+  final String? notes;
 
   /// Helper method to parse DateTime from various Firestore formats
   static DateTime _parseDateTime(dynamic dateField) {
     if (dateField == null) return DateTime.now();
-    
+
     if (dateField is Timestamp) {
       return dateField.toDate();
     } else if (dateField is String) {
@@ -81,7 +82,7 @@ class Participant {
     } else if (dateField is DateTime) {
       return dateField;
     }
-    
+
     return DateTime.now();
   }
 

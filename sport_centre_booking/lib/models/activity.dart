@@ -1,44 +1,4 @@
 class Activity {
-  // === IDENTIFIERS & RELATIONSHIPS ===
-  final String id;
-  final String clubId;              // Reference to club (for queries/security)
-  final String facilityId;          // Reference to facility
-  
-  // === DENORMALIZED DATA (for display without extra queries) ===
-  final String clubName;            // Club name for display
-  final String facilityName;        // Facility name for display
-  
-  // === ACTIVITY INFORMATION ===
-  final String name;                // Activity title
-  final String description;
-  final String category;            // "Wellness", "Fitness", "Kids", "Workshops"
-  final DateTime date;
-  final String time;                // Format "HH:mm"
-  final int duration;               // Duration in minutes
-  final String timeCategory;        // "Morning", "Afternoon", "Evening"
-  
-  // === CAPACITY ===
-  final int capacity;
-  final int bookedCount;            // Current number of bookings
-  
-  // === DUAL PRICING (Guest vs Member) ===
-  final double guestPrice;
-  final double memberPrice;
-  
-  // === POINTS & REWARDS ===
-  final int pointsReward;
-  
-  // === VOUCHER SETTINGS ===
-  final bool allowVouchers;         // Whether vouchers can be used for this activity
-  
-  final List<String> requirements;  
-  final String? imageUrl;
-  
-  
-  final DateTime createdAt;
-  final DateTime updatedAt;
-  final String createdBy;      
-
   Activity({
     required this.id,
     required this.clubId,
@@ -65,6 +25,81 @@ class Activity {
     required this.createdBy,
   });
 
+  factory Activity.fromJson(Map<String, dynamic> json) {
+    return Activity(
+      id: json['id'] ?? '',
+      clubId: json['clubId'] ?? '',
+      facilityId: json['facilityId'] ?? '',
+      clubName: json['clubName'] ?? '',
+      facilityName: json['facilityName'] ?? '',
+      name: json['name'] ?? '',
+      description: json['description'] ?? '',
+      category: json['category'] ?? '',
+      date: json['date'] is String
+          ? DateTime.parse(json['date'])
+          : (json['date'] as DateTime),
+      time: json['time'] ?? '00:00',
+      duration:
+          json['duration'] ??
+          60, // Default 60 minutes for backward compatibility
+      timeCategory:
+          json['timeCategory'] ?? getTimeCategory(json['time'] ?? '00:00'),
+      capacity: json['capacity'] ?? 0,
+      bookedCount: json['bookedCount'] ?? 0,
+      guestPrice: (json['guestPrice'] ?? 0).toDouble(),
+      memberPrice: (json['memberPrice'] ?? 0).toDouble(),
+      pointsReward: json['pointsReward'] ?? 0,
+      allowVouchers: json['allowVouchers'] ?? true,
+      requirements: List<String>.from(json['requirements'] ?? []),
+      imageUrl: json['imageUrl'] ?? '',
+      createdAt: json['createdAt'] is String
+          ? DateTime.parse(json['createdAt'])
+          : (json['createdAt'] as DateTime? ?? DateTime.now()),
+      updatedAt: json['updatedAt'] is String
+          ? DateTime.parse(json['updatedAt'])
+          : (json['updatedAt'] as DateTime? ?? DateTime.now()),
+      createdBy: json['createdBy'] ?? '',
+    );
+  }
+  // === IDENTIFIERS & RELATIONSHIPS ===
+  final String id;
+  final String clubId; // Reference to club (for queries/security)
+  final String facilityId; // Reference to facility
+
+  // === DENORMALIZED DATA (for display without extra queries) ===
+  final String clubName; // Club name for display
+  final String facilityName; // Facility name for display
+
+  // === ACTIVITY INFORMATION ===
+  final String name; // Activity title
+  final String description;
+  final String category; // "Wellness", "Fitness", "Kids", "Workshops"
+  final DateTime date;
+  final String time; // Format "HH:mm"
+  final int duration; // Duration in minutes
+  final String timeCategory; // "Morning", "Afternoon", "Evening"
+
+  // === CAPACITY ===
+  final int capacity;
+  final int bookedCount; // Current number of bookings
+
+  // === DUAL PRICING (Guest vs Member) ===
+  final double guestPrice;
+  final double memberPrice;
+
+  // === POINTS & REWARDS ===
+  final int pointsReward;
+
+  // === VOUCHER SETTINGS ===
+  final bool allowVouchers; // Whether vouchers can be used for this activity
+
+  final List<String> requirements;
+  final String? imageUrl;
+
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final String createdBy;
+
   // Computed property for spots left
   int get spotsLeft => capacity - bookedCount;
 
@@ -73,10 +108,10 @@ class Activity {
     try {
       final timeParts = time.split(':');
       if (timeParts.length != 2) return date;
-      
+
       final hour = int.parse(timeParts[0]);
       final minute = int.parse(timeParts[1]);
-      
+
       final startDateTime = DateTime(
         date.year,
         date.month,
@@ -84,7 +119,7 @@ class Activity {
         hour,
         minute,
       );
-      
+
       return startDateTime.add(Duration(minutes: duration));
     } catch (e) {
       return date;
@@ -104,7 +139,7 @@ class Activity {
     }
     return _getDefaultImageForCategory(category);
   }
-  
+
   String _getDefaultImageForCategory(String category) {
     switch (category) {
       case 'Wellness':
@@ -118,40 +153,6 @@ class Activity {
       default:
         return 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=200&fit=crop';
     }
-  }
-
-  factory Activity.fromJson(Map<String, dynamic> json) {
-    return Activity(
-      id: json['id'] ?? '',
-      clubId: json['clubId'] ?? '',
-      facilityId: json['facilityId'] ?? '',
-      clubName: json['clubName'] ?? '',
-      facilityName: json['facilityName'] ?? '',
-      name: json['name'] ?? '',
-      description: json['description'] ?? '',
-      category: json['category'] ?? '',
-      date: json['date'] is String 
-          ? DateTime.parse(json['date']) 
-          : (json['date'] as DateTime),
-      time: json['time'] ?? '00:00',
-      duration: json['duration'] ?? 60,  // Default 60 minutes for backward compatibility
-      timeCategory: json['timeCategory'] ?? getTimeCategory(json['time'] ?? '00:00'),
-      capacity: json['capacity'] ?? 0,
-      bookedCount: json['bookedCount'] ?? 0,
-      guestPrice: (json['guestPrice'] ?? 0).toDouble(),
-      memberPrice: (json['memberPrice'] ?? 0).toDouble(),
-      pointsReward: json['pointsReward'] ?? 0,
-      allowVouchers: json['allowVouchers'] ?? true,
-      requirements: List<String>.from(json['requirements'] ?? []),
-      imageUrl: json['imageUrl'] ?? '',
-      createdAt: json['createdAt'] is String
-          ? DateTime.parse(json['createdAt'])
-          : (json['createdAt'] as DateTime? ?? DateTime.now()),
-      updatedAt: json['updatedAt'] is String
-          ? DateTime.parse(json['updatedAt'])
-          : (json['updatedAt'] as DateTime? ?? DateTime.now()),
-      createdBy: json['createdBy'] ?? '',
-    );
   }
 
   Map<String, dynamic> toJson() {
@@ -240,10 +241,10 @@ class Activity {
     try {
       final timeParts = time.split(':');
       if (timeParts.length != 2) return false;
-      
+
       final hour = int.parse(timeParts[0]);
       final minute = int.parse(timeParts[1]);
-      
+
       final activityDateTime = DateTime(
         date.year,
         date.month,
@@ -251,7 +252,7 @@ class Activity {
         hour,
         minute,
       );
-      
+
       return activityDateTime.isBefore(DateTime.now());
     } catch (e) {
       return false;

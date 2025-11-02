@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../services/club_service.dart';
+
 import '../../models/club.dart';
+import '../../services/club_service.dart';
 
 class EditClubScreen extends StatefulWidget {
-  final Club club;
   const EditClubScreen({super.key, required this.club});
+  final Club club;
 
   @override
   State<EditClubScreen> createState() => _EditClubScreenState();
@@ -65,7 +66,10 @@ class _EditClubScreenState extends State<EditClubScreen> {
                         padding: const EdgeInsets.all(12.0),
                         child: Row(
                           children: [
-                            Icon(Icons.info_outline, color: Colors.orange),
+                            const Icon(
+                              Icons.info_outline,
+                              color: Colors.orange,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(

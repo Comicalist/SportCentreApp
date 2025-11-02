@@ -2,20 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// User model for the application
 class AppUser {
-  final String uid;
-  final String email;
-  final String displayName;
-  final DateTime? createdAt;
-  final DateTime? lastLoginAt;
-  final String role;
-  final bool isActive;
-  final int totalPoints;
-  final int availablePoints;
-  final int lifetimePointsEarned;
-  final bool isMember;
-  final String? membershipType; // 'basic', 'premium', 'vip'
-  final DateTime? membershipExpiry;
-  final bool isClubOwner; // Add this field
+  // Add this field
 
   const AppUser({
     required this.uid,
@@ -36,8 +23,8 @@ class AppUser {
 
   /// Create AppUser from Firestore document
   factory AppUser.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    
+    final data = doc.data()! as Map<String, dynamic>;
+
     return AppUser(
       uid: doc.id,
       email: data['email'] ?? '',
@@ -55,6 +42,20 @@ class AppUser {
       isClubOwner: data['isClubOwner'] ?? false, // Add this
     );
   }
+  final String uid;
+  final String email;
+  final String displayName;
+  final DateTime? createdAt;
+  final DateTime? lastLoginAt;
+  final String role;
+  final bool isActive;
+  final int totalPoints;
+  final int availablePoints;
+  final int lifetimePointsEarned;
+  final bool isMember;
+  final String? membershipType; // 'basic', 'premium', 'vip'
+  final DateTime? membershipExpiry;
+  final bool isClubOwner;
 
   /// Convert AppUser to JSON for Firestore
   Map<String, dynamic> toJson() {
@@ -63,7 +64,9 @@ class AppUser {
       'email': email,
       'displayName': displayName,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : null,
-      'lastLoginAt': lastLoginAt != null ? Timestamp.fromDate(lastLoginAt!) : null,
+      'lastLoginAt': lastLoginAt != null
+          ? Timestamp.fromDate(lastLoginAt!)
+          : null,
       'role': role,
       'isActive': isActive,
       'totalPoints': totalPoints,
@@ -71,7 +74,9 @@ class AppUser {
       'lifetimePointsEarned': lifetimePointsEarned,
       'isMember': isMember,
       'membershipType': membershipType,
-      'membershipExpiry': membershipExpiry != null ? Timestamp.fromDate(membershipExpiry!) : null,
+      'membershipExpiry': membershipExpiry != null
+          ? Timestamp.fromDate(membershipExpiry!)
+          : null,
       'isClubOwner': isClubOwner, // Add this
     };
   }
@@ -80,7 +85,8 @@ class AppUser {
   bool get isAdmin => role == 'admin';
 
   /// Check if user is club owner
-  bool get canManageClubs => isClubOwner || isAdmin; // Both club owners and admins can manage clubs
+  bool get canManageClubs =>
+      isClubOwner || isAdmin; // Both club owners and admins can manage clubs
 
   /// Get user's first name
   String get firstName {

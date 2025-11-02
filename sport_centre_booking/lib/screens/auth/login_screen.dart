@@ -5,12 +5,8 @@ import '../../utils/validation_utils.dart';
 import 'email_verification_screen.dart';
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key, required this.isSignUp});
   final bool isSignUp;
-  
-  const LoginScreen({
-    super.key,
-    required this.isSignUp,
-  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -22,7 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _displayNameController = TextEditingController();
-  
+
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isSignUp = false;
@@ -61,13 +57,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Logo or icon
-                  const Icon(
-                    Icons.sports_soccer,
-                    size: 80,
-                    color: Colors.teal,
-                  ),
+                  const Icon(Icons.sports_soccer, size: 80, color: Colors.teal),
                   const SizedBox(height: 24),
-                  
+
                   // Title
                   Text(
                     _isSignUp ? 'Create Account' : 'Welcome Back',
@@ -79,13 +71,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    _isSignUp 
+                    _isSignUp
                         ? 'Join us to book activities and earn rewards'
                         : 'Sign in to your account',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
@@ -100,7 +89,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         prefixIcon: const Icon(Icons.person),
                         border: const OutlineInputBorder(),
                         counterText: '${_displayNameController.text.length}/40',
-                        helperText: 'Letters, spaces, hyphens, and apostrophes only',
+                        helperText:
+                            'Letters, spaces, hyphens, and apostrophes only',
                         helperMaxLines: 2,
                       ),
                       validator: ValidationUtils.validateDisplayName,
@@ -133,7 +123,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       prefixIcon: const Icon(Icons.lock),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                         ),
                         onPressed: () {
                           setState(() {
@@ -143,17 +135,23 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       border: const OutlineInputBorder(),
                     ),
-                    validator: _isSignUp ? ValidationUtils.validatePassword : (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your password';
-                      }
-                      return null;
-                    },
-                    onChanged: _isSignUp ? (value) {
-                      setState(() {}); // Update password strength indicator
-                    } : null,
+                    validator: _isSignUp
+                        ? ValidationUtils.validatePassword
+                        : (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your password';
+                            }
+                            return null;
+                          },
+                    onChanged: _isSignUp
+                        ? (value) {
+                            setState(
+                              () {},
+                            ); // Update password strength indicator
+                          }
+                        : null,
                   ),
-                  
+
                   // Password strength indicator and requirements (only for sign up)
                   if (_isSignUp) ...[
                     const SizedBox(height: 8),
@@ -161,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 8),
                     _buildPasswordRequirements(),
                   ],
-                  
+
                   const SizedBox(height: 16),
 
                   // Confirm Password field (only for sign up)
@@ -174,11 +172,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         prefixIcon: const Icon(Icons.lock),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                            _obscureConfirmPassword
+                                ? Icons.visibility
+                                : Icons.visibility_off,
                           ),
                           onPressed: () {
                             setState(() {
-                              _obscureConfirmPassword = !_obscureConfirmPassword;
+                              _obscureConfirmPassword =
+                                  !_obscureConfirmPassword;
                             });
                           },
                         ),
@@ -209,7 +210,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.business, color: Colors.blue[700], size: 20),
+                                Icon(
+                                  Icons.business,
+                                  color: Colors.blue[700],
+                                  size: 20,
+                                ),
                                 const SizedBox(width: 8),
                                 Text(
                                   'Club Owner',
@@ -294,7 +299,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       child: authProvider.isLoading
                           ? const CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             )
                           : Text(
                               _isSignUp ? 'Sign Up' : 'Sign In',
@@ -309,7 +316,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        _isSignUp 
+                        _isSignUp
                             ? 'Already have an account? '
                             : 'Don\'t have an account? ',
                         style: TextStyle(color: Colors.grey[600]),
@@ -347,7 +354,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    bool success = false;
+    var success = false;
 
     if (_isSignUp) {
       success = await authProvider.register(
@@ -356,13 +363,14 @@ class _LoginScreenState extends State<LoginScreen> {
         _displayNameController.text.trim(),
         isClubOwner: _isClubOwner, // Pass the club owner flag
       );
-      
+
       if (success && mounted) {
         // Navigate to email verification screen
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => EmailVerificationScreen(
-              isClubOwner: _isClubOwner, // Pass the flag to show appropriate message
+              isClubOwner:
+                  _isClubOwner, // Pass the flag to show appropriate message
             ),
           ),
         );
@@ -382,7 +390,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _showForgotPasswordDialog(BuildContext context) {
     final emailController = TextEditingController();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -390,7 +398,9 @@ class _LoginScreenState extends State<LoginScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Enter your email address to receive a password reset link.'),
+            const Text(
+              'Enter your email address to receive a password reset link.',
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: emailController,
@@ -410,25 +420,27 @@ class _LoginScreenState extends State<LoginScreen> {
           Consumer<AuthProvider>(
             builder: (context, authProvider, child) {
               return TextButton(
-                onPressed: authProvider.isLoading ? null : () async {
-                  if (emailController.text.trim().isNotEmpty) {
-                    final success = await authProvider.resetPassword(
-                      emailController.text.trim(),
-                    );
-                    if (context.mounted) {
-                      Navigator.of(context).pop();
-                      if (success) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Password reset email sent!'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      }
-                    }
-                  }
-                },
-                child: authProvider.isLoading 
+                onPressed: authProvider.isLoading
+                    ? null
+                    : () async {
+                        if (emailController.text.trim().isNotEmpty) {
+                          final success = await authProvider.resetPassword(
+                            emailController.text.trim(),
+                          );
+                          if (context.mounted) {
+                            Navigator.of(context).pop();
+                            if (success) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Password reset email sent!'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          }
+                        }
+                      },
+                child: authProvider.isLoading
                     ? const SizedBox(
                         width: 16,
                         height: 16,
@@ -448,7 +460,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordController.text;
     final strength = ValidationUtils.getPasswordStrength(password);
     final label = ValidationUtils.getPasswordStrengthLabel(strength);
-    
+
     Color strengthColor;
     if (strength < 40) {
       strengthColor = Colors.red;
@@ -468,10 +480,7 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             Text(
               'Password Strength:',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
             Text(
               label,
@@ -517,29 +526,35 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          ...requirements.map((req) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
-            child: Row(
-              children: [
-                Icon(
-                  req.isMet ? Icons.check_circle : Icons.radio_button_unchecked,
-                  size: 16,
-                  color: req.isMet ? Colors.green : Colors.grey[400],
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    req.text,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: req.isMet ? Colors.green[700] : Colors.grey[600],
-                      fontWeight: req.isMet ? FontWeight.w500 : FontWeight.normal,
+          ...requirements.map(
+            (req) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                children: [
+                  Icon(
+                    req.isMet
+                        ? Icons.check_circle
+                        : Icons.radio_button_unchecked,
+                    size: 16,
+                    color: req.isMet ? Colors.green : Colors.grey[400],
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      req.text,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: req.isMet ? Colors.green[700] : Colors.grey[600],
+                        fontWeight: req.isMet
+                            ? FontWeight.w500
+                            : FontWeight.normal,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          )),
+          ),
         ],
       ),
     );

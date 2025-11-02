@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../services/club_service.dart';
+
 import '../../models/club.dart';
+import '../../services/club_service.dart';
 
 class ClubApprovalScreen extends StatefulWidget {
   const ClubApprovalScreen({super.key});
@@ -33,10 +34,7 @@ class _ClubApprovalScreenState extends State<ClubApprovalScreen> {
         title: const Text('Club Approvals'),
         backgroundColor: Colors.orange,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refreshData,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _refreshData),
         ],
       ),
       body: _isLoading
@@ -133,7 +131,10 @@ class _ClubApprovalScreenState extends State<ClubApprovalScreen> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.orange[100],
                     borderRadius: BorderRadius.circular(12),
@@ -150,9 +151,17 @@ class _ClubApprovalScreenState extends State<ClubApprovalScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            _buildInfoRow(Icons.location_on, 'Location', club.location ?? 'Not specified'),
+            _buildInfoRow(
+              Icons.location_on,
+              'Location',
+              club.location ?? 'Not specified',
+            ),
             _buildInfoRow(Icons.person, 'Owner ID', club.ownerId),
-            _buildInfoRow(Icons.calendar_today, 'Submitted', _formatDate(club.createdAt)),
+            _buildInfoRow(
+              Icons.calendar_today,
+              'Submitted',
+              _formatDate(club.createdAt),
+            ),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -188,15 +197,9 @@ class _ClubApprovalScreenState extends State<ClubApprovalScreen> {
         children: [
           Icon(icon, size: 16, color: Colors.grey),
           const SizedBox(width: 8),
-          Text(
-            '$label: ',
-            style: const TextStyle(fontWeight: FontWeight.w500),
-          ),
+          Text('$label: ', style: const TextStyle(fontWeight: FontWeight.w500)),
           Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(color: Colors.grey),
-            ),
+            child: Text(value, style: const TextStyle(color: Colors.grey)),
           ),
         ],
       ),
@@ -213,7 +216,7 @@ class _ClubApprovalScreenState extends State<ClubApprovalScreen> {
     try {
       await _clubService.approveClub(clubId);
       _refreshData();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -243,7 +246,9 @@ class _ClubApprovalScreenState extends State<ClubApprovalScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Reject Club'),
-        content: Text('Are you sure you want to reject "${club.name}"? This action cannot be undone.'),
+        content: Text(
+          'Are you sure you want to reject "${club.name}"? This action cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -268,7 +273,7 @@ class _ClubApprovalScreenState extends State<ClubApprovalScreen> {
     try {
       await _clubService.rejectClub(clubId);
       _refreshData();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

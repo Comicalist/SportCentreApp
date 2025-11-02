@@ -1,14 +1,13 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:sport_centre_booking/models/club.dart';
+
+import '../../models/club.dart';
 import '../../services/blocking_service.dart';
 
-
 class EditOpenHoursScreen extends StatefulWidget {
-  final Club club;
-
   const EditOpenHoursScreen({super.key, required this.club});
+  final Club club;
 
   @override
   State<EditOpenHoursScreen> createState() => _EditOpenHoursScreenState();
@@ -26,7 +25,6 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
   Future<void> _pickBlockedTime({Map<String, dynamic>? existing}) async {
     final now = DateTime.now();
     final timeFormat = DateFormat('HH:mm');
-
 
     String? startDayOfWeek = existing?['startDayOfWeek'];
     String? endDayOfWeek = existing?['endDayOfWeek'];
@@ -46,7 +44,9 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: Text(existing == null ? 'Add Blocked Time' : 'Edit Blocked Time'),
+              title: Text(
+                existing == null ? 'Add Blocked Time' : 'Edit Blocked Time',
+              ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -69,7 +69,7 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Start Day of Week',
                       ),
-                      value: startDayOfWeek,
+                      initialValue: startDayOfWeek,
                       items:
                           const [
                                 'Monday',
@@ -92,7 +92,7 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
                       decoration: const InputDecoration(
                         labelText: 'End Day of Week',
                       ),
-                      value: endDayOfWeek,
+                      initialValue: endDayOfWeek,
                       items:
                           const [
                                 'Monday',
@@ -154,7 +154,6 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
                     ),
                   ],
 
-
                   const SizedBox(height: 12),
                   ListTile(
                     title: const Text('Start Time'),
@@ -165,8 +164,17 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
                         initialTime: TimeOfDay.now(),
                       );
                       if (picked != null) {
-                        setDialogState(() => startTime =
-                            timeFormat.format(DateTime(now.year, now.month, now.day, picked.hour, picked.minute)));
+                        setDialogState(
+                          () => startTime = timeFormat.format(
+                            DateTime(
+                              now.year,
+                              now.month,
+                              now.day,
+                              picked.hour,
+                              picked.minute,
+                            ),
+                          ),
+                        );
                       }
                     },
                   ),
@@ -179,8 +187,17 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
                         initialTime: TimeOfDay.now(),
                       );
                       if (picked != null) {
-                        setDialogState(() => endTime =
-                            timeFormat.format(DateTime(now.year, now.month, now.day, picked.hour, picked.minute)));
+                        setDialogState(
+                          () => endTime = timeFormat.format(
+                            DateTime(
+                              now.year,
+                              now.month,
+                              now.day,
+                              picked.hour,
+                              picked.minute,
+                            ),
+                          ),
+                        );
                       }
                     },
                   ),
@@ -307,17 +324,19 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
-                    ...conflicts.map((activity) => Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        leading: const Icon(Icons.event, color: Colors.red),
-                        title: Text(activity.name),
-                        subtitle: Text(
-                          '${DateFormat('MMM dd, yyyy').format(activity.date)} at ${activity.time}\n${activity.facilityName}',
+                    ...conflicts.map(
+                      (activity) => Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          leading: const Icon(Icons.event, color: Colors.red),
+                          title: Text(activity.name),
+                          subtitle: Text(
+                            '${DateFormat('MMM dd, yyyy').format(activity.date)} at ${activity.time}\n${activity.facilityName}',
+                          ),
+                          isThreeLine: true,
                         ),
-                        isThreeLine: true,
                       ),
-                    )),
+                    ),
                   ],
                 ),
               ),
@@ -344,32 +363,29 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
         await _saveToFirestore();
       }
     });
-
   }
 
   Future<void> _saveToFirestore() async {
-  try {
-    await FirebaseFirestore.instance
-      .collection('clubs')
-      .doc(widget.club.id)
-      .set({'blockedTimes': blockedTimes}, SetOptions(merge: true));
+    try {
+      await FirebaseFirestore.instance
+          .collection('clubs')
+          .doc(widget.club.id)
+          .set({'blockedTimes': blockedTimes}, SetOptions(merge: true));
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Blocked times updated')),
-    );
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error: $e')),
-    );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Blocked times updated')));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edit Open Hours'),
-      ),
+      appBar: AppBar(title: const Text('Edit Open Hours')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -379,8 +395,8 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
                 leading: const Icon(Icons.block, color: Colors.redAccent),
                 title: Text(
                   block['recurring']
-                    ? '${block['startDayOfWeek']} ${block['startTime']} → ${block['endDayOfWeek']} ${block['endTime']}'
-                    : '${block['startDate']} ${block['startTime']} → ${block['endDate']} ${block['endTime']}',
+                      ? '${block['startDayOfWeek']} ${block['startTime']} → ${block['endDayOfWeek']} ${block['endTime']}'
+                      : '${block['startDate']} ${block['startTime']} → ${block['endDate']} ${block['endTime']}',
                 ),
                 subtitle: Text(
                   block['reason'] != null && block['reason'].isNotEmpty
@@ -412,7 +428,7 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
             child: ElevatedButton.icon(
               icon: const Icon(Icons.add),
               label: const Text('Add Blocked Time'),
-              onPressed: () => _pickBlockedTime(),
+              onPressed: _pickBlockedTime,
             ),
           ),
         ],

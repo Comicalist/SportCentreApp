@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/activity.dart';
 
 /// Seed Script for Creating Sample Activities
-/// 
+///
 /// This script creates sample activities based on existing clubs and facilities
 /// Run this from a debug button or admin panel
 class ActivitySeeder {
@@ -12,7 +12,6 @@ class ActivitySeeder {
 
   /// Create sample activities for all approved clubs with facilities
   static Future<void> seedActivities() async {
-
     try {
       // Get current user for createdBy field
       final user = FirebaseAuth.instance.currentUser;
@@ -29,14 +28,13 @@ class ActivitySeeder {
         return;
       }
 
-      int totalActivitiesCreated = 0;
+      var totalActivitiesCreated = 0;
 
-      for (var clubDoc in clubsSnapshot.docs) {
+      for (final clubDoc in clubsSnapshot.docs) {
         final clubData = clubDoc.data();
         final clubId = clubDoc.id;
         final clubName = clubData['name'] as String;
         final clubOwnerId = clubData['ownerId'] as String;
-
 
         // Get facilities for this club
         final facilitiesSnapshot = await _firestore
@@ -50,7 +48,7 @@ class ActivitySeeder {
         }
 
         // Create 2-3 activities per facility
-        for (var facilityDoc in facilitiesSnapshot.docs) {
+        for (final facilityDoc in facilitiesSnapshot.docs) {
           final facilityData = facilityDoc.data();
           final facilityId = facilityDoc.id;
           final facilityName = facilityData['title'] as String;
@@ -66,7 +64,7 @@ class ActivitySeeder {
             clubOwnerId,
           );
 
-          for (var activity in activities) {
+          for (final activity in activities) {
             try {
               final activityData = activity.toJson();
               activityData.remove('id'); // Firestore will generate ID
@@ -79,7 +77,6 @@ class ActivitySeeder {
           }
         }
       }
-
     } catch (e) {
       rethrow;
     }
@@ -111,19 +108,20 @@ class ActivitySeeder {
           clubName: clubName,
           facilityName: facilityName,
           name: 'Aqua Aerobics',
-          description: 'Low-impact water exercise for all fitness levels. Great for joint health and cardiovascular fitness.',
+          description:
+              'Low-impact water exercise for all fitness levels. Great for joint health and cardiovascular fitness.',
           category: 'Wellness',
           date: now.add(const Duration(days: 2)),
           time: '10:00',
           duration: 45,
           timeCategory: 'Morning',
           capacity: capacity,
-          bookedCount: 0,
           guestPrice: 18.0,
           memberPrice: 15.0,
           pointsReward: 50,
           requirements: ['Swimsuit', 'Swim cap', 'Goggles'],
-          imageUrl: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=300&h=200&fit=crop',
+          imageUrl:
+              'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=300&h=200&fit=crop',
           createdAt: now,
           updatedAt: now,
           createdBy: ownerId,
@@ -135,25 +133,27 @@ class ActivitySeeder {
           clubName: clubName,
           facilityName: facilityName,
           name: 'Adult Swimming Lessons',
-          description: 'Beginner-friendly swimming lessons to build confidence and technique in the water.',
+          description:
+              'Beginner-friendly swimming lessons to build confidence and technique in the water.',
           category: 'Wellness',
           date: now.add(const Duration(days: 5)),
           time: '18:00',
           duration: 60,
           timeCategory: 'Evening',
           capacity: (capacity * 0.5).round(),
-          bookedCount: 0,
           guestPrice: 25.0,
           memberPrice: 20.0,
           pointsReward: 70,
           requirements: ['Swimsuit', 'Goggles', 'Towel'],
-          imageUrl: 'https://images.unsplash.com/photo-1519315901367-f34ff9154487?w=300&h=200&fit=crop',
+          imageUrl:
+              'https://images.unsplash.com/photo-1519315901367-f34ff9154487?w=300&h=200&fit=crop',
           createdAt: now,
           updatedAt: now,
           createdBy: ownerId,
         ),
       ]);
-    } else if (facilityLower.contains('gym') || facilityLower.contains('weight')) {
+    } else if (facilityLower.contains('gym') ||
+        facilityLower.contains('weight')) {
       // Gym activities
       activities.addAll([
         Activity(
@@ -163,19 +163,20 @@ class ActivitySeeder {
           clubName: clubName,
           facilityName: facilityName,
           name: 'CrossFit Fundamentals',
-          description: 'Master basic CrossFit movements with focus on proper form and technique.',
+          description:
+              'Master basic CrossFit movements with focus on proper form and technique.',
           category: 'Fitness',
           date: now.add(const Duration(days: 1)),
           time: '06:30',
           duration: 60,
           timeCategory: 'Morning',
           capacity: capacity,
-          bookedCount: 0,
           guestPrice: 30.0,
           memberPrice: 25.0,
           pointsReward: 90,
           requirements: ['Athletic shoes', 'Water bottle', 'Towel'],
-          imageUrl: 'https://images.unsplash.com/photo-1517438322307-e67111335449?w=300&h=200&fit=crop',
+          imageUrl:
+              'https://images.unsplash.com/photo-1517438322307-e67111335449?w=300&h=200&fit=crop',
           createdAt: now,
           updatedAt: now,
           createdBy: ownerId,
@@ -187,19 +188,20 @@ class ActivitySeeder {
           clubName: clubName,
           facilityName: facilityName,
           name: 'Weight Training Basics',
-          description: 'Learn proper form and technique for common weight training exercises. Perfect for beginners.',
+          description:
+              'Learn proper form and technique for common weight training exercises. Perfect for beginners.',
           category: 'Fitness',
           date: now.add(const Duration(days: 4)),
           time: '09:00',
           duration: 60,
           timeCategory: 'Morning',
           capacity: (capacity * 0.6).round(),
-          bookedCount: 0,
           guestPrice: 25.0,
           memberPrice: 20.0,
           pointsReward: 80,
           requirements: ['Workout gloves (optional)', 'Water bottle', 'Towel'],
-          imageUrl: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=300&h=200&fit=crop',
+          imageUrl:
+              'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=300&h=200&fit=crop',
           createdAt: now,
           updatedAt: now,
           createdBy: ownerId,
@@ -211,25 +213,28 @@ class ActivitySeeder {
           clubName: clubName,
           facilityName: facilityName,
           name: 'HIIT Workout',
-          description: 'High intensity interval training for maximum calorie burn and cardiovascular fitness.',
+          description:
+              'High intensity interval training for maximum calorie burn and cardiovascular fitness.',
           category: 'Fitness',
           date: now.add(const Duration(days: 3)),
           time: '18:00',
           duration: 45,
           timeCategory: 'Evening',
           capacity: capacity,
-          bookedCount: 0,
           guestPrice: 20.0,
           memberPrice: 16.0,
           pointsReward: 70,
           requirements: ['Athletic shoes', 'Water bottle', 'Towel'],
-          imageUrl: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=300&h=200&fit=crop',
+          imageUrl:
+              'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=300&h=200&fit=crop',
           createdAt: now,
           updatedAt: now,
           createdBy: ownerId,
         ),
       ]);
-    } else if (facilityLower.contains('studio') || facilityLower.contains('yoga') || facilityLower.contains('dance')) {
+    } else if (facilityLower.contains('studio') ||
+        facilityLower.contains('yoga') ||
+        facilityLower.contains('dance')) {
       // Studio activities
       activities.addAll([
         Activity(
@@ -239,19 +244,20 @@ class ActivitySeeder {
           clubName: clubName,
           facilityName: facilityName,
           name: 'Morning Yoga Flow',
-          description: 'Start your day with energizing yoga poses and mindful breathing exercises.',
+          description:
+              'Start your day with energizing yoga poses and mindful breathing exercises.',
           category: 'Wellness',
           date: now.add(const Duration(days: 1)),
           time: '07:00',
           duration: 60,
           timeCategory: 'Morning',
           capacity: capacity,
-          bookedCount: 0,
           guestPrice: 18.0,
           memberPrice: 15.0,
           pointsReward: 50,
           requirements: ['Yoga mat', 'Water bottle'],
-          imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=200&fit=crop',
+          imageUrl:
+              'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=200&fit=crop',
           createdAt: now,
           updatedAt: now,
           createdBy: ownerId,
@@ -263,19 +269,20 @@ class ActivitySeeder {
           clubName: clubName,
           facilityName: facilityName,
           name: 'Pilates Core Strength',
-          description: 'Core-strengthening exercises focusing on alignment, breathing, and body control.',
+          description:
+              'Core-strengthening exercises focusing on alignment, breathing, and body control.',
           category: 'Wellness',
           date: now.add(const Duration(days: 2)),
           time: '12:00',
           duration: 50,
           timeCategory: 'Afternoon',
           capacity: (capacity * 0.7).round(),
-          bookedCount: 0,
           guestPrice: 22.0,
           memberPrice: 18.0,
           pointsReward: 65,
           requirements: ['Mat', 'Grip socks', 'Water bottle'],
-          imageUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=300&h=200&fit=crop',
+          imageUrl:
+              'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=300&h=200&fit=crop',
           createdAt: now,
           updatedAt: now,
           createdBy: ownerId,
@@ -287,19 +294,20 @@ class ActivitySeeder {
           clubName: clubName,
           facilityName: facilityName,
           name: 'Evening Restorative Yoga',
-          description: 'Gentle stretches and meditation to unwind and relax after a busy day.',
+          description:
+              'Gentle stretches and meditation to unwind and relax after a busy day.',
           category: 'Wellness',
           date: now.add(const Duration(days: 6)),
           time: '19:00',
           duration: 60,
           timeCategory: 'Evening',
           capacity: capacity,
-          bookedCount: 0,
           guestPrice: 18.0,
           memberPrice: 15.0,
           pointsReward: 55,
           requirements: ['Yoga mat', 'Blanket'],
-          imageUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=300&h=200&fit=crop',
+          imageUrl:
+              'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=300&h=200&fit=crop',
           createdAt: now,
           updatedAt: now,
           createdBy: ownerId,
@@ -315,19 +323,20 @@ class ActivitySeeder {
           clubName: clubName,
           facilityName: facilityName,
           name: 'Tennis Beginner Class',
-          description: 'Learn the fundamentals of tennis including proper grip, stance, and basic strokes.',
+          description:
+              'Learn the fundamentals of tennis including proper grip, stance, and basic strokes.',
           category: 'Fitness',
           date: now.add(const Duration(days: 3)),
           time: '10:00',
           duration: 90,
           timeCategory: 'Morning',
           capacity: (capacity * 0.5).round(),
-          bookedCount: 0,
           guestPrice: 28.0,
           memberPrice: 23.0,
           pointsReward: 75,
           requirements: ['Tennis racket', 'Tennis shoes', 'Water bottle'],
-          imageUrl: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=300&h=200&fit=crop',
+          imageUrl:
+              'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=300&h=200&fit=crop',
           createdAt: now,
           updatedAt: now,
           createdBy: ownerId,
@@ -343,19 +352,20 @@ class ActivitySeeder {
           clubName: clubName,
           facilityName: facilityName,
           name: 'Fitness Class',
-          description: 'General fitness class suitable for all levels. Join us for a great workout!',
+          description:
+              'General fitness class suitable for all levels. Join us for a great workout!',
           category: 'Fitness',
           date: now.add(const Duration(days: 2)),
           time: '14:00',
           duration: 60,
           timeCategory: 'Afternoon',
           capacity: capacity,
-          bookedCount: 0,
           guestPrice: 15.0,
           memberPrice: 12.0,
           pointsReward: 40,
           requirements: ['Athletic shoes', 'Water bottle'],
-          imageUrl: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=300&h=200&fit=crop',
+          imageUrl:
+              'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=300&h=200&fit=crop',
           createdAt: now,
           updatedAt: now,
           createdBy: ownerId,
@@ -368,16 +378,15 @@ class ActivitySeeder {
 
   /// Delete all existing activities (for clean re-seeding)
   static Future<void> clearAllActivities() async {
-
     try {
       final snapshot = await _firestore.collection('activities').get();
-      
+
       if (snapshot.docs.isEmpty) {
         return;
       }
 
       final batch = _firestore.batch();
-      for (var doc in snapshot.docs) {
+      for (final doc in snapshot.docs) {
         batch.delete(doc.reference);
       }
 
@@ -432,7 +441,7 @@ class _SeedActivitiesButtonState extends State<SeedActivitiesButton> {
 
     try {
       await ActivitySeeder.seedActivities();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

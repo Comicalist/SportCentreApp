@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../models/club.dart';
-import '../../services/club_service.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/club_service.dart';
 import 'add_club_screen.dart';
 import 'club_detail_screen.dart';
 
@@ -154,7 +155,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
     );
 
     // If club was deleted, refresh the list
-    if (result == true) {
+    if (result ?? false) {
       setState(() {});
     }
   }

@@ -1,5 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../models/activity.dart';
 import '../../models/club.dart';
 import '../../models/facility.dart';
@@ -7,7 +9,6 @@ import '../../services/activity_service.dart';
 import '../../services/club_service.dart';
 import '../../services/facility_service.dart';
 import '../../services/imageUpload_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class AddActivityScreen extends StatefulWidget {
   const AddActivityScreen({super.key});
@@ -20,7 +21,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
   final _formKey = GlobalKey<FormState>();
   final _clubService = ClubService();
   final _facilityService = FacilityService();
-  
+
   // Form controllers
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -29,8 +30,10 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
   final _capacityController = TextEditingController();
   final _pointsController = TextEditingController();
   final _imageUrlController = TextEditingController();
-  final _durationController = TextEditingController(text: '60'); // Default 60 minutes
-  
+  final _durationController = TextEditingController(
+    text: '60',
+  ); // Default 60 minutes
+
   // Form state
   List<Club> _ownedClubs = [];
   List<Facility> _facilities = [];
@@ -42,18 +45,18 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
   final List<String> _requirements = [];
   bool _isLoading = false;
   bool _isLoadingClubs = true;
-  
+
   String? _uploadedImageUrl;
   bool _isUploadingImage = false;
-  
+
   final List<String> _categories = ['Wellness', 'Fitness', 'Kids', 'Workshops'];
-  
+
   @override
   void initState() {
     super.initState();
     _loadOwnedClubs();
   }
-  
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -66,29 +69,31 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     _durationController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _loadOwnedClubs() async {
     setState(() => _isLoadingClubs = true);
-    
+
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         throw Exception('User not authenticated');
       }
-      
+
       // Get only APPROVED clubs
       final clubs = await _clubService.getApprovedOwnedClubs(ownerId: user.uid);
-      
+
       setState(() {
         _ownedClubs = clubs;
         _isLoadingClubs = false;
       });
-      
+
       if (clubs.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('You have no approved clubs yet. Please wait for admin approval or create a club.'),
+              content: Text(
+                'You have no approved clubs yet. Please wait for admin approval or create a club.',
+              ),
               backgroundColor: Colors.orange,
             ),
           );
@@ -98,29 +103,36 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
       setState(() => _isLoadingClubs = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading clubs: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error loading clubs: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
   }
-  
+
   Future<void> _loadFacilities(String clubId) async {
     try {
-      final facilities = await _facilityService.getClubFacilities(clubId: clubId);
-      
+      final facilities = await _facilityService.getClubFacilities(
+        clubId: clubId,
+      );
+
       // Filter only active facilities
       final activeFacilities = facilities.where((f) => f.isActive).toList();
-      
+
       setState(() {
         _facilities = activeFacilities;
         _selectedFacility = null; // Reset facility selection when club changes
       });
-      
+
       if (activeFacilities.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('This club has no active facilities. Please add a facility first.'),
+              content: Text(
+                'This club has no active facilities. Please add a facility first.',
+              ),
               backgroundColor: Colors.orange,
             ),
           );
@@ -129,66 +141,71 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading facilities: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error loading facilities: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
   }
-  
+
   Future<void> _selectDate() async {
-    final DateTime? picked = await showDatePicker(
+    final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    
+
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
       });
     }
   }
-  
+
   Future<void> _selectTime() async {
-    final TimeOfDay? picked = await showTimePicker(
+    final picked = await showTimePicker(
       context: context,
       initialTime: _selectedTime,
     );
-    
+
     if (picked != null && picked != _selectedTime) {
       setState(() {
         _selectedTime = picked;
       });
     }
   }
-  
+
   String _calculateEndTime() {
     try {
       final duration = int.tryParse(_durationController.text);
       if (duration == null || duration <= 0) {
         return 'Enter a valid duration to see end time';
       }
-      
+
       final startMinutes = _selectedTime.hour * 60 + _selectedTime.minute;
       final endMinutes = startMinutes + duration;
       final endHour = (endMinutes ~/ 60) % 24;
       final endMinute = endMinutes % 60;
-      
-      final startTime = '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
-      final endTime = '${endHour.toString().padLeft(2, '0')}:${endMinute.toString().padLeft(2, '0')}';
-      
+
+      final startTime =
+          '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
+      final endTime =
+          '${endHour.toString().padLeft(2, '0')}:${endMinute.toString().padLeft(2, '0')}';
+
       return 'Activity time: $startTime - $endTime';
     } catch (e) {
       return 'Enter a valid duration';
     }
   }
-  
+
   void _addRequirement() {
     showDialog(
       context: context,
       builder: (context) {
-        String requirement = '';
+        var requirement = '';
         return AlertDialog(
           title: const Text('Add Requirement'),
           content: TextField(
@@ -224,20 +241,20 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
       },
     );
   }
-  
+
   void _removeRequirement(int index) {
     setState(() {
       _requirements.removeAt(index);
     });
   }
-  
+
   Widget _buildImageSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionTitle('Activity Image'),
         const SizedBox(height: 8),
-        
+
         // Requirements info box
         Container(
           padding: const EdgeInsets.all(12),
@@ -259,9 +276,9 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
             ],
           ),
         ),
-        
+
         const SizedBox(height: 12),
-        
+
         // Image preview or placeholder
         Container(
           width: double.infinity,
@@ -270,7 +287,9 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: Colors.grey[300]!,
-              style: _uploadedImageUrl != null ? BorderStyle.solid : BorderStyle.solid,
+              style: _uploadedImageUrl != null
+                  ? BorderStyle.solid
+                  : BorderStyle.solid,
             ),
           ),
           child: _uploadedImageUrl != null
@@ -285,7 +304,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                         child: CircularProgressIndicator(
                           value: loadingProgress.expectedTotalBytes != null
                               ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
+                                    loadingProgress.expectedTotalBytes!
                               : null,
                         ),
                       );
@@ -313,24 +332,29 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                   ),
                 ),
         ),
-        
+
         const SizedBox(height: 12),
-        
+
         // Upload and remove buttons
         Row(
           children: [
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: _isUploadingImage ? null : _uploadImage,
-                icon: _isUploadingImage 
+                icon: _isUploadingImage
                     ? const SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.upload),
-                label: Text(_isUploadingImage ? 'Uploading...' : 
-                           _uploadedImageUrl != null ? 'Change Image' : 'Upload Image'),
+                label: Text(
+                  _isUploadingImage
+                      ? 'Uploading...'
+                      : _uploadedImageUrl != null
+                      ? 'Change Image'
+                      : 'Upload Image',
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.teal,
                   foregroundColor: Colors.white,
@@ -363,7 +387,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     try {
       // Generate temporary ID for upload path
       final tempId = DateTime.now().millisecondsSinceEpoch.toString();
-      
+
       final imageUrl = await ImageUploadService.pickAndUploadImage(
         type: 'activities',
         id: tempId,
@@ -391,44 +415,53 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
       });
     }
   }
-  
+
   Future<void> _createActivity() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    
+
     if (_selectedClub == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a club'), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('Please select a club'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
-    
+
     if (_selectedFacility == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a facility'), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('Please select a facility'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
-    
+
     setState(() => _isLoading = true);
-    
+
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         throw Exception('User not authenticated');
       }
-      
+
       // Validate capacity vs facility max capacity
       final capacity = int.parse(_capacityController.text);
       if (capacity > _selectedFacility!.maxCapacity) {
-        throw Exception('Capacity ($capacity) exceeds facility maximum (${_selectedFacility!.maxCapacity})');
+        throw Exception(
+          'Capacity ($capacity) exceeds facility maximum (${_selectedFacility!.maxCapacity})',
+        );
       }
-      
+
       // Create time string
-      final timeString = '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
+      final timeString =
+          '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
       final duration = int.parse(_durationController.text);
-      
+
       // Create the activity
       final activity = Activity(
         id: '', // Will be generated by Firestore
@@ -444,7 +477,6 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
         duration: duration,
         timeCategory: Activity.getTimeCategory(timeString),
         capacity: capacity,
-        bookedCount: 0,
         guestPrice: double.parse(_guestPriceController.text),
         memberPrice: double.parse(_memberPriceController.text),
         pointsReward: int.parse(_pointsController.text),
@@ -454,13 +486,13 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
         updatedAt: DateTime.now(),
         createdBy: user.uid,
       );
-      
+
       // Create in Firestore with validation
       await ActivityService.createActivity(
         activity: activity,
         currentUserId: user.uid,
       );
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -485,7 +517,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
       }
     }
   }
-  
+
   String _getDefaultImage(String category) {
     switch (category) {
       case 'Wellness':
@@ -500,17 +532,14 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
         return 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=300&h=200&fit=crop';
     }
   }
-  
+
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: const TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-      ),
+      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
     );
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -528,9 +557,9 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildSectionTitle('Basic Information'),
-              
+
               const SizedBox(height: 16),
-              
+
               // Club Selection
               Card(
                 child: Padding(
@@ -588,7 +617,9 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                         items: _facilities.map((facility) {
                           return DropdownMenuItem(
                             value: facility,
-                            child: Text('${facility.title} (Max: ${facility.maxCapacity})'),
+                            child: Text(
+                              '${facility.title} (Max: ${facility.maxCapacity})',
+                            ),
                           );
                         }).toList(),
                         onChanged: _selectedClub == null
@@ -609,9 +640,9 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Activity Details
               Card(
                 child: Padding(
@@ -681,9 +712,9 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Date & Time
               Card(
                 child: Padding(
@@ -702,7 +733,9 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                       ListTile(
                         leading: const Icon(Icons.calendar_today),
                         title: const Text('Date'),
-                        subtitle: Text(DateFormat('EEEE, MMM d, y').format(_selectedDate)),
+                        subtitle: Text(
+                          DateFormat('EEEE, MMM d, y').format(_selectedDate),
+                        ),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                         onTap: _selectDate,
                         shape: RoundedRectangleBorder(
@@ -725,7 +758,10 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                       const SizedBox(height: 8),
                       // Duration field
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 8.0,
+                        ),
                         child: TextFormField(
                           controller: _durationController,
                           decoration: InputDecoration(
@@ -736,7 +772,8 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                             helperMaxLines: 2,
                           ),
                           keyboardType: TextInputType.number,
-                          onChanged: (_) => setState(() {}), // Refresh end time display
+                          onChanged: (_) =>
+                              setState(() {}), // Refresh end time display
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
                               return 'Please enter duration';
@@ -756,9 +793,9 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Capacity & Pricing
               Card(
                 child: Padding(
@@ -793,7 +830,8 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                           if (capacity == null || capacity <= 0) {
                             return 'Please enter a valid number';
                           }
-                          if (_selectedFacility != null && capacity > _selectedFacility!.maxCapacity) {
+                          if (_selectedFacility != null &&
+                              capacity > _selectedFacility!.maxCapacity) {
                             return 'Exceeds facility max (${_selectedFacility!.maxCapacity})';
                           }
                           return null;
@@ -871,9 +909,9 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Requirements
               Card(
                 child: Padding(
@@ -912,7 +950,10 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                             leading: const Icon(Icons.check_circle_outline),
                             title: Text(_requirements[index]),
                             trailing: IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.red),
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                color: Colors.red,
+                              ),
                               onPressed: () => _removeRequirement(index),
                             ),
                           );
@@ -921,13 +962,13 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               _buildImageSection(), // Add image section here
-              
+
               const SizedBox(height: 32),
-              
+
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -944,7 +985,10 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text(
                           'Create Activity',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                 ),
               ),

@@ -1,21 +1,17 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 /// 🧪 Testing Tools Panel
-/// 
+///
 /// Debug-only widget for testing notification system.
 /// Provides buttons to:
 /// - Create test in-app notifications
 /// - Queue test emails
 /// - Manually trigger cron job
 class TestingPanel extends StatelessWidget {
+  const TestingPanel({super.key, required this.userId});
   final String userId;
-
-  const TestingPanel({
-    super.key,
-    required this.userId,
-  });
 
   @override
   Widget build(BuildContext context) {
@@ -148,8 +144,9 @@ class TestingPanel extends StatelessWidget {
                   Icon(Icons.check_circle, color: Colors.white),
                   SizedBox(width: 8),
                   Expanded(
-                    child:
-                        Text('Test notification created! Check the bell icon 🔔'),
+                    child: Text(
+                      'Test notification created! Check the bell icon 🔔',
+                    ),
                   ),
                 ],
               ),
@@ -165,21 +162,23 @@ class TestingPanel extends StatelessWidget {
             .doc(userId)
             .get();
 
-        await FirebaseFirestore.instance.collection('pendingNotifications').add({
-          'userId': userId,
-          'bookingId': 'test-email-${DateTime.now().millisecondsSinceEpoch}',
-          'type': 'bookingReminder',
-          'scheduledFor': Timestamp.fromDate(
-            DateTime.now().subtract(const Duration(minutes: 1)),
-          ),
-          'method': 'email',
-          'userEmail': userDoc.data()?['email'],
-          'activityName': 'Test Yoga Class',
-          'bookingTime': Timestamp.fromDate(
-            DateTime.now().add(const Duration(hours: 2)),
-          ),
-          'created': FieldValue.serverTimestamp(),
-        });
+        await FirebaseFirestore.instance.collection('pendingNotifications').add(
+          {
+            'userId': userId,
+            'bookingId': 'test-email-${DateTime.now().millisecondsSinceEpoch}',
+            'type': 'bookingReminder',
+            'scheduledFor': Timestamp.fromDate(
+              DateTime.now().subtract(const Duration(minutes: 1)),
+            ),
+            'method': 'email',
+            'userEmail': userDoc.data()?['email'],
+            'activityName': 'Test Yoga Class',
+            'bookingTime': Timestamp.fromDate(
+              DateTime.now().add(const Duration(hours: 2)),
+            ),
+            'created': FieldValue.serverTimestamp(),
+          },
+        );
 
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -255,7 +254,8 @@ class TestingPanel extends StatelessWidget {
       final response = await http
           .get(
             Uri.parse(
-                'https://us-central1-sportcentreapp.cloudfunctions.net/triggerCheckPendingNotifications'),
+              'https://us-central1-sportcentreapp.cloudfunctions.net/triggerCheckPendingNotifications',
+            ),
           )
           .timeout(const Duration(seconds: 30));
 
@@ -277,10 +277,7 @@ class TestingPanel extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    response.body,
-                    style: const TextStyle(fontSize: 12),
-                  ),
+                  Text(response.body, style: const TextStyle(fontSize: 12)),
                 ],
               ),
               backgroundColor: Colors.green,
@@ -309,10 +306,7 @@ class TestingPanel extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  e.toString(),
-                  style: const TextStyle(fontSize: 12),
-                ),
+                Text(e.toString(), style: const TextStyle(fontSize: 12)),
               ],
             ),
             backgroundColor: Colors.red,

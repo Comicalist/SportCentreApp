@@ -2,13 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 /// Booking status enumeration
-enum BookingStatus {
-  pending,
-  confirmed,
-  cancelled,
-  completed,
-  waitlist
-}
+enum BookingStatus { pending, confirmed, cancelled, completed, waitlist }
 
 /// Extension to convert BookingStatus to/from string
 extension BookingStatusExtension on BookingStatus {
@@ -47,13 +41,6 @@ extension BookingStatusExtension on BookingStatus {
 
 /// Time slot model for activity scheduling
 class TimeSlot {
-  final String id;
-  final DateTime startTime;
-  final DateTime endTime;
-  final int capacity;
-  final int bookedCount;
-  final bool isAvailable;
-
   TimeSlot({
     required this.id,
     required this.startTime,
@@ -73,6 +60,12 @@ class TimeSlot {
       isAvailable: json['isAvailable'] ?? true,
     );
   }
+  final String id;
+  final DateTime startTime;
+  final DateTime endTime;
+  final int capacity;
+  final int bookedCount;
+  final bool isAvailable;
 
   Map<String, dynamic> toJson() {
     return {
@@ -93,45 +86,17 @@ class TimeSlot {
 
   /// Get formatted time range
   String get timeRange {
-    final start = '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}';
-    final end = '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}';
+    final start =
+        '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}';
+    final end =
+        '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}';
     return '$start - $end';
   }
 }
 
 /// Enhanced booking model
 class Booking {
-  final String id;
-  final String userId;
-  final String activityId;
-  final String? timeSlotId;
-  final DateTime bookingDate;
-  final DateTime createdAt;
-  final BookingStatus status;
-  final double amountPaid;
-  final int pointsEarned;
-  final int participantCount;
-  final bool isMemberBooking;
-  final String? cancellationReason;
-  final DateTime? cancelledAt;
-  final String confirmationNumber;
-  final Map<String, dynamic>? metadata;
-  
-  // Voucher information
-  final String? voucherId;          // ID of voucher used
-  final double? voucherDiscount;    // Amount discounted by voucher
-  
-  // Activity details for display
-  final String activityTitle;
-  final DateTime activityDate;
-  final String activityTime;
-  final double totalPrice;
-  
-  // Denormalized club/facility data (NEW - for display without extra queries)
-  final String clubId;              // For filtering by club
-  final String clubName;            // For display
-  final String facilityId;          // For statistics
-  final String facilityName;        // For display
+  // For display
 
   Booking({
     required this.id,
@@ -162,7 +127,7 @@ class Booking {
   });
 
   factory Booking.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    final data = doc.data()! as Map<String, dynamic>;
     return Booking(
       id: doc.id,
       userId: data['userId'] ?? '',
@@ -176,15 +141,15 @@ class Booking {
       participantCount: data['participantCount'] ?? 1,
       isMemberBooking: data['isMemberBooking'] ?? false,
       cancellationReason: data['cancellationReason'],
-      cancelledAt: data['cancelledAt'] != null 
-          ? (data['cancelledAt'] as Timestamp).toDate() 
+      cancelledAt: data['cancelledAt'] != null
+          ? (data['cancelledAt'] as Timestamp).toDate()
           : null,
       confirmationNumber: data['confirmationNumber'] ?? '',
       metadata: data['metadata'],
       voucherId: data['voucherId'],
       voucherDiscount: data['voucherDiscount']?.toDouble(),
       activityTitle: data['activityTitle'] ?? 'Unknown Activity',
-      activityDate: data['activityDate'] != null 
+      activityDate: data['activityDate'] != null
           ? (data['activityDate'] as Timestamp).toDate()
           : (data['bookingDate'] as Timestamp).toDate(),
       activityTime: data['activityTime'] ?? '00:00',
@@ -210,15 +175,15 @@ class Booking {
       participantCount: json['participantCount'] ?? 1,
       isMemberBooking: json['isMemberBooking'] ?? false,
       cancellationReason: json['cancellationReason'],
-      cancelledAt: json['cancelledAt'] != null 
-          ? DateTime.parse(json['cancelledAt']) 
+      cancelledAt: json['cancelledAt'] != null
+          ? DateTime.parse(json['cancelledAt'])
           : null,
       confirmationNumber: json['confirmationNumber'] ?? '',
       metadata: json['metadata'],
       voucherId: json['voucherId'],
       voucherDiscount: json['voucherDiscount']?.toDouble(),
       activityTitle: json['activityTitle'] ?? 'Unknown Activity',
-      activityDate: json['activityDate'] != null 
+      activityDate: json['activityDate'] != null
           ? DateTime.parse(json['activityDate'])
           : DateTime.parse(json['bookingDate']),
       activityTime: json['activityTime'] ?? '00:00',
@@ -229,6 +194,37 @@ class Booking {
       facilityName: json['facilityName'] ?? '',
     );
   }
+  final String id;
+  final String userId;
+  final String activityId;
+  final String? timeSlotId;
+  final DateTime bookingDate;
+  final DateTime createdAt;
+  final BookingStatus status;
+  final double amountPaid;
+  final int pointsEarned;
+  final int participantCount;
+  final bool isMemberBooking;
+  final String? cancellationReason;
+  final DateTime? cancelledAt;
+  final String confirmationNumber;
+  final Map<String, dynamic>? metadata;
+
+  // Voucher information
+  final String? voucherId; // ID of voucher used
+  final double? voucherDiscount; // Amount discounted by voucher
+
+  // Activity details for display
+  final String activityTitle;
+  final DateTime activityDate;
+  final String activityTime;
+  final double totalPrice;
+
+  // Denormalized club/facility data (NEW - for display without extra queries)
+  final String clubId; // For filtering by club
+  final String clubName; // For display
+  final String facilityId; // For statistics
+  final String facilityName;
 
   Map<String, dynamic> toJson() {
     return {
@@ -244,7 +240,9 @@ class Booking {
       'participantCount': participantCount,
       'isMemberBooking': isMemberBooking,
       'cancellationReason': cancellationReason,
-      'cancelledAt': cancelledAt != null ? Timestamp.fromDate(cancelledAt!) : null,
+      'cancelledAt': cancelledAt != null
+          ? Timestamp.fromDate(cancelledAt!)
+          : null,
       'confirmationNumber': confirmationNumber,
       'metadata': metadata,
       'voucherId': voucherId,
@@ -305,19 +303,6 @@ class Booking {
 
 /// Booking details model for the booking flow
 class BookingDetails {
-  final String activityId;
-  final String? timeSlotId;
-  final DateTime bookingDate;
-  final int participantCount;
-  final bool isMemberBooking;
-  final double totalPrice;
-  final int expectedPoints;
-  final Map<String, dynamic>? additionalInfo;
-  
-  // Voucher information
-  final String? voucherId;
-  final double? voucherDiscount;
-
   BookingDetails({
     required this.activityId,
     this.timeSlotId,
@@ -330,6 +315,18 @@ class BookingDetails {
     this.voucherId,
     this.voucherDiscount,
   });
+  final String activityId;
+  final String? timeSlotId;
+  final DateTime bookingDate;
+  final int participantCount;
+  final bool isMemberBooking;
+  final double totalPrice;
+  final int expectedPoints;
+  final Map<String, dynamic>? additionalInfo;
+
+  // Voucher information
+  final String? voucherId;
+  final double? voucherDiscount;
 
   BookingDetails copyWith({
     String? activityId,

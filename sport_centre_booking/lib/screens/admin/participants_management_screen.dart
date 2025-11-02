@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
-import '../../models/participant.dart';
+
 import '../../models/booking.dart';
+import '../../models/participant.dart';
 import '../../services/participant_service.dart';
 
 /// Admin screen for managing event participants
 /// Features: View, search, filter, edit, and remove participants with real-time sync
 class AdminParticipantsScreen extends StatefulWidget {
-  const AdminParticipantsScreen({Key? key}) : super(key: key);
+  const AdminParticipantsScreen({super.key});
 
   @override
-  State<AdminParticipantsScreen> createState() => _AdminParticipantsScreenState();
+  State<AdminParticipantsScreen> createState() =>
+      _AdminParticipantsScreenState();
 }
 
 class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
   final TextEditingController _searchController = TextEditingController();
   BookingStatus? _selectedStatus;
   bool _showStats = true;
-  
+
   Stream<List<Participant>>? _participantsStream;
   Map<String, dynamic>? _stats;
 
@@ -30,9 +32,13 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
   void _loadParticipants() {
     setState(() {
       if (_searchController.text.isNotEmpty) {
-        _participantsStream = ParticipantService.searchParticipants(_searchController.text);
+        _participantsStream = ParticipantService.searchParticipants(
+          _searchController.text,
+        );
       } else if (_selectedStatus != null) {
-        _participantsStream = ParticipantService.getParticipantsByStatus(_selectedStatus!);
+        _participantsStream = ParticipantService.getParticipantsByStatus(
+          _selectedStatus!,
+        );
       } else {
         _participantsStream = ParticipantService.getAllParticipants();
       }
@@ -105,9 +111,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
           _buildSearchAndFilterBar(),
 
           // Participants List
-          Expanded(
-            child: _buildParticipantsList(),
-          ),
+          Expanded(child: _buildParticipantsList()),
         ],
       ),
     );
@@ -127,10 +131,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
         children: [
           const Text(
             'Participant Statistics',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -138,10 +139,26 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
             runSpacing: 8,
             children: [
               _buildStatItem('Total', _stats!['total'].toString(), Colors.blue),
-              _buildStatItem('Confirmed', _stats!['confirmed'].toString(), Colors.green),
-              _buildStatItem('Pending', _stats!['pending'].toString(), Colors.orange),
-              _buildStatItem('Cancelled', _stats!['cancelled'].toString(), Colors.red),
-              _buildStatItem('Completed', _stats!['completed'].toString(), Colors.purple),
+              _buildStatItem(
+                'Confirmed',
+                _stats!['confirmed'].toString(),
+                Colors.green,
+              ),
+              _buildStatItem(
+                'Pending',
+                _stats!['pending'].toString(),
+                Colors.orange,
+              ),
+              _buildStatItem(
+                'Cancelled',
+                _stats!['cancelled'].toString(),
+                Colors.red,
+              ),
+              _buildStatItem(
+                'Completed',
+                _stats!['completed'].toString(),
+                Colors.purple,
+              ),
               _buildStatItem(
                 'Revenue',
                 '\$${_stats!['totalRevenue'].toStringAsFixed(2)}',
@@ -167,10 +184,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
         children: [
           Text(
             label,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.w600,
-            ),
+            style: TextStyle(color: color, fontWeight: FontWeight.w600),
           ),
           const SizedBox(width: 8),
           Text(
@@ -222,7 +236,10 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              const Text('Filter by Status: ', style: TextStyle(fontWeight: FontWeight.w600)),
+              const Text(
+                'Filter by Status: ',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
               _buildFilterChip('All', null),
               _buildFilterChip('Confirmed', BookingStatus.confirmed),
               _buildFilterChip('Pending', BookingStatus.pending),
@@ -279,7 +296,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
-                  onPressed: () => _loadParticipants(),
+                  onPressed: _loadParticipants,
                   icon: const Icon(Icons.refresh),
                   label: const Text('Retry'),
                 ),
@@ -295,7 +312,11 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.people_outline, size: 64, color: Colors.grey.shade400),
+                Icon(
+                  Icons.people_outline,
+                  size: 64,
+                  color: Colors.grey.shade400,
+                ),
                 const SizedBox(height: 16),
                 Text(
                   _searchController.text.isNotEmpty
@@ -328,10 +349,13 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
         leading: CircleAvatar(
           backgroundColor: _getStatusColor(participant.status),
           child: Text(
-            participant.userName.isNotEmpty 
-                ? participant.userName[0].toUpperCase() 
+            participant.userName.isNotEmpty
+                ? participant.userName[0].toUpperCase()
                 : 'U',
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         title: Text(
@@ -359,13 +383,31 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildDetailRow('Activity', participant.activityTitle),
-                _buildDetailRow('Activity Date', participant.formattedActivityDate),
+                _buildDetailRow(
+                  'Activity Date',
+                  participant.formattedActivityDate,
+                ),
                 _buildDetailRow('Activity Time', participant.activityTime),
-                _buildDetailRow('Booking Date', participant.formattedBookingDate),
-                _buildDetailRow('Participants', participant.participantCount.toString()),
-                _buildDetailRow('Amount Paid', '\$${participant.amountPaid.toStringAsFixed(2)}'),
-                _buildDetailRow('Points Earned', participant.pointsEarned.toString()),
-                _buildDetailRow('Confirmation #', participant.confirmationNumber),
+                _buildDetailRow(
+                  'Booking Date',
+                  participant.formattedBookingDate,
+                ),
+                _buildDetailRow(
+                  'Participants',
+                  participant.participantCount.toString(),
+                ),
+                _buildDetailRow(
+                  'Amount Paid',
+                  '\$${participant.amountPaid.toStringAsFixed(2)}',
+                ),
+                _buildDetailRow(
+                  'Points Earned',
+                  participant.pointsEarned.toString(),
+                ),
+                _buildDetailRow(
+                  'Confirmation #',
+                  participant.confirmationNumber,
+                ),
                 if (participant.phoneNumber != null)
                   _buildDetailRow('Phone', participant.phoneNumber!),
                 if (participant.notes != null)
@@ -384,7 +426,9 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
                       onPressed: () => _changeStatus(participant),
                       icon: const Icon(Icons.change_circle),
                       label: const Text('Change Status'),
-                      style: TextButton.styleFrom(foregroundColor: Colors.orange),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.orange,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     TextButton.icon(
@@ -416,9 +460,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
-          Expanded(
-            child: Text(value),
-          ),
+          Expanded(child: Text(value)),
         ],
       ),
     );
@@ -449,7 +491,9 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
       decoration: BoxDecoration(
         color: isMember ? Colors.amber.shade100 : Colors.grey.shade200,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isMember ? Colors.amber.shade700 : Colors.grey.shade400),
+        border: Border.all(
+          color: isMember ? Colors.amber.shade700 : Colors.grey.shade400,
+        ),
       ),
       child: Text(
         isMember ? 'MEMBER' : 'GUEST',
@@ -484,8 +528,11 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
     );
 
     if (result != null && mounted) {
-      final success = await ParticipantService.updateParticipant(participant.id, result);
-      
+      final success = await ParticipantService.updateParticipant(
+        participant.id,
+        result,
+      );
+
       if (success) {
         _showSnackBar('Participant updated successfully', Colors.green);
         _loadStats(); // Refresh stats
@@ -498,7 +545,8 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
   Future<void> _changeStatus(Participant participant) async {
     final newStatus = await showDialog<BookingStatus>(
       context: context,
-      builder: (context) => ChangeStatusDialog(currentStatus: participant.status),
+      builder: (context) =>
+          ChangeStatusDialog(currentStatus: participant.status),
     );
 
     if (newStatus != null && mounted) {
@@ -543,7 +591,9 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
     );
 
     if (confirmed == true && mounted) {
-      final success = await ParticipantService.removeParticipant(participant.id);
+      final success = await ParticipantService.removeParticipant(
+        participant.id,
+      );
 
       if (success) {
         _showSnackBar('Participant removed successfully', Colors.green);
@@ -567,9 +617,8 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
 
 /// Dialog for editing participant details
 class EditParticipantDialog extends StatefulWidget {
+  const EditParticipantDialog({super.key, required this.participant});
   final Participant participant;
-
-  const EditParticipantDialog({Key? key, required this.participant}) : super(key: key);
 
   @override
   State<EditParticipantDialog> createState() => _EditParticipantDialogState();
@@ -636,11 +685,13 @@ class _EditParticipantDialogState extends State<EditParticipantDialog> {
             TextField(
               controller: _amountController,
               decoration: const InputDecoration(
-                labelText: 'Amount Paid (\$)',
+                labelText: r'Amount Paid ($)',
                 border: OutlineInputBorder(),
-                prefixText: '\$ ',
+                prefixText: r'$ ',
               ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -678,10 +729,7 @@ class _EditParticipantDialogState extends State<EditParticipantDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(
-          onPressed: _saveChanges,
-          child: const Text('Save'),
-        ),
+        ElevatedButton(onPressed: _saveChanges, child: const Text('Save')),
       ],
     );
   }
@@ -711,7 +759,9 @@ class _EditParticipantDialogState extends State<EditParticipantDialog> {
       'amountPaid': amount,
       'pointsEarned': points,
       'isMemberBooking': _isMemberBooking,
-      'notes': _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+      'notes': _notesController.text.trim().isEmpty
+          ? null
+          : _notesController.text.trim(),
     };
 
     Navigator.pop(context, updates);
@@ -726,9 +776,8 @@ class _EditParticipantDialogState extends State<EditParticipantDialog> {
 
 /// Dialog for changing participant status
 class ChangeStatusDialog extends StatelessWidget {
+  const ChangeStatusDialog({super.key, required this.currentStatus});
   final BookingStatus currentStatus;
-
-  const ChangeStatusDialog({Key? key, required this.currentStatus}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -746,7 +795,6 @@ class ChangeStatusDialog extends StatelessWidget {
               title: Text(status.value.toUpperCase()),
               leading: Radio<BookingStatus>(
                 value: status,
-                groupValue: null,
                 onChanged: (value) {
                   if (value != null) {
                     Navigator.pop(context, value);
@@ -755,7 +803,7 @@ class ChangeStatusDialog extends StatelessWidget {
               ),
               onTap: () => Navigator.pop(context, status),
             );
-          }).toList(),
+          }),
         ],
       ),
       actions: [

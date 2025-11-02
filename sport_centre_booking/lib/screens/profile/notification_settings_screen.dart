@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+
 import '../../models/notification_preferences.dart';
 import '../../services/notification_service.dart';
 
@@ -39,11 +40,8 @@ class _NotificationSettingsScreenState
   Future<void> _savePreferences() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) {
-   
       return;
     }
-
-   
 
     setState(() {
       _isLoading = true;
@@ -55,22 +53,18 @@ class _NotificationSettingsScreenState
         reminderHoursBefore: _selectedHours,
       );
 
-     
-
       await _notificationService.savePreferences(userId, prefs);
-
-    
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 12),
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 12),
                 Text(
                   'Preferences saved successfully!',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -80,7 +74,6 @@ class _NotificationSettingsScreenState
         );
       }
     } catch (e) {
-     
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -98,7 +91,6 @@ class _NotificationSettingsScreenState
             ),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -121,21 +113,24 @@ class _NotificationSettingsScreenState
             padding: const EdgeInsets.only(right: 8.0),
             child: ElevatedButton.icon(
               onPressed: _isLoading ? null : _savePreferences,
-              icon: _isLoading 
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : const Icon(Icons.save, size: 20),
+              icon: _isLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Icon(Icons.save, size: 20),
               label: Text(_isLoading ? 'Saving...' : 'Save'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.teal,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -150,8 +145,10 @@ class _NotificationSettingsScreenState
               padding: const EdgeInsets.all(16),
               children: [
                 // Method selection
-                Text('Preferred Method',
-                    style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  'Preferred Method',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const SizedBox(height: 16),
                 Row(
                   children: [
@@ -188,8 +185,10 @@ class _NotificationSettingsScreenState
                 const SizedBox(height: 16),
 
                 // Timing
-                Text('Booking Reminder',
-                    style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  'Booking Reminder',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const SizedBox(height: 16),
                 Row(
                   children: [
@@ -197,7 +196,7 @@ class _NotificationSettingsScreenState
                     const SizedBox(width: 16),
                     Expanded(
                       child: DropdownButtonFormField<int>(
-                        value: _selectedHours,
+                        initialValue: _selectedHours,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
                           contentPadding: EdgeInsets.symmetric(
@@ -209,7 +208,8 @@ class _NotificationSettingsScreenState
                           return DropdownMenuItem(
                             value: hours,
                             child: Text(
-                                '$hours hour${hours > 1 ? 's' : ''} before'),
+                              '$hours hour${hours > 1 ? 's' : ''} before',
+                            ),
                           );
                         }).toList(),
                         onChanged: (value) {
@@ -228,17 +228,16 @@ class _NotificationSettingsScreenState
 }
 
 class _MethodCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
   const _MethodCard({
     required this.icon,
     required this.label,
     required this.isSelected,
     required this.onTap,
   });
+  final IconData icon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -253,16 +252,11 @@ class _MethodCard extends StatelessWidget {
             width: 2,
           ),
           borderRadius: BorderRadius.circular(12),
-          color:
-              isSelected ? Colors.teal.withOpacity(0.1) : Colors.transparent,
+          color: isSelected ? Colors.teal.withOpacity(0.1) : Colors.transparent,
         ),
         child: Column(
           children: [
-            Icon(
-              icon,
-              size: 48,
-              color: isSelected ? Colors.teal : Colors.grey,
-            ),
+            Icon(icon, size: 48, color: isSelected ? Colors.teal : Colors.grey),
             const SizedBox(height: 12),
             Text(
               label,
@@ -273,8 +267,7 @@ class _MethodCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            if (isSelected)
-              const Icon(Icons.check_circle, color: Colors.teal),
+            if (isSelected) const Icon(Icons.check_circle, color: Colors.teal),
           ],
         ),
       ),

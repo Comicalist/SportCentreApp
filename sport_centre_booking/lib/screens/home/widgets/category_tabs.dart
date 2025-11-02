@@ -4,14 +4,13 @@ import '../../../utils/activity_helpers.dart';
 
 /// Widget for displaying category filter tabs
 class CategoryTabs extends StatelessWidget {
-  final String selectedCategory;
-  final Function(String) onCategorySelected;
-
   const CategoryTabs({
     super.key,
     required this.selectedCategory,
     required this.onCategorySelected,
   });
+  final String selectedCategory;
+  final Function(String) onCategorySelected;
 
   @override
   Widget build(BuildContext context) {
@@ -20,11 +19,11 @@ class CategoryTabs extends StatelessWidget {
       child: StreamBuilder<List<String>>(
         stream: ActivityService.getAvailableCategoriesStream(),
         builder: (context, snapshot) {
-          List<String> categories = ['All'];
+          final categories = <String>['All'];
           if (snapshot.hasData) {
             categories.addAll(snapshot.data!);
           }
-          
+
           return ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: categories.length,
@@ -52,7 +51,6 @@ class CategoryTabs extends StatelessWidget {
                   selectedColor: ActivityHelpers.getCategoryColor(category),
                   side: BorderSide(
                     color: ActivityHelpers.getCategoryColor(category),
-                    width: 1,
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),

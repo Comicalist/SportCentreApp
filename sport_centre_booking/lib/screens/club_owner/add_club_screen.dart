@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../services/club_service.dart';
-import '../../models/club.dart';
 import 'package:provider/provider.dart';
+
+import '../../models/club.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/club_service.dart';
 
 class AddClubScreen extends StatefulWidget {
   const AddClubScreen({super.key});
@@ -61,14 +62,16 @@ class _AddClubScreenState extends State<AddClubScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    
+
                     TextFormField(
                       controller: _nameController,
                       decoration: const InputDecoration(
                         labelText: 'Club Name',
                         border: OutlineInputBorder(),
                       ),
-                      validator: (value) => value == null || value.isEmpty ? 'Enter club name' : null,
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Enter club name'
+                          : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -77,13 +80,17 @@ class _AddClubScreenState extends State<AddClubScreen> {
                         labelText: 'Location',
                         border: OutlineInputBorder(),
                       ),
-                      validator: (value) => value == null || value.isEmpty ? 'Enter location' : null,
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Enter location'
+                          : null,
                     ),
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : () => _submitForApproval(ownerId),
+                        onPressed: _isLoading
+                            ? null
+                            : () => _submitForApproval(ownerId),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange,
                           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -94,7 +101,9 @@ class _AddClubScreenState extends State<AddClubScreen> {
                                 width: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation(
+                                    Colors.white,
+                                  ),
                                 ),
                               )
                             : const Text('Submit for Approval'),
@@ -118,13 +127,12 @@ class _AddClubScreenState extends State<AddClubScreen> {
       location: _locationController.text.trim(),
       ownerId: ownerId,
       isActive: false, // Start as inactive until approved
-      isApproved: false, // Needs admin approval
       createdAt: DateTime.now(),
     );
 
     try {
       await _clubService.submitClubForApproval(club: club);
-      
+
       if (mounted) {
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
@@ -133,7 +141,7 @@ class _AddClubScreenState extends State<AddClubScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        
+
         // Navigate back
         Navigator.pop(context);
       }

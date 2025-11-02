@@ -1,14 +1,4 @@
 class UserProfile {
-  final String id;
-  final String name;
-  final String email;
-  final int totalPoints;
-  final List<String> bookingHistory;
-  final List<String> upcomingBookings;
-  final String profileImageUrl;
-  final DateTime joinDate;
-  final String role;
-
   UserProfile({
     required this.id,
     required this.name,
@@ -18,7 +8,7 @@ class UserProfile {
     required this.upcomingBookings,
     this.profileImageUrl = '',
     required this.joinDate,
-    this.role = 'user'
+    this.role = 'user',
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -34,6 +24,15 @@ class UserProfile {
       role: json['role'] ?? 'user',
     );
   }
+  final String id;
+  final String name;
+  final String email;
+  final int totalPoints;
+  final List<String> bookingHistory;
+  final List<String> upcomingBookings;
+  final String profileImageUrl;
+  final DateTime joinDate;
+  final String role;
 
   // Checker for Admin
   bool get isAdmin => role == 'admin';
@@ -48,7 +47,7 @@ class UserProfile {
       'upcomingBookings': upcomingBookings,
       'profileImageUrl': profileImageUrl,
       'joinDate': joinDate.toIso8601String(),
-      'role' : role,
+      'role': role,
     };
   }
 }

@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../models/booking.dart';
+
 import '../../models/activity.dart';
+import '../../models/booking.dart';
 import '../../utils/constants.dart';
-import '../home/home_screen.dart';
-import 'bookings.dart';
-import '../rewards.dart';
-import '../profile/profile_screen.dart';
 import '../../widgets/auth/auth_wrapper.dart' as auth;
+import '../home/home_screen.dart';
+import '../profile/profile_screen.dart';
+import '../rewards.dart';
+import 'bookings.dart';
 
 class BookingSuccessScreen extends StatelessWidget {
-  final Booking booking;
-  final Activity activity;
-
   const BookingSuccessScreen({
     super.key,
     required this.booking,
     required this.activity,
   });
+  final Booking booking;
+  final Activity activity;
 
   @override
   Widget build(BuildContext context) {
@@ -66,11 +66,7 @@ class BookingSuccessScreen extends StatelessWidget {
               color: Colors.white,
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              Icons.check,
-              color: Colors.green[600],
-              size: 48,
-            ),
+            child: Icon(Icons.check, color: Colors.green[600], size: 48),
           ),
           const SizedBox(height: 20),
           const Text(
@@ -105,7 +101,10 @@ class BookingSuccessScreen extends StatelessWidget {
             // Confirmation number
             Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.teal[50],
                   borderRadius: BorderRadius.circular(20),
@@ -121,16 +120,17 @@ class BookingSuccessScreen extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Activity details
             Row(
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.network(
-                    activity.displayImageUrl, // ✅ Changed from activity.imageUrl
+                    activity
+                        .displayImageUrl, // ✅ Changed from activity.imageUrl
                     width: 80,
                     height: 80,
                     fit: BoxFit.cover,
@@ -149,7 +149,7 @@ class BookingSuccessScreen extends StatelessWidget {
                               color: Colors.teal,
                               value: loadingProgress.expectedTotalBytes != null
                                   ? loadingProgress.cumulativeBytesLoaded /
-                                      loadingProgress.expectedTotalBytes!
+                                        loadingProgress.expectedTotalBytes!
                                   : null,
                             ),
                           ),
@@ -192,32 +192,25 @@ class BookingSuccessScreen extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         activity.category,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                        ),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 24),
             const Divider(),
             const SizedBox(height: 20),
-            
+
             // Booking details
             _buildDetailRow(
               Icons.calendar_today,
               'Date',
               DateFormat('EEEE, MMM dd, yyyy').format(booking.bookingDate),
             ),
-            _buildDetailRow(
-              Icons.access_time,
-              'Time',
-              activity.time,
-            ),
+            _buildDetailRow(Icons.access_time, 'Time', activity.time),
             _buildDetailRow(
               Icons.location_on,
               'Location',
@@ -233,9 +226,9 @@ class BookingSuccessScreen extends StatelessWidget {
               'Total Paid',
               '\$${booking.amountPaid.toStringAsFixed(2)}',
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             // Points earned
             Container(
               width: double.infinity,
@@ -325,10 +318,7 @@ class BookingSuccessScreen extends StatelessWidget {
           children: [
             const Text(
               'What\'s Next?',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             _buildStepItem(
@@ -379,10 +369,7 @@ class BookingSuccessScreen extends StatelessWidget {
           Icon(icon, size: 20, color: Colors.grey[600]),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              description,
-              style: const TextStyle(fontSize: 14),
-            ),
+            child: Text(description, style: const TextStyle(fontSize: 14)),
           ),
         ],
       ),
@@ -402,20 +389,19 @@ class BookingSuccessScreen extends StatelessWidget {
               backgroundColor: Colors.teal,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
+                borderRadius: BorderRadius.circular(
+                  AppConstants.buttonBorderRadius,
+                ),
               ),
             ),
             child: const Text(
               'View My Bookings',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ),
         ),
         const SizedBox(height: 12),
-        
+
         // Secondary action - Back to Activities
         SizedBox(
           width: double.infinity,
@@ -426,20 +412,19 @@ class BookingSuccessScreen extends StatelessWidget {
               foregroundColor: Colors.teal,
               side: const BorderSide(color: Colors.teal),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
+                borderRadius: BorderRadius.circular(
+                  AppConstants.buttonBorderRadius,
+                ),
               ),
             ),
             child: const Text(
               'Browse More Activities',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ),
         ),
         const SizedBox(height: 20),
-        
+
         // Support info
         Container(
           padding: const EdgeInsets.all(16),
@@ -466,10 +451,7 @@ class BookingSuccessScreen extends StatelessWidget {
                     ),
                     Text(
                       'Contact us if you have questions about your booking',
-                      style: TextStyle(
-                        color: Colors.blue[600],
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: Colors.blue[600], fontSize: 12),
                     ),
                   ],
                 ),
@@ -484,9 +466,7 @@ class BookingSuccessScreen extends StatelessWidget {
   void _navigateToMyBookings(BuildContext context) {
     // Navigate back to main app and show bookings tab
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (context) => const MainAppWithBookingsTab(),
-      ),
+      MaterialPageRoute(builder: (context) => const MainAppWithBookingsTab()),
       (route) => false,
     );
   }
@@ -494,9 +474,7 @@ class BookingSuccessScreen extends StatelessWidget {
   void _navigateToActivities(BuildContext context) {
     // Navigate back to Activities tab (index 0)
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (context) => const auth.AuthWrapper(),
-      ),
+      MaterialPageRoute(builder: (context) => const auth.AuthWrapper()),
       (route) => false,
     );
   }
@@ -547,10 +525,7 @@ class _MainAppWithBookingsTabState extends State<MainAppWithBookingsTab> {
             icon: Icon(Icons.card_giftcard),
             label: 'Rewards',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );

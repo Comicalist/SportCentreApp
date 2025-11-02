@@ -13,12 +13,14 @@ class NotificationService {
         .orderBy('timestamp', descending: true)
         .limit(50)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => AppNotification.fromJson({
-                  ...doc.data(),
-                  'id': doc.id,
-                }))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map(
+                (doc) =>
+                    AppNotification.fromJson({...doc.data(), 'id': doc.id}),
+              )
+              .toList(),
+        );
   }
 
   /// Get unread count (real-time)
@@ -33,10 +35,9 @@ class NotificationService {
 
   /// Mark notification as read
   Future<void> markAsRead(String notificationId) async {
-    await _firestore
-        .collection('notifications')
-        .doc(notificationId)
-        .update({'isRead': true});
+    await _firestore.collection('notifications').doc(notificationId).update({
+      'isRead': true,
+    });
   }
 
   /// Mark all as read
@@ -48,7 +49,7 @@ class NotificationService {
         .where('isRead', isEqualTo: false)
         .get();
 
-    for (var doc in docs.docs) {
+    for (final doc in docs.docs) {
       batch.update(doc.reference, {'isRead': true});
     }
     await batch.commit();
@@ -61,22 +62,17 @@ class NotificationService {
 
   /// Save user preferences
   Future<void> savePreferences(
-      String userId, NotificationPreferences prefs) async {
+    String userId,
+    NotificationPreferences prefs,
+  ) async {
     try {
-    
       // Use set with merge to create the field if it doesn't exist
       await _firestore.collection('users').doc(userId).set({
         'notificationPreferences': prefs.toJson(),
       }, SetOptions(merge: true));
-      
-      
-      
+
       // Verify the save by reading it back
-      
-     
-     
     } catch (e) {
-     
       rethrow;
     }
   }
@@ -99,14 +95,12 @@ class NotificationService {
           .get();
 
       final batch = _firestore.batch();
-      for (var doc in snapshot.docs) {
+      for (final doc in snapshot.docs) {
         batch.delete(doc.reference);
       }
 
       await batch.commit();
-  
     } catch (e) {
-  
       rethrow;
     }
   }

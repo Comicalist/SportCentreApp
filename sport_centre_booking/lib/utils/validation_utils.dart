@@ -12,17 +12,17 @@ class ValidationUtils {
     }
 
     // Check for uppercase letter
-    if (!password.contains(RegExp(r'[A-Z]'))) {
+    if (!password.contains(RegExp('[A-Z]'))) {
       return 'Password must contain at least 1 uppercase letter';
     }
 
     // Check for lowercase letter
-    if (!password.contains(RegExp(r'[a-z]'))) {
+    if (!password.contains(RegExp('[a-z]'))) {
       return 'Password must contain at least 1 lowercase letter';
     }
 
     // Check for number
-    if (!password.contains(RegExp(r'[0-9]'))) {
+    if (!password.contains(RegExp('[0-9]'))) {
       return 'Password must contain at least 1 number';
     }
 
@@ -42,7 +42,7 @@ class ValidationUtils {
     }
 
     final trimmedName = name.trim();
-    
+
     if (trimmedName.length < 2) {
       return 'Name must be at least 2 characters long';
     }
@@ -78,7 +78,7 @@ class ValidationUtils {
   static int getPasswordStrength(String password) {
     if (password.isEmpty) return 0;
 
-    int score = 0;
+    var score = 0;
 
     // Length check (up to 30 points)
     if (password.length >= 8) score += 10;
@@ -86,9 +86,9 @@ class ValidationUtils {
     if (password.length >= 16) score += 10;
 
     // Character type checks (20 points each)
-    if (password.contains(RegExp(r'[a-z]'))) score += 20;
-    if (password.contains(RegExp(r'[A-Z]'))) score += 20;
-    if (password.contains(RegExp(r'[0-9]'))) score += 20;
+    if (password.contains(RegExp('[a-z]'))) score += 20;
+    if (password.contains(RegExp('[A-Z]'))) score += 20;
+    if (password.contains(RegExp('[0-9]'))) score += 20;
     if (password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) score += 20;
 
     return score.clamp(0, 100);
@@ -105,24 +105,21 @@ class ValidationUtils {
   /// Get password requirements list
   static List<PasswordRequirement> getPasswordRequirements(String password) {
     return [
-      PasswordRequirement(
-        'At least 8 characters',
-        password.length >= 8,
-      ),
+      PasswordRequirement('At least 8 characters', password.length >= 8),
       PasswordRequirement(
         'At least 1 uppercase letter (A-Z)',
-        password.contains(RegExp(r'[A-Z]')),
+        password.contains(RegExp('[A-Z]')),
       ),
       PasswordRequirement(
         'At least 1 lowercase letter (a-z)',
-        password.contains(RegExp(r'[a-z]')),
+        password.contains(RegExp('[a-z]')),
       ),
       PasswordRequirement(
         'At least 1 number (0-9)',
-        password.contains(RegExp(r'[0-9]')),
+        password.contains(RegExp('[0-9]')),
       ),
       PasswordRequirement(
-        'At least 1 special character (!@#\$%^&*)',
+        r'At least 1 special character (!@#$%^&*)',
         password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]')),
       ),
     ];
@@ -131,8 +128,7 @@ class ValidationUtils {
 
 /// Model for password requirement
 class PasswordRequirement {
+  PasswordRequirement(this.text, this.isMet);
   final String text;
   final bool isMet;
-
-  PasswordRequirement(this.text, this.isMet);
 }

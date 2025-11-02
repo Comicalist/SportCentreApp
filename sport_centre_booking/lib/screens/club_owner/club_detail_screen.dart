@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
+
 import '../../models/club.dart';
 import '../../services/club_service.dart';
-import 'edit_club_screen.dart';
 import '../facilities/club_facilities_screen.dart';
+import 'edit_club_screen.dart';
 import 'edit_open_hours_screen.dart';
 
-
 class ClubDetailScreen extends StatefulWidget {
-  final Club club;
-
   const ClubDetailScreen({super.key, required this.club});
+  final Club club;
 
   @override
   State<ClubDetailScreen> createState() => _ClubDetailScreenState();
@@ -59,11 +58,11 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
-                const Icon(Icons.info_outline, color: Colors.orange),
-                const SizedBox(width: 8),
-                const Text(
+                Icon(Icons.info_outline, color: Colors.orange),
+                SizedBox(width: 8),
+                Text(
                   'Club Information',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
@@ -134,11 +133,11 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
-                const Icon(Icons.settings, color: Colors.orange),
-                const SizedBox(width: 8),
-                const Text(
+                Icon(Icons.settings, color: Colors.orange),
+                SizedBox(width: 8),
+                Text(
                   'Manage Club',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
@@ -146,7 +145,7 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
             ),
 
             const SizedBox(height: 16),
-            
+
             _buildActionTile(
               icon: Icons.home_work,
               title: 'View Facilities',
@@ -227,12 +226,11 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
   void _editOpenHours() {
     Navigator.push(
       context,
-    MaterialPageRoute(
+      MaterialPageRoute(
         builder: (context) => EditOpenHoursScreen(club: _currentClub),
       ),
     );
   }
-
 
   void _confirmDelete() {
     showDialog(

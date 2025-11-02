@@ -1,19 +1,12 @@
 import 'package:flutter/material.dart';
+
 import '../../../models/activity.dart';
 import '../../../services/activity_service.dart';
-import '../../../widgets/activity/activity_card.dart';
 import '../../../utils/activity_helpers.dart';
+import '../../../widgets/activity/activity_card.dart';
 
 /// Widget for displaying activities in a responsive grid layout
 class ActivitiesGrid extends StatelessWidget {
-  final String selectedCategory;
-  final String? selectedClub;
-  final DateTime? selectedDate;
-  final String? selectedTimeCategory;
-  final String? selectedLocation;
-  final String? searchQuery;
-  final bool onlyAvailable;
-
   const ActivitiesGrid({
     super.key,
     required this.selectedCategory,
@@ -24,6 +17,13 @@ class ActivitiesGrid extends StatelessWidget {
     required this.searchQuery,
     required this.onlyAvailable,
   });
+  final String selectedCategory;
+  final String? selectedClub;
+  final DateTime? selectedDate;
+  final String? selectedTimeCategory;
+  final String? selectedLocation;
+  final String? searchQuery;
+  final bool onlyAvailable;
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +34,7 @@ class ActivitiesGrid extends StatelessWidget {
         date: selectedDate,
         timeCategory: selectedTimeCategory,
         facilityId: selectedLocation,
-        searchQuery: searchQuery?.isEmpty == true ? null : searchQuery,
+        searchQuery: searchQuery?.isEmpty ?? false ? null : searchQuery,
         onlyAvailable: onlyAvailable,
       ),
       builder: (context, snapshot) {

@@ -1,12 +1,13 @@
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+
 import '../../providers/auth_provider.dart';
 import '../../services/notification_service.dart';
 import '../../widgets/notifications/notifications_drawer.dart';
-import 'widgets/category_tabs.dart';
-import 'widgets/advanced_filters.dart';
 import 'widgets/activities_grid.dart';
+import 'widgets/advanced_filters.dart';
+import 'widgets/category_tabs.dart';
 
 /// Main home screen showing activities with filtering capabilities
 class HomeScreen extends StatefulWidget {
@@ -151,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              authProvider.isLoggedIn 
+              authProvider.isLoggedIn
                   ? 'Welcome back, ${authProvider.userFirstName}!'
                   : 'Discover amazing activities',
               style: const TextStyle(fontSize: 16, color: Colors.grey),
@@ -205,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Build filter toggle button
   Widget _buildFilterToggleButton() {
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -242,7 +243,8 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       },
       onDateChanged: (value) => setState(() => selectedDate = value),
-      onTimeCategoryChanged: (value) => setState(() => selectedTimeCategory = value),
+      onTimeCategoryChanged: (value) =>
+          setState(() => selectedTimeCategory = value),
       onFacilityChanged: (value) => setState(() => selectedFacility = value),
       onAvailabilityChanged: (value) => setState(() => onlyAvailable = value),
       onClearFilters: _clearFilters,

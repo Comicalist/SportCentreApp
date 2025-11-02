@@ -1,9 +1,10 @@
 import 'dart:io';
 import 'dart:typed_data';
+
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
-import 'package:flutter/material.dart';
 
 class ImageUploadService {
   static final FirebaseStorage _storage = FirebaseStorage.instance;
@@ -16,16 +17,19 @@ class ImageUploadService {
   static const List<String> allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
   static const List<String> allowedMimeTypes = [
     'image/jpeg',
-    'image/jpg', 
+    'image/jpg',
     'image/png',
-    'image/webp'
+    'image/webp',
   ];
 
   /// Validate image file before upload
   static Future<String?> _validateImage(XFile imageFile) async {
     try {
       // Check file extension
-      final extension = path.extension(imageFile.path).toLowerCase().replaceAll('.', '');
+      final extension = path
+          .extension(imageFile.path)
+          .toLowerCase()
+          .replaceAll('.', '');
       if (!allowedExtensions.contains(extension)) {
         return 'Invalid file format. Please use JPG, PNG, or WebP images only.';
       }
@@ -38,7 +42,7 @@ class ImageUploadService {
       }
 
       // Check MIME type if available
-      if (imageFile.mimeType != null && 
+      if (imageFile.mimeType != null &&
           !allowedMimeTypes.contains(imageFile.mimeType!.toLowerCase())) {
         return 'Invalid file type detected. Please use a valid image file.';
       }
@@ -70,9 +74,11 @@ class ImageUploadService {
     }
 
     // PNG header: 89 50 4E 47
-    if (bytes.length >= 8 && 
-        bytes[0] == 0x89 && bytes[1] == 0x50 && 
-        bytes[2] == 0x4E && bytes[3] == 0x47) {
+    if (bytes.length >= 8 &&
+        bytes[0] == 0x89 &&
+        bytes[1] == 0x50 &&
+        bytes[2] == 0x4E &&
+        bytes[3] == 0x47) {
       return true;
     }
 
@@ -96,11 +102,11 @@ class ImageUploadService {
   }) async {
     try {
       // Show image source selection with requirements
-      final ImageSource? source = await _showImageSourceDialog(context);
+      final source = await _showImageSourceDialog(context);
       if (source == null) return null;
 
       // Pick image with automatic resizing (following your existing approach)
-      final XFile? image = await _picker.pickImage(
+      final image = await _picker.pickImage(
         source: source,
         maxWidth: maxWidthPixels.toDouble(),
         maxHeight: maxHeightPixels.toDouble(),
@@ -117,7 +123,6 @@ class ImageUploadService {
             SnackBar(
               content: Text(validationError),
               backgroundColor: Colors.red,
-              duration: const Duration(seconds: 4),
             ),
           );
         }
@@ -130,23 +135,24 @@ class ImageUploadService {
       final fileName = '${timestamp}_$id$extension';
 
       // Create storage reference
-      final Reference ref = _storage.ref().child('$type/$id/$fileName');
+      final ref = _storage.ref().child('$type/$id/$fileName');
 
       // Upload with progress indication
-      final UploadTask uploadTask = ref.putFile(File(image.path));
-      
+      final uploadTask = ref.putFile(File(image.path));
+
       // Wait for completion and get download URL
-      final TaskSnapshot snapshot = await uploadTask;
-      final String downloadUrl = await snapshot.ref.getDownloadURL();
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
 
       return downloadUrl;
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to upload image: ${e.toString().replaceAll('Exception: ', '')}'),
+            content: Text(
+              'Failed to upload image: ${e.toString().replaceAll('Exception: ', '')}',
+            ),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -155,8 +161,10 @@ class ImageUploadService {
   }
 
   /// Show image source selection dialog with requirements
-  static Future<ImageSource?> _showImageSourceDialog(BuildContext context) async {
-    return await showDialog<ImageSource>(
+  static Future<ImageSource?> _showImageSourceDialog(
+    BuildContext context,
+  ) async {
+    return showDialog<ImageSource>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
@@ -177,7 +185,11 @@ class ImageUploadService {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.info_outline, size: 16, color: Colors.blue[700]),
+                        Icon(
+                          Icons.info_outline,
+                          size: 16,
+                          color: Colors.blue[700],
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'Image Requirements',
@@ -198,7 +210,7 @@ class ImageUploadService {
                 ),
               ),
               const SizedBox(height: 16),
-              
+
               // Source selection buttons
               ListTile(
                 leading: const Icon(Icons.photo_library),
@@ -226,7 +238,7 @@ class ImageUploadService {
   /// Delete image from storage - following your existing pattern
   static Future<void> deleteImage(String imageUrl) async {
     try {
-      final Reference ref = _storage.refFromURL(imageUrl);
+      final ref = _storage.refFromURL(imageUrl);
       await ref.delete();
     } catch (e) {
       // Don't throw error - image might already be deleted
@@ -236,8 +248,8 @@ class ImageUploadService {
   /// Get image validation requirements as text
   static String getValidationRequirements() {
     return '• Format: ${allowedExtensions.join(', ').toUpperCase()}\n'
-           '• Max size: ${(maxFileSizeBytes / (1024 * 1024)).toInt()}MB\n'
-           '• Max dimensions: ${maxWidthPixels}x${maxHeightPixels}px\n'
-           '• Landscape orientation recommended';
+        '• Max size: ${(maxFileSizeBytes / (1024 * 1024)).toInt()}MB\n'
+        '• Max dimensions: ${maxWidthPixels}x${maxHeightPixels}px\n'
+        '• Landscape orientation recommended';
   }
 }

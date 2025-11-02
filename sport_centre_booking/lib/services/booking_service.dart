@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../models/booking.dart';
+
 import '../models/activity.dart';
+import '../models/booking.dart';
 import '../models/voucher.dart';
-import 'voucher_service.dart';
 
 /// Service for managing booking operations
 class BookingService {
@@ -84,7 +84,7 @@ class BookingService {
         final activityData = activityDoc.data()!;
 
         // Handle voucher validation and processing
-        double voucherDiscount = 0.0;
+        var voucherDiscount = 0.0;
         if (voucherId != null) {
           // Get voucher document
           final voucherRef = _firestore.collection('vouchers').doc(voucherId);
@@ -106,7 +106,9 @@ class BookingService {
           }
 
           if (voucher.clubId != activityData['clubId']) {
-            throw Exception('This voucher can only be used for activities from ${voucher.clubName}');
+            throw Exception(
+              'This voucher can only be used for activities from ${voucher.clubName}',
+            );
           }
 
           final allowVouchers = activityData['allowVouchers'] ?? true;
@@ -119,13 +121,17 @@ class BookingService {
           // Mark voucher as used
           transaction.update(voucherRef, {
             'usedAt': Timestamp.fromDate(DateTime.now()),
-            'usedForBooking': activityId, // Will be updated with booking ID after creation
+            'usedForBooking':
+                activityId, // Will be updated with booking ID after creation
             'updatedAt': Timestamp.fromDate(DateTime.now()),
           });
         }
 
         // Calculate final amount paid and points earned
-        final finalAmountPaid = (totalPrice - voucherDiscount).clamp(0.0, totalPrice);
+        final finalAmountPaid = (totalPrice - voucherDiscount).clamp(
+          0.0,
+          totalPrice,
+        );
         final finalPointsEarned = calculatePointsEarned(
           Activity.fromJson(activityData),
           finalAmountPaid,
@@ -216,7 +222,9 @@ class BookingService {
           'activityTitle': activityTitle,
           'activityDate': Timestamp.fromDate(activityDateTime),
           'activityTime': activityTime,
-          'scheduledDate': Timestamp.fromDate(scheduledDateTime), // ← NOUVEAU pour notifications
+          'scheduledDate': Timestamp.fromDate(
+            scheduledDateTime,
+          ), // ← NOUVEAU pour notifications
           'totalPrice': totalPrice,
           // Denormalized club/facility data for display
           'clubId': clubId,
@@ -231,9 +239,7 @@ class BookingService {
         // Update voucher with correct booking ID if voucher was used
         if (voucherId != null) {
           final voucherRef = _firestore.collection('vouchers').doc(voucherId);
-          transaction.update(voucherRef, {
-            'usedForBooking': bookingRef.id,
-          });
+          transaction.update(voucherRef, {'usedForBooking': bookingRef.id});
         }
 
         // Create Booking object to return
@@ -283,8 +289,7 @@ class BookingService {
 
       return booking;
     } catch (e) {
-      if (e.toString().contains('transaction')) {
-      }
+      if (e.toString().contains('transaction')) {}
       rethrow;
     }
   }
@@ -425,7 +430,6 @@ class BookingService {
           'activityTitle': booking.activityTitle,
           'createdAt': FieldValue.serverTimestamp(),
         });
-
       }
 
       return true;
@@ -441,9 +445,7 @@ class BookingService {
         .where('userId', isEqualTo: userId)
         .snapshots()
         .map((snapshot) {
-          final bookings = snapshot.docs
-              .map((doc) => Booking.fromFirestore(doc))
-              .toList();
+          final bookings = snapshot.docs.map(Booking.fromFirestore).toList();
 
           // Sort by creation date (newest first) since we can't use orderBy without index
           bookings.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -488,7 +490,7 @@ class BookingService {
     bool isMember,
   ) {
     // Base points: 1 point per CHF spent (only on amount actually paid)
-    int basePoints = paidAmount.floor();
+    var basePoints = paidAmount.floor();
 
     // Member bonus: 50% more points
     if (isMember) {
@@ -583,9 +585,7 @@ class BookingService {
           .orderBy('bookingDate')
           .get();
 
-      return querySnapshot.docs
-          .map((doc) => Booking.fromFirestore(doc))
-          .toList();
+      return querySnapshot.docs.map(Booking.fromFirestore).toList();
     } catch (e) {
       return [];
     }

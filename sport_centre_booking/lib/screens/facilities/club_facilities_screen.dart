@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import '../../models/facility.dart';
+
 import '../../models/club.dart';
+import '../../models/facility.dart';
 import '../../services/facility_service.dart';
 import 'add_facility_screen.dart';
 import 'edit_facility_screen.dart';
 
 class ClubFacilitiesScreen extends StatefulWidget {
-  final Club club;
-
   const ClubFacilitiesScreen({super.key, required this.club});
+  final Club club;
 
   @override
   State<ClubFacilitiesScreen> createState() => _ClubFacilitiesScreenState();
@@ -25,7 +25,6 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
 
     _loadFacilities();
   }
-
 
   void _loadFacilities() {
     _facilitiesFuture = _facilityService.getClubFacilities(
@@ -70,7 +69,7 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
                         ),
                         const SizedBox(height: 8),
                         ElevatedButton(
-                          onPressed: () => setState(() => _loadFacilities()),
+                          onPressed: () => setState(_loadFacilities),
                           child: const Text('Retry'),
                         ),
                       ],
@@ -94,7 +93,7 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
 
                 return RefreshIndicator(
                   onRefresh: () async {
-                    setState(() => _loadFacilities());
+                    setState(_loadFacilities);
                   },
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),
@@ -302,8 +301,8 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
       ),
     );
 
-    if (result == true) {
-      setState(() => _loadFacilities());
+    if (result ?? false) {
+      setState(_loadFacilities);
     }
   }
 
@@ -312,9 +311,7 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
     try {
@@ -324,7 +321,7 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
       );
 
       if (!mounted) return;
-      
+
       // Dismiss loading indicator
       Navigator.pop(context);
 
@@ -345,14 +342,14 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
         ),
       );
 
-      if (result == true && mounted) {
-        setState(() => _loadFacilities());
+      if (result ?? false && mounted) {
+        setState(_loadFacilities);
       }
     } catch (e) {
       if (mounted) {
         // Dismiss loading indicator
         Navigator.pop(context);
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error loading facility: $e'),
@@ -400,7 +397,7 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        setState(() => _loadFacilities());
+        setState(_loadFacilities);
       }
     } catch (e) {
       if (mounted) {

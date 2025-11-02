@@ -1,5 +1,5 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// Service for handling Firebase Authentication
 class AuthService {
@@ -21,7 +21,7 @@ class AuthService {
     String password,
   ) async {
     try {
-      final UserCredential result = await _auth.signInWithEmailAndPassword(
+      final result = await _auth.signInWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
@@ -38,15 +38,15 @@ class AuthService {
   }
 
   /// Register new user with email and password
-  /// 
+  ///
   /// Creates a new Firebase user account and automatically sends email verification.
-  /// 
+  ///
   /// Parameters:
   /// - [email]: User's email address
   /// - [password]: User's password (must meet validation requirements)
   /// - [displayName]: User's full name
   /// - [isClubOwner]: Optional flag to mark user as club owner (default: false)
-  /// 
+  ///
   /// Returns [UserCredential] on success or throws exception on failure.
   static Future<UserCredential?> registerWithEmail(
     String email,
@@ -55,7 +55,7 @@ class AuthService {
     bool isClubOwner = false,
   }) async {
     try {
-      final UserCredential result = await _auth.createUserWithEmailAndPassword(
+      final result = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
@@ -118,7 +118,7 @@ class AuthService {
   static bool get isEmailVerified => currentUser?.emailVerified ?? false;
 
   /// Reload current user to check verification status
-  /// 
+  ///
   /// Refreshes the current user's data from Firebase to get updated
   /// email verification status and other user properties.
   static Future<void> reloadUser() async {
@@ -130,10 +130,10 @@ class AuthService {
   }
 
   /// Create user document in Firestore with default values
-  /// 
+  ///
   /// Creates a comprehensive user profile document in Firestore with
   /// default values for points, membership, and booking history.
-  /// 
+  ///
   /// Parameters:
   /// - [user]: Firebase user instance
   /// - [displayName]: User's display name
@@ -158,15 +158,15 @@ class AuthService {
       'totalPoints': 0,
       'availablePoints': 0,
       'lifetimePointsEarned': 0,
-      
+
       // Membership system
       'isMember': false,
       'membershipType': null,
       'membershipExpiry': null,
-      
+
       // User type flags
       'isClubOwner': isClubOwner,
-      
+
       // Booking and profile data
       'bookingHistory': [],
       'upcomingBookings': [],

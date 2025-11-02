@@ -1,25 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+
 import '../../models/activity.dart';
-import '../../utils/activity_helpers.dart';
-import '../../utils/constants.dart';
 import '../../providers/auth_provider.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/booking/booking_details_screen.dart';
 import '../../services/booking_service.dart';
+import '../../utils/activity_helpers.dart';
+import '../../utils/constants.dart';
 
 class ActivityCard extends StatelessWidget {
+  const ActivityCard({super.key, required this.activity});
   final Activity activity;
-
-  const ActivityCard({
-    super.key,
-    required this.activity,
-  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
@@ -34,10 +31,7 @@ class ActivityCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildActivityImage(),
-          _buildActivityDetails(context),
-        ],
+        children: [_buildActivityImage(), _buildActivityDetails(context)],
       ),
     );
   }
@@ -74,8 +68,12 @@ class ActivityCard extends StatelessWidget {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        ActivityHelpers.getCategoryColor(activity.category).withValues(alpha: 0.7),
-                        ActivityHelpers.getCategoryColor(activity.category).withValues(alpha: 0.4),
+                        ActivityHelpers.getCategoryColor(
+                          activity.category,
+                        ).withValues(alpha: 0.7),
+                        ActivityHelpers.getCategoryColor(
+                          activity.category,
+                        ).withValues(alpha: 0.4),
                       ],
                     ),
                   ),
@@ -83,7 +81,7 @@ class ActivityCard extends StatelessWidget {
                     child: CircularProgressIndicator(
                       value: loadingProgress.expectedTotalBytes != null
                           ? loadingProgress.cumulativeBytesLoaded /
-                              loadingProgress.expectedTotalBytes!
+                                loadingProgress.expectedTotalBytes!
                           : null,
                       color: Colors.white,
                     ),
@@ -100,8 +98,12 @@ class ActivityCard extends StatelessWidget {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        ActivityHelpers.getCategoryColor(activity.category).withValues(alpha: 0.7),
-                        ActivityHelpers.getCategoryColor(activity.category).withValues(alpha: 0.4),
+                        ActivityHelpers.getCategoryColor(
+                          activity.category,
+                        ).withValues(alpha: 0.7),
+                        ActivityHelpers.getCategoryColor(
+                          activity.category,
+                        ).withValues(alpha: 0.4),
                       ],
                     ),
                   ),
@@ -147,10 +149,7 @@ class ActivityCard extends StatelessWidget {
       top: 12,
       left: 12,
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 6,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: ActivityHelpers.getCategoryColor(activity.category),
           borderRadius: BorderRadius.circular(AppConstants.categoryBadgeRadius),
@@ -213,11 +212,7 @@ class ActivityCard extends StatelessWidget {
         // Date on first row
         Row(
           children: [
-            Icon(
-              Icons.calendar_today,
-              size: 16,
-              color: Colors.grey[600],
-            ),
+            Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
             const SizedBox(width: 4),
             Text(
               DateFormat('MMM dd').format(activity.date),
@@ -286,10 +281,7 @@ class ActivityCard extends StatelessWidget {
   Widget _buildPriceAndAvailability(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _buildPriceAndPoints(context),
-        _buildAvailabilityBadge(),
-      ],
+      children: [_buildPriceAndPoints(context), _buildAvailabilityBadge()],
     );
   }
 
@@ -299,10 +291,10 @@ class ActivityCard extends StatelessWidget {
     final isMember = context.read<AuthProvider>().isLoggedIn;
 
     // Price per person according to member status
-    final double currentPrice = isMember ? activity.memberPrice : activity.guestPrice;
+    final currentPrice = isMember ? activity.memberPrice : activity.guestPrice;
 
     // Compute preview points using the same backend logic as the booking flow
-    final int pointsPreview = BookingService.calculatePointsEarned(
+    final pointsPreview = BookingService.calculatePointsEarned(
       activity,
       currentPrice, // one participant preview
       isMember,
@@ -321,11 +313,7 @@ class ActivityCard extends StatelessWidget {
         ),
         Row(
           children: [
-            Icon(
-              Icons.star,
-              size: 12,
-              color: Colors.orange[600],
-            ),
+            Icon(Icons.star, size: 12, color: Colors.orange[600]),
             const SizedBox(width: 2),
             Text(
               '$pointsPreview points',
@@ -343,13 +331,10 @@ class ActivityCard extends StatelessWidget {
 
   /// Build availability badge
   Widget _buildAvailabilityBadge() {
-    final bool isFullyBooked = activity.spotsLeft <= 0;
+    final isFullyBooked = activity.spotsLeft <= 0;
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 8,
-        vertical: 4,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: ActivityHelpers.getSpotsColor(activity.spotsLeft),
         borderRadius: BorderRadius.circular(12),
@@ -367,7 +352,7 @@ class ActivityCard extends StatelessWidget {
 
   /// Build centered book now button
   Widget _buildBookButton(BuildContext context) {
-    final bool isFullyBooked = activity.spotsLeft <= 0;
+    final isFullyBooked = activity.spotsLeft <= 0;
 
     return Center(
       child: SizedBox(
@@ -382,17 +367,15 @@ class ActivityCard extends StatelessWidget {
                   disabledForegroundColor: Colors.grey[600],
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
+                    borderRadius: BorderRadius.circular(
+                      AppConstants.buttonBorderRadius,
+                    ),
                   ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.event_busy,
-                      size: 16,
-                      color: Colors.grey[600],
-                    ),
+                    Icon(Icons.event_busy, size: 16, color: Colors.grey[600]),
                     const SizedBox(width: 8),
                     const Text(
                       'Fully Booked',
@@ -408,7 +391,9 @@ class ActivityCard extends StatelessWidget {
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
+                    borderRadius: BorderRadius.circular(
+                      AppConstants.buttonBorderRadius,
+                    ),
                   ),
                 ),
                 child: const Text(
@@ -449,11 +434,7 @@ class ActivityCard extends StatelessWidget {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                Icons.lock_outline,
-                size: 48,
-                color: Colors.grey,
-              ),
+              const Icon(Icons.lock_outline, size: 48, color: Colors.grey),
               const SizedBox(height: 16),
               Text(
                 'You need to sign in to book "${activity.name}".',

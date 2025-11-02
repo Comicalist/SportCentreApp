@@ -1,10 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Voucher type enumeration
-enum VoucherType {
-  fitness,
-  stuff
-}
+enum VoucherType { fitness, stuff }
 
 /// Extension to convert VoucherType to/from string
 extension VoucherTypeExtension on VoucherType {
@@ -31,37 +28,7 @@ extension VoucherTypeExtension on VoucherType {
 
 /// Voucher model for managing club vouchers
 class Voucher {
-  // === IDENTIFIERS & RELATIONSHIPS ===
-  final String id;
-  final String clubId;              // Reference to club that created this voucher
-  final String createdBy;           // Admin user who created this voucher
-  
-  // === VOUCHER INFORMATION ===
-  final String title;               // e.g., "5 CHF off Fitness Classes"
-  final String description;         // Detailed description
-  final VoucherType type;           // fitness or stuff
-  final double amount;              // CHF value (e.g., 5.0)
-  final int pointsCost;             // Points required to purchase (e.g., 500)
-  final bool isActive;              // Can be purchased/used
-  
-  // === DENORMALIZED DATA ===
-  final String clubName;            // Club name for display
-  
-  // === TIMESTAMPS ===
-  final DateTime createdAt;
-  final DateTime updatedAt;
-  
-  // === PURCHASE & USAGE INFO (null until purchased) ===
-  final String? purchasedBy;        // User ID who bought this voucher
-  final DateTime? purchasedAt;      // When it was purchased
-  final DateTime? expiresAt;        // Expiration date (1 year from purchase)
-  
-  // === USAGE INFO (null until used) ===
-  final DateTime? usedAt;           // When it was used
-  final String? usedForBooking;     // Booking ID where this voucher was used
-  
-  // === VOUCHER CODE (generated on purchase) ===
-  final String? code;               // e.g., "SC-V-2024-1234"
+  // e.g., "SC-V-2024-1234"
 
   Voucher({
     required this.id,
@@ -84,48 +51,8 @@ class Voucher {
     this.code,
   });
 
-  /// Check if voucher is available for purchase
-  bool get isAvailableForPurchase => isActive && purchasedBy == null;
-
-  /// Check if voucher is purchased but not used
-  bool get isPurchasedAndUnused => purchasedBy != null && usedAt == null && !isExpired;
-
-  /// Check if voucher is expired
-  bool get isExpired {
-    if (expiresAt == null) return false;
-    return DateTime.now().isAfter(expiresAt!);
-  }
-
-  /// Check if voucher is used
-  bool get isUsed => usedAt != null;
-
-  /// Check if voucher can be used for bookings
-  bool get canBeUsedForBookings => type == VoucherType.fitness && isPurchasedAndUnused;
-
-  /// Get status display text
-  String get statusDisplayText {
-    if (isUsed) return 'Used';
-    if (isExpired) return 'Expired';
-    if (isPurchasedAndUnused) return 'Available';
-    if (isAvailableForPurchase) return 'For Sale';
-    return 'Inactive';
-  }
-
-  /// Generate voucher code (SC-V-YYYY-XXXX format)
-  static String generateVoucherCode() {
-    final year = DateTime.now().year;
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final random = (timestamp % 10000).toString().padLeft(4, '0');
-    return 'SC-V-$year-$random';
-  }
-
-  /// Calculate expiration date (1 year from now)
-  static DateTime calculateExpirationDate() {
-    return DateTime.now().add(const Duration(days: 365));
-  }
-
   factory Voucher.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    final data = doc.data()! as Map<String, dynamic>;
     return Voucher(
       id: doc.id,
       clubId: data['clubId'] ?? '',
@@ -137,7 +64,7 @@ class Voucher {
       pointsCost: data['pointsCost'] ?? 0,
       isActive: data['isActive'] ?? true,
       clubName: data['clubName'] ?? '',
-      createdAt: data['createdAt'] != null 
+      createdAt: data['createdAt'] != null
           ? (data['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
       updatedAt: data['updatedAt'] != null
@@ -183,12 +110,83 @@ class Voucher {
       expiresAt: json['expiresAt'] != null
           ? DateTime.parse(json['expiresAt'])
           : null,
-      usedAt: json['usedAt'] != null
-          ? DateTime.parse(json['usedAt'])
-          : null,
+      usedAt: json['usedAt'] != null ? DateTime.parse(json['usedAt']) : null,
       usedForBooking: json['usedForBooking'],
       code: json['code'],
     );
+  }
+  // === IDENTIFIERS & RELATIONSHIPS ===
+  final String id;
+  final String clubId; // Reference to club that created this voucher
+  final String createdBy; // Admin user who created this voucher
+
+  // === VOUCHER INFORMATION ===
+  final String title; // e.g., "5 CHF off Fitness Classes"
+  final String description; // Detailed description
+  final VoucherType type; // fitness or stuff
+  final double amount; // CHF value (e.g., 5.0)
+  final int pointsCost; // Points required to purchase (e.g., 500)
+  final bool isActive; // Can be purchased/used
+
+  // === DENORMALIZED DATA ===
+  final String clubName; // Club name for display
+
+  // === TIMESTAMPS ===
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  // === PURCHASE & USAGE INFO (null until purchased) ===
+  final String? purchasedBy; // User ID who bought this voucher
+  final DateTime? purchasedAt; // When it was purchased
+  final DateTime? expiresAt; // Expiration date (1 year from purchase)
+
+  // === USAGE INFO (null until used) ===
+  final DateTime? usedAt; // When it was used
+  final String? usedForBooking; // Booking ID where this voucher was used
+
+  // === VOUCHER CODE (generated on purchase) ===
+  final String? code;
+
+  /// Check if voucher is available for purchase
+  bool get isAvailableForPurchase => isActive && purchasedBy == null;
+
+  /// Check if voucher is purchased but not used
+  bool get isPurchasedAndUnused =>
+      purchasedBy != null && usedAt == null && !isExpired;
+
+  /// Check if voucher is expired
+  bool get isExpired {
+    if (expiresAt == null) return false;
+    return DateTime.now().isAfter(expiresAt!);
+  }
+
+  /// Check if voucher is used
+  bool get isUsed => usedAt != null;
+
+  /// Check if voucher can be used for bookings
+  bool get canBeUsedForBookings =>
+      type == VoucherType.fitness && isPurchasedAndUnused;
+
+  /// Get status display text
+  String get statusDisplayText {
+    if (isUsed) return 'Used';
+    if (isExpired) return 'Expired';
+    if (isPurchasedAndUnused) return 'Available';
+    if (isAvailableForPurchase) return 'For Sale';
+    return 'Inactive';
+  }
+
+  /// Generate voucher code (SC-V-YYYY-XXXX format)
+  static String generateVoucherCode() {
+    final year = DateTime.now().year;
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final random = (timestamp % 10000).toString().padLeft(4, '0');
+    return 'SC-V-$year-$random';
+  }
+
+  /// Calculate expiration date (1 year from now)
+  static DateTime calculateExpirationDate() {
+    return DateTime.now().add(const Duration(days: 365));
   }
 
   Map<String, dynamic> toJson() {
@@ -206,7 +204,9 @@ class Voucher {
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
       'purchasedBy': purchasedBy,
-      'purchasedAt': purchasedAt != null ? Timestamp.fromDate(purchasedAt!) : null,
+      'purchasedAt': purchasedAt != null
+          ? Timestamp.fromDate(purchasedAt!)
+          : null,
       'expiresAt': expiresAt != null ? Timestamp.fromDate(expiresAt!) : null,
       'usedAt': usedAt != null ? Timestamp.fromDate(usedAt!) : null,
       'usedForBooking': usedForBooking,
@@ -265,8 +265,10 @@ class Voucher {
     required VoucherType type,
   }) async {
     try {
-      final cutoffDate = DateTime.now().subtract(const Duration(days: 90)); // 3 months
-      
+      final cutoffDate = DateTime.now().subtract(
+        const Duration(days: 90),
+      ); // 3 months
+
       final recentPurchases = await FirebaseFirestore.instance
           .collection('vouchers')
           .where('purchasedBy', isEqualTo: userId)
@@ -274,7 +276,7 @@ class Voucher {
           .where('type', isEqualTo: type.value)
           .where('purchasedAt', isGreaterThan: Timestamp.fromDate(cutoffDate))
           .get();
-      
+
       return recentPurchases.docs.isEmpty;
     } catch (e) {
       return false;
