@@ -114,9 +114,26 @@ class BookingProvider extends ChangeNotifier {
   void setSelectedVoucher(Voucher? voucher) {
     _selectedVoucher = voucher;
 
-    // Update booking details with voucher ID
-    if (_currentBookingDetails != null) {
-      updateBookingDetails(voucherId: voucher?.id);
+    // Update booking details with voucher ID and recalculate points
+    if (_currentBookingDetails != null && _selectedActivity != null) {
+      final originalPrice = _currentBookingDetails!.totalPrice;
+      final voucherDiscount = voucher?.amount ?? 0.0;
+      final finalPrice = (originalPrice - voucherDiscount).clamp(
+        0.0,
+        originalPrice,
+      );
+
+      // Recalculate points based on final price after voucher discount
+      final adjustedPoints = _calculatePointsForAmount(
+        _selectedActivity!,
+        finalPrice,
+        _currentBookingDetails!.isMemberBooking,
+      );
+
+      _currentBookingDetails = _currentBookingDetails!.copyWith(
+        voucherId: voucher?.id,
+        expectedPoints: adjustedPoints,
+      );
     }
 
     notifyListeners();
@@ -155,6 +172,7 @@ class BookingProvider extends ChangeNotifier {
         totalPrice: _currentBookingDetails!.totalPrice,
         expectedPoints: _currentBookingDetails!.expectedPoints,
         metadata: _currentBookingDetails!.additionalInfo,
+        voucherId: _currentBookingDetails!.voucherId, 
       );
 
       if (booking != null) {
@@ -258,6 +276,35 @@ class BookingProvider extends ChangeNotifier {
   int _calculatePoints(Activity activity, bool isMember, int participantCount) {
     final totalPrice = _calculatePrice(activity, isMember, participantCount);
     return BookingService.calculatePointsEarned(activity, totalPrice, isMember);
+  }
+
+  // Add this method after the existing _calculatePoints method:
+
+  /// Calculate points for a specific amount (used when voucher discount is applied)
+  int _calculatePointsForAmount(
+    Activity activity,
+    double finalAmount,
+    bool isMember,
+  ) {
+    var basePoints = finalAmount.floor();
+
+    if (isMember) {
+      basePoints = (basePoints * 1.5).floor();
+    }
+
+    // Activity type multiplier
+    switch (activity.category.toLowerCase()) {
+      case 'wellness':
+        basePoints = (basePoints * 1.2).floor();
+        break;
+      case 'workshops':
+        basePoints = (basePoints * 1.3).floor();
+        break;
+      default:
+        break;
+    }
+
+    return basePoints;
   }
 
   /// Set loading state

@@ -247,7 +247,7 @@ class BookingSuccessScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Points Earned',
+                          'Points to Earn',
                           style: TextStyle(
                             color: Colors.orange[700],
                             fontWeight: FontWeight.bold,
@@ -255,7 +255,7 @@ class BookingSuccessScreen extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          '${booking.pointsEarned} points added to your account',
+                          '${booking.pointsEarned} points will be added to your account, once the activity is completed.',
                           style: TextStyle(
                             color: Colors.orange[600],
                             fontSize: 14,
