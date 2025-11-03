@@ -5,17 +5,23 @@ import 'package:flutter/material.dart';
 import '../models/app_user.dart';
 import '../services/auth_service.dart';
 
-/// Provider for managing authentication state
+/// Central authentication state management with role-based access control
+/// 
+/// Manages Firebase Auth integration, user profile synchronization, and
+/// role-based permissions (admin, club owner, member). Provides real-time
+/// authentication state updates throughout the app.
 class AuthProvider extends ChangeNotifier {
   AuthProvider() {
     _initAuthListener();
   }
-  User? _firebaseUser;
-  AppUser? _appUser;
+
+  // Authentication state
+  User? _firebaseUser; // Firebase Auth user
+  AppUser? _appUser; // Extended user profile from Firestore
   bool _isLoading = false;
   String? _errorMessage;
 
-  // Getters
+  // Core authentication getters
   User? get firebaseUser => _firebaseUser;
   AppUser? get appUser => _appUser;
   bool get isLoading => _isLoading;
@@ -23,23 +29,21 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoggedIn => _firebaseUser != null;
   bool get isAnonymous => _firebaseUser?.isAnonymous ?? false;
 
-  // NEW: Admin check
+  // Role-based access control
   bool get isAdmin => _appUser?.isAdmin ?? false;
-
-  // NEW: Club owner check
   bool get isClubOwner => _appUser?.isClubOwner ?? false;
 
-  /// Initialize authentication state listener
+  /// Initialize real-time authentication state monitoring
   void _initAuthListener() {
     AuthService.authStateChanges.listen((User? user) async {
       _firebaseUser = user;
 
       if (user != null) {
-        // User is signed in, load user data
+        // User signed in - load extended profile from Firestore
         await _loadUserData(user.uid);
         await AuthService.updateLastLogin();
       } else {
-        // User is signed out
+        // User signed out - clear profile data
         _appUser = null;
       }
 
@@ -47,22 +51,21 @@ class AuthProvider extends ChangeNotifier {
     });
   }
 
-  /// Load user data from Firestore (create it if missing)
+  /// Load or create user profile in Firestore with offline fallback
   Future<void> _loadUserData(String uid) async {
     try {
       final docRef = FirebaseFirestore.instance.collection('users').doc(uid);
 
-      // Always try to get the latest version from the server first
+      // Attempt server-first fetch for latest data
       DocumentSnapshot<Map<String, dynamic>> doc;
       try {
         doc = await docRef.get(const GetOptions(source: Source.server));
       } catch (e) {
-        // If offline or fails, fallback to cache
-        // Server fetch failed, fall back to cache
+        // Network issues - fallback to cached data
         doc = await docRef.get(const GetOptions(source: Source.cache));
       }
 
-      // If the document doesn't exist, create it
+      // Create new user profile if doesn't exist
       if (!doc.exists) {
         final fUser = FirebaseAuth.instance.currentUser;
         await docRef.set({
@@ -79,21 +82,20 @@ class AuthProvider extends ChangeNotifier {
           'isMember': false,
           'membershipType': null,
           'membershipExpiry': null,
-          'isClubOwner': false, // Add default value
+          'isClubOwner': false,
         }, SetOptions(merge: true));
 
-        // Fetch again from server after creation
+        // Fetch the newly created document
         doc = await docRef.get(const GetOptions(source: Source.server));
       }
 
       if (doc.exists) {
         _appUser = AppUser.fromFirestore(doc);
-
         notifyListeners();
         return;
       }
 
-      // Fallback minimal
+      // Emergency fallback - create minimal local profile
       final fUser = FirebaseAuth.instance.currentUser;
       if (fUser != null) {
         _appUser = AppUser(
@@ -107,11 +109,11 @@ class AuthProvider extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      // Error loading user data - will retry on next auth state change
+      // Silent failure - will retry on next auth state change
     }
   }
 
-  /// Sign in with email and password
+  /// Authenticate user with email and password
   Future<bool> signIn(String email, String password) async {
     return _performAuthAction(() async {
       await AuthService.signInWithEmail(email, password);
@@ -119,7 +121,7 @@ class AuthProvider extends ChangeNotifier {
     });
   }
 
-  /// Register new user - UPDATED with isClubOwner parameter
+  /// Register new user with optional club owner privileges
   Future<bool> register(
     String email,
     String password,
@@ -131,7 +133,7 @@ class AuthProvider extends ChangeNotifier {
         email,
         password,
         displayName,
-        isClubOwner: isClubOwner, // Pass the parameter to AuthService
+        isClubOwner: isClubOwner,
       );
       final uid = cred?.user?.uid;
       if (uid != null) {
@@ -142,7 +144,7 @@ class AuthProvider extends ChangeNotifier {
     });
   }
 
-  /// Sign out current user
+  /// Sign out current user and clear state
   Future<bool> signOut() async {
     return _performAuthAction(() async {
       await AuthService.signOut();
@@ -150,7 +152,7 @@ class AuthProvider extends ChangeNotifier {
     });
   }
 
-  /// Send password reset email
+  /// Send password reset email to user
   Future<bool> resetPassword(String email) async {
     return _performAuthAction(() async {
       await AuthService.resetPassword(email);
@@ -158,7 +160,7 @@ class AuthProvider extends ChangeNotifier {
     });
   }
 
-  /// Send email verification
+  /// Send email verification to current user
   Future<bool> sendEmailVerification() async {
     return _performAuthAction(() async {
       await AuthService.sendEmailVerification();
@@ -169,13 +171,13 @@ class AuthProvider extends ChangeNotifier {
   /// Check if current user's email is verified
   bool get isEmailVerified => AuthService.isEmailVerified;
 
-  /// Reload user to check verification status
+  /// Refresh user data to check verification status
   Future<void> checkEmailVerification() async {
     await AuthService.reloadUser();
     notifyListeners();
   }
 
-  /// Helper method to perform auth actions with loading and error handling
+  /// Standardized auth action wrapper with loading states and error handling
   Future<bool> _performAuthAction(Future<bool> Function() action) async {
     _setLoading(true);
     _clearError();
@@ -191,29 +193,30 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Set loading state
+  /// Update loading state and notify listeners
   void _setLoading(bool loading) {
     _isLoading = loading;
     notifyListeners();
   }
 
-  /// Set error message
+  /// Set error message and notify listeners
   void _setError(String error) {
     _errorMessage = error;
     notifyListeners();
   }
 
-  /// Clear error message
+  /// Public method to clear error state
   void clearError() {
     _clearError();
   }
 
+  /// Internal error clearing
   void _clearError() {
     _errorMessage = null;
     notifyListeners();
   }
 
-  /// Get user display name or fallback
+  /// Get user display name with intelligent fallbacks
   String get userDisplayName {
     if (_appUser?.displayName.isNotEmpty ?? false) {
       return _appUser!.displayName;
@@ -224,10 +227,10 @@ class AuthProvider extends ChangeNotifier {
     return _firebaseUser?.email?.split('@')[0] ?? 'User';
   }
 
-  /// Get user first name for greetings
+  /// Extract first name for personalized greetings
   String get userFirstName {
     if (_appUser != null) {
-      return _appUser!.firstName; // Now uses the getter from AppUser
+      return _appUser!.firstName;
     }
     return userDisplayName.split(' ')[0];
   }

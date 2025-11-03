@@ -6,11 +6,15 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/colors.dart';
 
+/// Email verification flow with automatic detection and club owner onboarding
+/// 
+/// Guides users through email verification process with periodic status checking,
+/// resend capabilities with cooldown protection, and special messaging for
+/// club owner accounts requiring admin approval workflow.
 class EmailVerificationScreen extends StatefulWidget {
-  // Add this parameter
-
   const EmailVerificationScreen({super.key, this.isClubOwner = false});
-  final bool isClubOwner;
+  
+  final bool isClubOwner; // Determines UI messaging and next steps
 
   @override
   State<EmailVerificationScreen> createState() =>
@@ -18,9 +22,9 @@ class EmailVerificationScreen extends StatefulWidget {
 }
 
 class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
-  Timer? _timer;
-  bool _canResendEmail = true;
-  int _resendCooldown = 0;
+  Timer? _timer; // Periodic verification status checker
+  bool _canResendEmail = true; // Prevents spam resending
+  int _resendCooldown = 0; // Cooldown timer display
 
   @override
   void initState() {
@@ -34,16 +38,14 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     super.dispose();
   }
 
-  /// Start periodic timer to check email verification status
-  ///
-  /// Checks verification status every 3 seconds and automatically
-  /// navigates back to the main app when verification is detected.
+  /// Establish automatic verification detection with 3-second polling
+  /// Automatically navigates back to app when verification is detected
   void _startEmailCheckTimer() {
     _timer = Timer.periodic(const Duration(seconds: 3), (timer) async {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       await authProvider.checkEmailVerification();
 
-      // If email is verified, navigate back to main app
+      // Auto-navigation on successful verification
       if (authProvider.isEmailVerified && mounted) {
         timer.cancel();
         Navigator.of(context).pop();
@@ -57,6 +59,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     });
   }
 
+  /// Implement resend cooldown to prevent email spam
   void _startResendCooldown() {
     setState(() {
       _canResendEmail = false;
@@ -95,7 +98,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Email verification icon
+                // Visual email verification indicator
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
@@ -110,7 +113,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                // Title
+                // Primary heading
                 const Text(
                   'Check Your Email',
                   style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
@@ -118,15 +121,13 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Description
+                // Email destination confirmation
                 Text(
                   'We\'ve sent a verification link to:',
                   style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
-
-                // Email address
                 Text(
                   email,
                   style: const TextStyle(
@@ -138,7 +139,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Club Owner Info Card (only show if user registered as club owner)
+                // Special onboarding for club owners
                 if (widget.isClubOwner) ...[
                   Card(
                     color: Colors.orange[50],
@@ -182,7 +183,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                   ),
                 ],
 
-                // Instructions
+                // Context-aware instructions based on user type
                 Text(
                   widget.isClubOwner
                       ? 'Click the verification link to activate your club owner account. This page will automatically update when verified.'
@@ -192,7 +193,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                // Resend email button
+                // Resend functionality with spam protection
                 SizedBox(
                   width: double.infinity,
                   height: 50,
@@ -239,7 +240,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Check verification status button
+                // Manual verification check for immediate feedback
                 SizedBox(
                   width: double.infinity,
                   height: 50,
@@ -285,7 +286,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                // Skip for now button
+                // Optional flow exit for non-critical verification
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pop();
@@ -296,7 +297,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                   ),
                 ),
 
-                // Error message
+                // Error state display for verification issues
                 if (authProvider.errorMessage != null) ...[
                   const SizedBox(height: 16),
                   Container(

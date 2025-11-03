@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import '../../models/app_notification.dart';
 import '../../services/notification_service.dart';
 
-/// Show notifications in a bottom sheet
+/// Opens notification management interface for booking updates and system alerts
+/// Provides batch operations for efficient notification hygiene
 void showNotificationsDrawer(BuildContext context) {
   showModalBottomSheet(
     context: context,
@@ -24,6 +25,7 @@ void showNotificationsDrawer(BuildContext context) {
   );
 }
 
+/// Comprehensive notification center with real-time updates and management tools
 class NotificationsListView extends StatelessWidget {
   NotificationsListView({super.key, required this.scrollController});
   final ScrollController scrollController;
@@ -38,7 +40,6 @@ class NotificationsListView extends StatelessWidget {
 
     return Column(
       children: [
-        // Header
         Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -109,7 +110,6 @@ class NotificationsListView extends StatelessWidget {
         ),
         const Divider(height: 1),
 
-        // List
         Expanded(
           child: StreamBuilder<List<AppNotification>>(
             stream: _notificationService.getUserNotifications(userId),
@@ -158,6 +158,8 @@ class NotificationsListView extends StatelessWidget {
   }
 }
 
+/// Individual notification with swipe-to-delete and read status management
+/// Supports booking reminders and cancellation alerts with contextual actions
 class NotificationTile extends StatelessWidget {
   NotificationTile({super.key, required this.notification});
   final AppNotification notification;
@@ -217,12 +219,12 @@ class NotificationTile extends StatelessWidget {
           if (!notification.isRead) {
             _notificationService.markAsRead(notification.id);
           }
-          // Could navigate to booking details here if needed
         },
       ),
     );
   }
 
+  /// Human-readable time formatting for intuitive notification aging
   String _formatTimestamp(DateTime timestamp) {
     final now = DateTime.now();
     final diff = now.difference(timestamp);

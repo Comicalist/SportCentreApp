@@ -8,26 +8,30 @@ import '../models/voucher.dart';
 import '../providers/auth_provider.dart';
 import '../services/booking_service.dart';
 
-/// Provider for managing booking state and operations
+/// Central booking state management with voucher integration and real-time updates
+/// 
+/// Manages the complete booking lifecycle: activity selection → configuration → 
+/// confirmation → tracking. Handles voucher discounts, points calculations, and
+/// maintains real-time synchronization with user's booking history.
 class BookingProvider extends ChangeNotifier {
-  // Current booking flow state
-  BookingDetails? _currentBookingDetails;
-  Activity? _selectedActivity;
+  // Booking flow state (temporary during booking process)
+  BookingDetails? _currentBookingDetails; // Current booking being configured
+  Activity? _selectedActivity; // Activity being booked
   bool _isLoading = false;
   String? _errorMessage;
 
-  // User bookings
+  // User's booking history (persistent data)
   List<Booking> _userBookings = [];
   bool _bookingsLoading = false;
-  StreamSubscription<List<Booking>>? _bookingsSubscription;
+  StreamSubscription<List<Booking>>? _bookingsSubscription; // Real-time updates
 
-  // Booking confirmation
-  Booking? _lastCreatedBooking;
+  // Booking completion tracking
+  Booking? _lastCreatedBooking; // For success screen display
 
-  // Voucher handling
-  Voucher? _selectedVoucher;
+  // Voucher system integration
+  Voucher? _selectedVoucher; // Currently selected voucher for discount
 
-  // Getters
+  // State accessors
   BookingDetails? get currentBookingDetails => _currentBookingDetails;
   Activity? get selectedActivity => _selectedActivity;
   bool get isLoading => _isLoading;
@@ -37,22 +41,22 @@ class BookingProvider extends ChangeNotifier {
   Booking? get lastCreatedBooking => _lastCreatedBooking;
   Voucher? get selectedVoucher => _selectedVoucher;
 
-  // Stream for user bookings
+  // Real-time booking stream for UI consumption
   Stream<List<Booking>> get userBookingsStream =>
       _userBookingsStreamController.stream;
   final StreamController<List<Booking>> _userBookingsStreamController =
       StreamController<List<Booking>>.broadcast();
 
-  // Check if user has an active booking flow
+  /// Check if user is currently in booking process
   bool get hasActiveBookingFlow => _currentBookingDetails != null;
 
-  /// Start a new booking flow
+  /// Initialize new booking flow with activity selection
   void startBooking(Activity activity, AuthProvider authProvider) {
-    // Clear any previous booking result
+    // Clear previous booking result for clean state
     _lastCreatedBooking = null;
     _selectedActivity = activity;
 
-    // Initialize booking details with default values
+    // Initialize booking configuration with default values
     _currentBookingDetails = BookingDetails(
       activityId: activity.id,
       bookingDate: activity.date,
@@ -66,7 +70,7 @@ class BookingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Update booking details during the flow
+  /// Update booking configuration during the flow (participant count, dates, etc.)
   void updateBookingDetails({
     String? timeSlotId,
     DateTime? bookingDate,
@@ -82,10 +86,9 @@ class BookingProvider extends ChangeNotifier {
     final newIsMemberBooking =
         isMemberBooking ?? _currentBookingDetails!.isMemberBooking;
 
-    // Update selected voucher if provided
+    // Store voucher ID for later processing
     if (voucherId != null) {
-      // Note: In a real implementation, you might want to fetch the voucher details here
-      // For now, we'll store the voucherId
+      // Voucher details fetched separately via setSelectedVoucher
     }
 
     _currentBookingDetails = _currentBookingDetails!.copyWith(
@@ -110,11 +113,11 @@ class BookingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Set selected voucher for the booking
+  /// Apply voucher discount and recalculate pricing/points
   void setSelectedVoucher(Voucher? voucher) {
     _selectedVoucher = voucher;
 
-    // Update booking details with voucher ID and recalculate points
+    // Recalculate booking details with voucher discount applied
     if (_currentBookingDetails != null && _selectedActivity != null) {
       final originalPrice = _currentBookingDetails!.totalPrice;
       final voucherDiscount = voucher?.amount ?? 0.0;
@@ -123,7 +126,7 @@ class BookingProvider extends ChangeNotifier {
         originalPrice,
       );
 
-      // Recalculate points based on final price after voucher discount
+      // Points earned only on amount actually paid (after voucher)
       final adjustedPoints = _calculatePointsForAmount(
         _selectedActivity!,
         finalPrice,
@@ -139,7 +142,7 @@ class BookingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Confirm and create the booking
+  /// Finalize booking creation with availability check and transaction processing
   Future<bool> confirmBooking() async {
     if (_currentBookingDetails == null || _selectedActivity == null) {
       _setError('No booking details available');
@@ -150,7 +153,7 @@ class BookingProvider extends ChangeNotifier {
     _clearError();
 
     try {
-      // Check availability first
+      // Prevent double-booking by checking current availability
       final isAvailable = await BookingService.checkAvailability(
         _currentBookingDetails!.activityId,
         _currentBookingDetails!.timeSlotId,
@@ -162,7 +165,7 @@ class BookingProvider extends ChangeNotifier {
         return false;
       }
 
-      // Create the booking
+      // Process booking with voucher integration
       final booking = await BookingService.createBooking(
         activityId: _currentBookingDetails!.activityId,
         timeSlotId: _currentBookingDetails!.timeSlotId,
@@ -193,7 +196,7 @@ class BookingProvider extends ChangeNotifier {
     }
   }
 
-  /// Cancel a booking
+  /// Cancel existing booking with optional reason
   Future<bool> cancelBooking(String bookingId, {String? reason}) async {
     _setLoading(true);
     _clearError();
@@ -212,15 +215,15 @@ class BookingProvider extends ChangeNotifier {
     }
   }
 
-  /// Load user bookings
+  /// Establish real-time connection to user's booking history
   Future<void> loadUserBookings(String userId) async {
     _setBookingsLoading(true);
 
     try {
-      // Cancel existing subscription
+      // Clean up previous subscription to prevent memory leaks
       await _bookingsSubscription?.cancel();
 
-      // Listen to real-time updates
+      // Subscribe to real-time booking updates from Firestore
       _bookingsSubscription = BookingService.getUserBookings(userId).listen(
         (bookings) {
           _userBookings = bookings;
@@ -239,31 +242,31 @@ class BookingProvider extends ChangeNotifier {
     }
   }
 
-  /// Refresh user bookings
+  /// Trigger manual refresh of booking data (handled by stream listener)
   Future<void> _refreshUserBookings() async {
-    // This will be handled by the stream listener in loadUserBookings
-    // But we can trigger a manual refresh if needed
+    // Real-time updates handled automatically by stream subscription
   }
 
-  /// Clear the current booking flow
+  /// Clear current booking flow state
   void clearBookingFlow() {
     _clearBookingFlow();
     notifyListeners();
   }
 
-  /// Clear the last created booking result
+  /// Clear booking success result (for navigating away from success screen)
   void clearLastCreatedBooking() {
     _lastCreatedBooking = null;
     notifyListeners();
   }
 
+  /// Internal flow state cleanup
   void _clearBookingFlow() {
     _currentBookingDetails = null;
     _selectedActivity = null;
-    // Don't clear _lastCreatedBooking here - keep it for the success screen
+    // Preserve _lastCreatedBooking for success screen display
   }
 
-  /// Calculate price based on activity and user status
+  /// Calculate total price based on member status and participant count
   double _calculatePrice(
     Activity activity,
     bool isMember,
@@ -272,15 +275,14 @@ class BookingProvider extends ChangeNotifier {
     return BookingService.calculatePrice(activity, isMember, participantCount);
   }
 
-  /// Calculate points based on activity and user status
+  /// Calculate expected points based on full price (before voucher discount)
   int _calculatePoints(Activity activity, bool isMember, int participantCount) {
     final totalPrice = _calculatePrice(activity, isMember, participantCount);
     return BookingService.calculatePointsEarned(activity, totalPrice, isMember);
   }
 
-  // Add this method after the existing _calculatePoints method:
-
-  /// Calculate points for a specific amount (used when voucher discount is applied)
+  /// Calculate points earned on specific amount (used for voucher-discounted bookings)
+  /// Points only awarded on amount actually paid, not original price
   int _calculatePointsForAmount(
     Activity activity,
     double finalAmount,
@@ -292,7 +294,7 @@ class BookingProvider extends ChangeNotifier {
       basePoints = (basePoints * 1.5).floor();
     }
 
-    // Activity type multiplier
+    // Activity category bonuses
     switch (activity.category.toLowerCase()) {
       case 'wellness':
         basePoints = (basePoints * 1.2).floor();
@@ -307,35 +309,36 @@ class BookingProvider extends ChangeNotifier {
     return basePoints;
   }
 
-  /// Set loading state
+  /// Update main loading state and notify UI
   void _setLoading(bool loading) {
     _isLoading = loading;
     notifyListeners();
   }
 
-  /// Set bookings loading state
+  /// Update bookings loading state for UI indicators
   void _setBookingsLoading(bool loading) {
     _bookingsLoading = loading;
     notifyListeners();
   }
 
-  /// Set error message
+  /// Set error message and notify UI for display
   void _setError(String error) {
     _errorMessage = error;
     notifyListeners();
   }
 
-  /// Clear error message
+  /// Public error clearing method
   void clearError() {
     _clearError();
   }
 
+  /// Internal error state cleanup
   void _clearError() {
     _errorMessage = null;
     notifyListeners();
   }
 
-  /// Get upcoming bookings
+  /// Filter user bookings for future activities
   List<Booking> get upcomingBookings {
     final now = DateTime.now();
     return _userBookings
@@ -345,7 +348,7 @@ class BookingProvider extends ChangeNotifier {
         .toList();
   }
 
-  /// Get past bookings
+  /// Filter user bookings for past or completed activities
   List<Booking> get pastBookings {
     final now = DateTime.now();
     return _userBookings
@@ -357,21 +360,20 @@ class BookingProvider extends ChangeNotifier {
         .toList();
   }
 
-  /// Get cancelled bookings
+  /// Filter user bookings for cancelled activities
   List<Booking> get cancelledBookings {
     return _userBookings
         .where((booking) => booking.status == BookingStatus.cancelled)
         .toList();
   }
 
-  /// Check if user can book an activity (no conflicts)
+  /// Check for booking time conflicts (placeholder for future implementation)
   Future<bool> canBookActivity(DateTime startTime, DateTime endTime) async {
-    // This would check for conflicting bookings
-    // For now, return true - implement conflict checking later
+    // TODO: Implement conflict checking logic
     return true;
   }
 
-  /// Get booking by ID
+  /// Find specific booking by ID in user's history
   Booking? getBookingById(String bookingId) {
     try {
       return _userBookings.firstWhere((booking) => booking.id == bookingId);
@@ -380,7 +382,7 @@ class BookingProvider extends ChangeNotifier {
     }
   }
 
-  /// Check if activity is fully booked
+  /// Check real-time activity availability before booking
   Future<bool> isActivityAvailable(
     String activityId,
     String? timeSlotId,
@@ -388,6 +390,7 @@ class BookingProvider extends ChangeNotifier {
     return BookingService.checkAvailability(activityId, timeSlotId);
   }
 
+  /// Clean up resources and subscriptions
   @override
   void dispose() {
     _bookingsSubscription?.cancel();

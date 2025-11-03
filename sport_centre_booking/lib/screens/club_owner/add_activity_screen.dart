@@ -10,6 +10,8 @@ import '../../services/club_service.dart';
 import '../../services/facility_service.dart';
 import '../../services/image_upload_service.dart';
 
+/// Comprehensive activity creation interface for club owners with validation,
+/// image management, facility capacity checks, and scheduling coordination
 class AddActivityScreen extends StatefulWidget {
   const AddActivityScreen({super.key});
 
@@ -22,7 +24,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
   final _clubService = ClubService();
   final _facilityService = FacilityService();
 
-  // Form controllers
+  /// Form input controllers for activity data collection
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _guestPriceController = TextEditingController();
@@ -30,11 +32,9 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
   final _capacityController = TextEditingController();
   final _pointsController = TextEditingController();
   final _imageUrlController = TextEditingController();
-  final _durationController = TextEditingController(
-    text: '60',
-  ); // Default 60 minutes
+  final _durationController = TextEditingController(text: '60');
 
-  // Form state
+  /// Activity configuration state management
   List<Club> _ownedClubs = [];
   List<Facility> _facilities = [];
   Club? _selectedClub;
@@ -45,6 +45,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
   final List<String> _requirements = [];
   bool _isLoading = false;
 
+  /// Image upload management
   String? _uploadedImageUrl;
   bool _isUploadingImage = false;
 
@@ -69,6 +70,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     super.dispose();
   }
 
+  /// Loads approved clubs owned by current user for activity assignment
   Future<void> _loadOwnedClubs() async {
     setState(() => _isLoading = true);
 
@@ -78,7 +80,6 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
         throw Exception('User not authenticated');
       }
 
-      // Get only APPROVED clubs
       final clubs = await _clubService.getApprovedOwnedClubs(ownerId: user.uid);
 
       setState(() {
@@ -111,18 +112,18 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     }
   }
 
+  /// Loads active facilities for selected club with capacity information
   Future<void> _loadFacilities(String clubId) async {
     try {
       final facilities = await _facilityService.getClubFacilities(
         clubId: clubId,
       );
 
-      // Filter only active facilities
       final activeFacilities = facilities.where((f) => f.isActive).toList();
 
       setState(() {
         _facilities = activeFacilities;
-        _selectedFacility = null; // Reset facility selection when club changes
+        _selectedFacility = null;
       });
 
       if (activeFacilities.isEmpty) {
@@ -149,6 +150,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     }
   }
 
+  /// Date selection with future date restriction for activity scheduling
   Future<void> _selectDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -164,6 +166,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     }
   }
 
+  /// Time selection for activity scheduling
   Future<void> _selectTime() async {
     final picked = await showTimePicker(
       context: context,
@@ -177,6 +180,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     }
   }
 
+  /// Calculates and displays activity end time based on duration
   String _calculateEndTime() {
     try {
       final duration = int.tryParse(_durationController.text);
@@ -200,6 +204,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     }
   }
 
+  /// Adds activity requirement through dialog interface
   void _addRequirement() {
     showDialog(
       context: context,
@@ -241,12 +246,14 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     );
   }
 
+  /// Removes requirement from activity list
   void _removeRequirement(int index) {
     setState(() {
       _requirements.removeAt(index);
     });
   }
 
+  /// Builds comprehensive image upload section with validation requirements
   Widget _buildImageSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -254,7 +261,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
         _buildSectionTitle('Activity Image'),
         const SizedBox(height: 8),
 
-        // Requirements info box
+        /// Image upload requirements and guidelines
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -278,7 +285,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
 
         const SizedBox(height: 12),
 
-        // Image preview or placeholder
+        /// Image preview area with fallback placeholder
         Container(
           width: double.infinity,
           height: 200,
@@ -334,7 +341,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
 
         const SizedBox(height: 12),
 
-        // Upload and remove buttons
+        /// Image management controls
         Row(
           children: [
             Expanded(
@@ -378,13 +385,13 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     );
   }
 
+  /// Handles image upload process with temporary ID generation
   Future<void> _uploadImage() async {
     setState(() {
       _isUploadingImage = true;
     });
 
     try {
-      // Generate temporary ID for upload path
       final tempId = DateTime.now().millisecondsSinceEpoch.toString();
 
       final imageUrl = await ImageUploadService.pickAndUploadImage(
@@ -405,9 +412,9 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     }
   }
 
+  /// Removes uploaded image with storage cleanup
   void _removeImage() {
     if (_uploadedImageUrl != null) {
-      // Optionally delete from storage
       ImageUploadService.deleteImage(_uploadedImageUrl!);
       setState(() {
         _uploadedImageUrl = null;
@@ -415,6 +422,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     }
   }
 
+  /// Creates new activity with comprehensive validation and capacity checks
   Future<void> _createActivity() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -448,7 +456,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
         throw Exception('User not authenticated');
       }
 
-      // Validate capacity vs facility max capacity
+      /// Facility capacity validation
       final capacity = int.parse(_capacityController.text);
       if (capacity > _selectedFacility!.maxCapacity) {
         throw Exception(
@@ -456,14 +464,14 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
         );
       }
 
-      // Create time string
+      /// Time formatting and duration calculation
       final timeString =
           '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
       final duration = int.parse(_durationController.text);
 
-      // Create the activity
+      /// Activity object creation with all required fields
       final activity = Activity(
-        id: '', // Will be generated by Firestore
+        id: '',
         clubId: _selectedClub!.id,
         facilityId: _selectedFacility!.id,
         clubName: _selectedClub!.name,
@@ -486,7 +494,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
         createdBy: user.uid,
       );
 
-      // Create in Firestore with validation
+      /// Firestore creation with business rule validation
       await ActivityService.createActivity(
         activity: activity,
         currentUserId: user.uid,
@@ -517,6 +525,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     }
   }
 
+  /// Provides category-appropriate default images for activities
   String _getDefaultImage(String category) {
     switch (category) {
       case 'Wellness':
@@ -532,6 +541,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     }
   }
 
+  /// Standardized section title styling
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
@@ -559,7 +569,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
 
               const SizedBox(height: 16),
 
-              // Club Selection
+              /// Club and facility selection with capacity constraints
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -642,7 +652,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
 
               const SizedBox(height: 16),
 
-              // Activity Details
+              /// Activity information and categorization
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -714,7 +724,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
 
               const SizedBox(height: 16),
 
-              // Date & Time
+              /// Scheduling configuration with end time calculation
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -755,7 +765,8 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      // Duration field
+                      
+                      /// Duration input with end time preview
                       Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16.0,
@@ -771,8 +782,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                             helperMaxLines: 2,
                           ),
                           keyboardType: TextInputType.number,
-                          onChanged: (_) =>
-                              setState(() {}), // Refresh end time display
+                          onChanged: (_) => setState(() {}),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
                               return 'Please enter duration';
@@ -795,7 +805,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
 
               const SizedBox(height: 16),
 
-              // Capacity & Pricing
+              /// Capacity and pricing structure configuration
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -837,6 +847,8 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
+                      
+                      /// Dual pricing structure for guest and member rates
                       Row(
                         children: [
                           Expanded(
@@ -911,7 +923,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
 
               const SizedBox(height: 16),
 
-              // Requirements
+              /// Activity requirements and prerequisites management
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -964,10 +976,11 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
 
               const SizedBox(height: 24),
 
-              _buildImageSection(), // Add image section here
+              _buildImageSection(),
 
               const SizedBox(height: 32),
 
+              /// Activity creation submission
               SizedBox(
                 width: double.infinity,
                 height: 50,

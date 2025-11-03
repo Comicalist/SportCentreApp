@@ -8,13 +8,15 @@ import 'providers/auth_provider.dart';
 import 'providers/booking_provider.dart';
 import 'widgets/auth/auth_wrapper.dart';
 
-// Global logger instance
+/// Application-wide logging for debugging and production monitoring
 final logger = Logger(
   printer: PrettyPrinter(
     dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart,
   ),
 );
 
+/// Entry point for sport centre booking application
+/// Initializes Firebase backend services and state management
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -32,17 +34,16 @@ void main() async {
       )
       ..w('Continuing app startup despite Firebase initialization failure');
 
-    // In a production app, you might want to:
-    // 1. Show an error dialog to the user
-    // 2. Prevent the app from continuing
-    // 3. Send crash reports to a service like Firebase Crashlytics
-
-    // For now, we'll continue but the app might not work properly
+    // Production consideration: implement proper error handling
+    // - User notification of service unavailability
+    // - Crash reporting for monitoring
+    // - Graceful degradation or app termination
   }
 
   runApp(const MyApp());
 }
 
+/// Root application widget with provider state management and Material theme
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 

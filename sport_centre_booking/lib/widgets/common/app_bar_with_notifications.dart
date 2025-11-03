@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import '../../services/notification_service.dart';
 import '../notifications/notifications_drawer.dart';
 
-/// AppBar with notification bell icon
+/// Unified app bar providing real-time notification access across all screens
+/// Displays unread count badges to encourage user engagement with updates
 class AppBarWithNotifications extends StatelessWidget
     implements PreferredSizeWidget {
   const AppBarWithNotifications({super.key, required this.title, this.actions});
@@ -19,7 +20,6 @@ class AppBarWithNotifications extends StatelessWidget
       title: Text(title),
       actions: [
         if (userId != null) ...[
-          // Bell icon with badge
           StreamBuilder<int>(
             stream: NotificationService().getUnreadCount(userId),
             builder: (context, snapshot) {
@@ -35,6 +35,7 @@ class AppBarWithNotifications extends StatelessWidget
                     },
                     tooltip: 'Notifications',
                   ),
+                  // Visual urgency indicator for pending notifications
                   if (unreadCount > 0)
                     Positioned(
                       right: 8,
@@ -65,7 +66,6 @@ class AppBarWithNotifications extends StatelessWidget
             },
           ),
         ],
-        // Add any additional actions passed in
         ...?actions,
       ],
     );

@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import '../../models/club.dart';
 import '../../services/blocking_service.dart';
 
+/// Club operating hours management with time blocking functionality
+/// Handles recurring weekly blocks and one-time closures with conflict detection
 class EditOpenHoursScreen extends StatefulWidget {
   const EditOpenHoursScreen({super.key, required this.club});
   final Club club;
@@ -19,22 +21,23 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
   @override
   void initState() {
     super.initState();
+    // Initialize with existing club blocked times for editing
     blockedTimes = List<Map<String, dynamic>>.from(widget.club.blockedTimes);
   }
 
+  /// Create or edit blocked time periods with validation and conflict checking
+  /// Supports both recurring weekly patterns and one-time date ranges
   Future<void> _pickBlockedTime({Map<String, dynamic>? existing}) async {
     final now = DateTime.now();
     final timeFormat = DateFormat('HH:mm');
 
+    // Initialize form state from existing block or defaults
     String? startDayOfWeek = existing?['startDayOfWeek'];
     String? endDayOfWeek = existing?['endDayOfWeek'];
-
     String? startDate = existing?['startDate'];
     String? endDate = existing?['endDate'];
-
     String? startTime = existing?['startTime'];
     String? endTime = existing?['endTime'];
-
     bool recurring = existing?['recurring'] ?? false;
     String reason = existing?['reason'] ?? '';
 
@@ -50,6 +53,7 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Business reason for blocking time
                   TextFormField(
                     initialValue: reason,
                     decoration: const InputDecoration(
@@ -59,11 +63,15 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
                     onChanged: (val) => setDialogState(() => reason = val),
                   ),
                   const SizedBox(height: 12),
+                  
+                  // Toggle between recurring weekly and one-time blocks
                   SwitchListTile(
                     title: const Text('Recurring Weekly'),
                     value: recurring,
                     onChanged: (val) => setDialogState(() => recurring = val),
                   ),
+                  
+                  // Recurring weekly pattern configuration
                   if (recurring) ...[
                     DropdownButtonFormField<String>(
                       decoration: const InputDecoration(
@@ -112,6 +120,7 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
                           setDialogState(() => endDayOfWeek = val),
                     ),
                   ] else ...[
+                    // One-time date range configuration
                     ListTile(
                       title: const Text('Start Date'),
                       subtitle: Text(startDate ?? 'No date selected'),
@@ -155,6 +164,8 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
                   ],
 
                   const SizedBox(height: 12),
+                  
+                  // Time range selection for blocked periods
                   ListTile(
                     title: const Text('Start Time'),
                     subtitle: Text(startTime ?? '--:--'),
@@ -209,7 +220,7 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
                   child: const Text('Cancel'),
                 ),
 
-                // Save + Validation
+                // Validate and save blocked time configuration
                 ElevatedButton(
                   onPressed: () {
                     if ((recurring &&
@@ -221,6 +232,7 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
                             startTime != null &&
                             endTime != null)) {
                       if (!recurring) {
+                        // Validate date range for one-time blocks
                         final start = DateTime.parse(startDate!);
                         final end = DateTime.parse(endDate!);
                         if (start.isAfter(end)) {
@@ -234,7 +246,7 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
                           return;
                         }
 
-                        // If same date, validate times
+                        // Validate time range for same-day blocks
                         if (start.isAtSameMomentAs(end)) {
                           final startParts = startTime!
                               .split(':')
@@ -272,7 +284,7 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
                         }
                       }
 
-                      // If all good, save
+                      // Create validated blocked time entry
                       final newEntry = {
                         'startDayOfWeek': recurring ? startDayOfWeek : null,
                         'endDayOfWeek': recurring ? endDayOfWeek : null,
@@ -296,14 +308,14 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
       },
     ).then((result) async {
       if (result != null) {
-        // NEW: Check for conflicting activities before saving
+        // Check for conflicting activities before applying block
         final conflicts = await BlockingService.getActivitiesInTimeRange(
           clubId: widget.club.id,
           blockData: result,
         );
 
         if (conflicts.isNotEmpty && mounted) {
-          // Show warning dialog
+          // Show warning dialog for existing activity conflicts
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
@@ -348,10 +360,10 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
               ],
             ),
           );
-          return; // Don't save the block
+          return;
         }
 
-        // No conflicts - proceed with saving
+        // No conflicts - save the blocked time configuration
         setState(() {
           if (existing != null) {
             final index = blockedTimes.indexOf(existing);
@@ -365,6 +377,7 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
     });
   }
 
+  /// Persist blocked times configuration to Firestore
   Future<void> _saveToFirestore() async {
     try {
       await FirebaseFirestore.instance
@@ -389,6 +402,7 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Display all configured blocked time periods
           for (final block in blockedTimes)
             Card(
               child: ListTile(
@@ -408,10 +422,12 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Edit existing blocked time
                     IconButton(
                       icon: const Icon(Icons.edit),
                       onPressed: () => _pickBlockedTime(existing: block),
                     ),
+                    // Remove blocked time period
                     IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
                       onPressed: () async {
@@ -424,6 +440,8 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
               ),
             ),
           const SizedBox(height: 24),
+          
+          // Add new blocked time period
           Center(
             child: ElevatedButton.icon(
               icon: const Icon(Icons.add),

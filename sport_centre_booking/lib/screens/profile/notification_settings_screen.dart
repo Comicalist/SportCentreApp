@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../../models/notification_preferences.dart';
 import '../../services/notification_service.dart';
 
+/// User notification preferences management interface
+/// Configures delivery method (email/in-app) and timing for booking reminders
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
 
@@ -25,6 +27,7 @@ class _NotificationSettingsScreenState
     _loadPreferences();
   }
 
+  /// Load user's existing notification preferences from Firestore
   Future<void> _loadPreferences() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return;
@@ -37,6 +40,7 @@ class _NotificationSettingsScreenState
     });
   }
 
+  /// Save updated notification preferences with user feedback
   Future<void> _savePreferences() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) {
@@ -144,7 +148,7 @@ class _NotificationSettingsScreenState
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                // Method selection
+                /// Notification delivery method selection
                 Text(
                   'Preferred Method',
                   style: Theme.of(context).textTheme.titleLarge,
@@ -184,7 +188,7 @@ class _NotificationSettingsScreenState
                 const Divider(),
                 const SizedBox(height: 16),
 
-                // Timing
+                /// Booking reminder timing configuration
                 Text(
                   'Booking Reminder',
                   style: Theme.of(context).textTheme.titleLarge,
@@ -227,6 +231,8 @@ class _NotificationSettingsScreenState
   }
 }
 
+/// Interactive notification method selection card with visual feedback
+/// Supports email and in-app notification preferences
 class _MethodCard extends StatelessWidget {
   const _MethodCard({
     required this.icon,

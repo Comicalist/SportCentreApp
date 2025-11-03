@@ -1,21 +1,22 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-/// Service for handling Firebase Authentication
+/// Firebase authentication service for sport centre booking system
+/// Handles user registration, login, email verification, and profile creation
 class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Get current user
+  /// Current authenticated user instance
   static User? get currentUser => _auth.currentUser;
 
-  /// Stream of authentication state changes
+  /// Real-time authentication state monitoring for UI updates
   static Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  /// Check if user is logged in
+  /// Authentication status check for access control
   static bool get isLoggedIn => currentUser != null;
 
-  /// Sign in with email and password
+  /// Secure user login with session tracking and error handling
   static Future<UserCredential?> signInWithEmail(
     String email,
     String password,
@@ -26,7 +27,7 @@ class AuthService {
         password: password,
       );
 
-      // Update last login
+      /// Track login activity for user analytics and security
       await updateLastLogin();
 
       return result;
@@ -37,17 +38,16 @@ class AuthService {
     }
   }
 
-  /// Register new user with email and password
-  ///
-  /// Creates a new Firebase user account and automatically sends email verification.
+  /// User registration with automatic profile creation and email verification
+  /// Creates comprehensive user document with points system and membership defaults
   ///
   /// Parameters:
-  /// - [email]: User's email address
-  /// - [password]: User's password (must meet validation requirements)
-  /// - [displayName]: User's full name
-  /// - [isClubOwner]: Optional flag to mark user as club owner (default: false)
+  /// - [email]: User's email address for authentication and communication
+  /// - [password]: Secure password meeting validation requirements
+  /// - [displayName]: User's full name for personalization
+  /// - [isClubOwner]: Business flag for club management permissions (default: false)
   ///
-  /// Returns [UserCredential] on success or throws exception on failure.
+  /// Returns [UserCredential] on success or throws detailed exception on failure
   static Future<UserCredential?> registerWithEmail(
     String email,
     String password,
@@ -70,7 +70,7 @@ class AuthService {
           isClubOwner: isClubOwner,
         );
 
-        // Send email verification automatically
+        /// Automatic email verification for account security
         await result.user!.sendEmailVerification();
       }
 
@@ -82,7 +82,7 @@ class AuthService {
     }
   }
 
-  /// Sign out current user
+  /// Secure user logout with session cleanup
   static Future<void> signOut() async {
     try {
       await _auth.signOut();
@@ -91,7 +91,7 @@ class AuthService {
     }
   }
 
-  /// Send password reset email
+  /// Password recovery via secure email link
   static Future<void> resetPassword(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email.trim());
@@ -102,7 +102,7 @@ class AuthService {
     }
   }
 
-  /// Send email verification
+  /// Email verification for account security and communication reliability
   static Future<void> sendEmailVerification() async {
     try {
       final user = currentUser;
@@ -114,30 +114,26 @@ class AuthService {
     }
   }
 
-  /// Check if current user's email is verified
+  /// Email verification status for access control and user prompting
   static bool get isEmailVerified => currentUser?.emailVerified ?? false;
 
-  /// Reload current user to check verification status
-  ///
-  /// Refreshes the current user's data from Firebase to get updated
-  /// email verification status and other user properties.
+  /// Refresh user authentication data for real-time verification status
+  /// Updates email verification status and other user properties from Firebase
   static Future<void> reloadUser() async {
     try {
       await currentUser?.reload();
     } catch (e) {
-      // Silently fail - not critical for app functionality
+      /// Silent failure - non-critical for app functionality
     }
   }
 
-  /// Create user document in Firestore with default values
-  ///
-  /// Creates a comprehensive user profile document in Firestore with
-  /// default values for points, membership, and booking history.
+  /// Initialize comprehensive user profile in Firestore with business defaults
+  /// Creates user document with points system, membership tracking, and booking history
   ///
   /// Parameters:
-  /// - [user]: Firebase user instance
-  /// - [displayName]: User's display name
-  /// - [isClubOwner]: Flag indicating if user is a club owner
+  /// - [user]: Firebase authenticated user instance
+  /// - [displayName]: User's display name for personalization
+  /// - [isClubOwner]: Business role flag for club management permissions
   static Future<void> _createUserDocument(
     User user,
     String displayName, {
@@ -154,27 +150,27 @@ class AuthService {
       'role': 'user',
       'isActive': true,
 
-      // Points and rewards system
+      /// Points and rewards system initialization
       'totalPoints': 0,
       'availablePoints': 0,
       'lifetimePointsEarned': 0,
 
-      // Membership system
+      /// Membership system defaults for upgrade tracking
       'isMember': false,
       'membershipType': null,
       'membershipExpiry': null,
 
-      // User type flags
+      /// Business role flags for access control
       'isClubOwner': isClubOwner,
 
-      // Booking and profile data
+      /// Booking system integration and profile management
       'bookingHistory': [],
       'upcomingBookings': [],
       'profileImageUrl': '',
     }, SetOptions(merge: true));
   }
 
-  /// Update user's last login time
+  /// Track user login activity for analytics and security monitoring
   static Future<void> updateLastLogin() async {
     final user = currentUser;
     if (user != null) {
@@ -183,12 +179,13 @@ class AuthService {
           'lastLoginAt': FieldValue.serverTimestamp(),
         });
       } catch (e) {
-        // Silently fail - not critical for user experience
+        /// Silent failure - non-critical for user experience
       }
     }
   }
 
-  /// Handle Firebase Auth exceptions and return user-friendly messages
+  /// Convert Firebase authentication errors to user-friendly messages
+  /// Provides localized error handling for better user experience
   static String _handleAuthException(FirebaseAuthException e) {
     switch (e.code) {
       case 'user-not-found':

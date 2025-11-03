@@ -9,6 +9,8 @@ import '../../providers/booking_provider.dart';
 import '../../utils/constants.dart';
 import 'booking_success_screen.dart';
 
+/// Final booking confirmation screen displaying activity details, pricing breakdown,
+/// and payment terms before confirming the reservation
 class BookingConfirmationScreen extends StatefulWidget {
   const BookingConfirmationScreen({super.key, required this.activity});
   final Activity activity;
@@ -57,6 +59,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     );
   }
 
+  /// Builds welcoming header with confirmation progress indicator
   Widget _buildConfirmationHeader() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -94,6 +97,8 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     );
   }
 
+  /// Displays comprehensive booking summary with activity details, 
+  /// participant count, and pricing breakdown including member/guest rates
   Widget _buildBookingSummary(dynamic bookingDetails) {
     return Card(
       elevation: 2,
@@ -108,15 +113,13 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Activity name and category
+            /// Activity image and basic info display
             Row(
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Image.network(
-                    widget
-                        .activity
-                        .displayImageUrl, // ✅ Changed from widget.activity.imageUrl
+                    widget.activity.displayImageUrl,
                     width: 60,
                     height: 60,
                     fit: BoxFit.cover,
@@ -189,7 +192,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
             const Divider(),
             const SizedBox(height: 16),
 
-            // Booking details
+            /// Reservation details: date, time, location, participants
             _buildSummaryRow(
               'Date',
               DateFormat(
@@ -207,7 +210,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
             const Divider(),
             const SizedBox(height: 16),
 
-            // Pricing breakdown
+            /// Dynamic pricing display based on member vs guest status
             Consumer<AuthProvider>(
               builder: (context, authProvider, child) {
                 return Column(
@@ -230,6 +233,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                       isTotal: true,
                     ),
                     const SizedBox(height: 12),
+                    /// Points reward preview for activity participation
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -261,6 +265,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     );
   }
 
+  /// Reusable summary row component with styling options for totals and highlights
   Widget _buildSummaryRow(
     String label,
     String value, {
@@ -295,6 +300,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     );
   }
 
+  /// Payment terms and collection method information
   Widget _buildPaymentInfo() {
     return Card(
       elevation: 2,
@@ -334,6 +340,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     );
   }
 
+  /// Essential booking policies and participant guidelines
   Widget _buildImportantInfo() {
     return Card(
       elevation: 2,
@@ -369,6 +376,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     );
   }
 
+  /// Reusable info item with icon and text for policy display
   Widget _buildInfoItem(IconData icon, String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -382,11 +390,13 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     );
   }
 
+  /// Final confirmation button with error handling and loading states
   Widget _buildConfirmButton() {
     return Consumer<BookingProvider>(
       builder: (context, bookingProvider, child) {
         return Column(
           children: [
+            /// Error message display for booking failures
             if (bookingProvider.errorMessage != null) ...[
               Container(
                 padding: const EdgeInsets.all(12),
@@ -454,6 +464,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     );
   }
 
+  /// Processes final booking confirmation and navigates to success screen
   Future<void> _confirmBooking() async {
     final bookingProvider = Provider.of<BookingProvider>(
       context,
@@ -463,7 +474,6 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     final success = await bookingProvider.confirmBooking();
 
     if (success && mounted) {
-      // Navigate to success screen
       unawaited(
         Navigator.pushReplacement(
           context,
@@ -476,6 +486,5 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
         ),
       );
     }
-    // Error handling is done by the provider and shown in the UI
   }
 }

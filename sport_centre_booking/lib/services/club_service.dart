@@ -1,17 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/club.dart';
 
+/// Club management service with administrative approval workflow
+/// Handles club registration, approval process, ownership validation, and cascade deletion
 class ClubService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // ========== APPROVAL SYSTEM METHODS ==========
 
-  /// Submit a club for approval (instead of directly adding)
+  /// Submit new club for administrative approval instead of direct activation
+  /// Prevents unauthorized clubs from appearing in public listings
   Future<void> submitClubForApproval({required Club club}) async {
     try {
       final docRef = _firestore.collection('clubs').doc();
 
-      // Create club with pending approval status
+      /// Create club in pending state requiring admin review
       final pendingClub = club.copyWith(
         id: docRef.id,
         isApproved: false,
@@ -24,7 +27,7 @@ class ClubService {
     }
   }
 
-  /// Admin: Get all pending clubs for approval
+  /// Administrative interface: retrieve all clubs awaiting approval
   Future<List<Club>> getPendingClubs() async {
     try {
       final snapshot = await _firestore
@@ -35,7 +38,7 @@ class ClubService {
 
       return snapshot.docs.map(Club.fromFirestore).toList();
     } catch (e) {
-      // Fallback: try without ordering
+      /// Fallback for missing composite index during development
       try {
         final snapshot = await _firestore
             .collection('clubs')
@@ -52,7 +55,7 @@ class ClubService {
     }
   }
 
-  /// Admin: Approve a club
+  /// Administrative action: approve club for public visibility and booking
   Future<void> approveClub(String clubId) async {
     try {
       await _firestore.collection('clubs').doc(clubId).update({
@@ -64,7 +67,7 @@ class ClubService {
     }
   }
 
-  /// Admin: Reject a club
+  /// Administrative action: reject and remove club application
   Future<void> rejectClub(String clubId) async {
     try {
       await _firestore.collection('clubs').doc(clubId).delete();
@@ -73,7 +76,7 @@ class ClubService {
     }
   }
 
-  /// Get only approved clubs for normal users
+  /// Public club directory: only approved and active clubs for user discovery
   Future<List<Club>> getApprovedClubs() async {
     try {
       final snapshot = await _firestore
@@ -88,9 +91,9 @@ class ClubService {
     }
   }
 
-  // ========== EXISTING METHODS (UPDATED) ==========
+  // ========== CLUB OWNER MANAGEMENT ==========
 
-  /// Fetch all clubs owned by a specific user (both approved and pending)
+  /// Club owner dashboard: retrieve all owned clubs regardless of approval status
   Future<List<Club>> getOwnedClubs({required String ownerId}) async {
     try {
       final snapshot = await _firestore
@@ -100,7 +103,7 @@ class ClubService {
 
       final clubs = snapshot.docs.map(Club.fromFirestore).toList();
 
-      // Sort manually to avoid needing composite index
+      /// Manual sorting to avoid composite index requirement
       clubs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       return clubs;
@@ -109,10 +112,10 @@ class ClubService {
     }
   }
 
-  /// Fetch only approved clubs owned by a specific user
+  /// Club owner operations: only approved clubs for activity management
   Future<List<Club>> getApprovedOwnedClubs({required String ownerId}) async {
-    // Use manual filtering approach to avoid composite index issues
-    // Once the composite index is fully built, this can be optimized
+    /// Manual filtering approach to avoid composite index complexity
+    /// Can be optimized once composite index is fully deployed
     try {
       final snapshot = await _firestore
           .collection('clubs')
@@ -132,19 +135,19 @@ class ClubService {
     }
   }
 
-  /// Count of owned clubs for dashboard stats (all statuses)
+  /// Dashboard analytics: total clubs owned across all statuses
   Future<int> getOwnedClubCount({required String ownerId}) async {
     final clubs = await getOwnedClubs(ownerId: ownerId);
     return clubs.length;
   }
 
-  /// Count of approved owned clubs for dashboard stats
+  /// Dashboard analytics: operational clubs available for activity management
   Future<int> getApprovedOwnedClubCount({required String ownerId}) async {
     final clubs = await getApprovedOwnedClubs(ownerId: ownerId);
     return clubs.length;
   }
 
-  /// Count of pending owned clubs
+  /// Dashboard analytics: clubs awaiting administrative approval
   Future<int> getPendingOwnedClubCount({required String ownerId}) async {
     try {
       final snapshot = await _firestore
@@ -159,7 +162,7 @@ class ClubService {
     }
   }
 
-  /// Add a new club directly (use only for admin or testing - prefer submitClubForApproval)
+  /// Direct club creation bypassing approval (administrative use only)
   Future<void> addClub({required Club club}) async {
     final docRef = club.id.isNotEmpty
         ? _firestore.collection('clubs').doc(club.id)
@@ -168,10 +171,10 @@ class ClubService {
     await docRef.set(club.toMap());
   }
 
-  // update Club method:
+  /// Update existing club with approval status validation
   Future<void> updateClub(Club club) async {
     try {
-      // Prevent activating unapproved clubs on server side
+      /// Business rule: prevent activation of unapproved clubs
       if (club.isActive && !club.isApproved) {
         throw Exception('Cannot activate club until approved by admin');
       }
@@ -182,10 +185,11 @@ class ClubService {
     }
   }
 
-  /// Delete a club and all its facilities and activities (with validation)
+  /// Comprehensive club deletion with booking conflict prevention
+  /// Validates no active future bookings exist before allowing deletion
   Future<void> deleteClub(String clubId) async {
     try {
-      // 1️⃣ Check for active future bookings in club's activities
+      /// Check for active future bookings to prevent data integrity issues
       final activitiesSnapshot = await _firestore
           .collection('activities')
           .where('clubId', isEqualTo: clubId)
@@ -199,9 +203,8 @@ class ClubService {
             ? DateTime.parse(activityData['date'])
             : (activityData['date'] as Timestamp).toDate();
 
-        // Check if activity is in the future
+        /// Only check future activities for active bookings
         if (activityDate.isAfter(now)) {
-          // Check for active bookings
           final bookingsSnapshot = await _firestore
               .collection('bookings')
               .where('activityId', isEqualTo: activityDoc.id)
@@ -217,14 +220,15 @@ class ClubService {
         }
       }
 
-      // 2️⃣ Delete all activities (no active future bookings at this point)
+      /// Cascade deletion: remove all club-related data atomically
       final batch = _firestore.batch();
 
+      /// Remove all club activities (safe after booking validation)
       for (final activityDoc in activitiesSnapshot.docs) {
         batch.delete(activityDoc.reference);
       }
 
-      // 3️⃣ Delete all facilities
+      /// Remove all club facilities
       final facilitiesSnapshot = await _firestore
           .collection('facilities')
           .where('clubId', isEqualTo: clubId)
@@ -234,31 +238,31 @@ class ClubService {
         batch.delete(facilityDoc.reference);
       }
 
-      // 4️⃣ Delete the club itself
+      /// Remove the club record itself
       batch.delete(_firestore.collection('clubs').doc(clubId));
 
-      // Commit all deletions
+      /// Execute all deletions as atomic transaction
       await batch.commit();
     } catch (e) {
       throw Exception('Failed to delete club: $e');
     }
   }
 
-  /// Soft delete - deactivate a club
+  /// Soft deletion: temporarily disable club without data loss
   Future<void> deactivateClub(String clubId) async {
     await _firestore.collection('clubs').doc(clubId).update({
       'isActive': false,
     });
   }
 
-  /// Reactivate a club
+  /// Restore previously deactivated club to operational status
   Future<void> reactivateClub(String clubId) async {
     await _firestore.collection('clubs').doc(clubId).update({'isActive': true});
   }
 
   // ========== UTILITY METHODS ==========
 
-  /// Optional: Fetch number of activities in a club (for dashboard)
+  /// Dashboard metrics: count activities offered by specific club
   Future<int> getActivitiesCount(String clubId) async {
     try {
       final snapshot = await _firestore
@@ -271,7 +275,7 @@ class ClubService {
     }
   }
 
-  /// Get club by ID
+  /// Retrieve specific club details for management and display
   Future<Club?> getClubById(String clubId) async {
     try {
       final doc = await _firestore.collection('clubs').doc(clubId).get();
@@ -284,7 +288,7 @@ class ClubService {
     }
   }
 
-  /// Get pending clubs count for admin dashboard
+  /// Administrative dashboard: count clubs awaiting approval
   Future<int> getPendingClubsCount() async {
     try {
       final snapshot = await _firestore
@@ -297,7 +301,7 @@ class ClubService {
     }
   }
 
-  /// Get total clubs count (for admin)
+  /// Administrative dashboard: total clubs in system across all statuses
   Future<int> getTotalClubsCount() async {
     try {
       final snapshot = await _firestore.collection('clubs').get();

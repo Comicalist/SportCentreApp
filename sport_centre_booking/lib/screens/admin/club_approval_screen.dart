@@ -3,6 +3,11 @@ import 'package:flutter/material.dart';
 import '../../models/club.dart';
 import '../../services/club_service.dart';
 
+/// Administrative workflow for reviewing and approving new club registrations
+///
+/// Allows system administrators to review pending club applications, view
+/// submission details, and approve or reject clubs. Approved clubs can then
+/// create activities and manage their facilities within the platform.
 class ClubApprovalScreen extends StatefulWidget {
   const ClubApprovalScreen({super.key});
 
@@ -13,7 +18,7 @@ class ClubApprovalScreen extends StatefulWidget {
 class _ClubApprovalScreenState extends State<ClubApprovalScreen> {
   final ClubService _clubService = ClubService();
   late Future<List<Club>> _pendingClubsFuture;
-  bool _isLoading = false;
+  bool _isLoading = false; // Track individual approval/rejection operations
 
   @override
   void initState() {
@@ -21,6 +26,7 @@ class _ClubApprovalScreenState extends State<ClubApprovalScreen> {
     _refreshData();
   }
 
+  /// Reload pending clubs list from server
   void _refreshData() {
     setState(() {
       _pendingClubsFuture = _clubService.getPendingClubs();
@@ -46,6 +52,7 @@ class _ClubApprovalScreenState extends State<ClubApprovalScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
+                // Error state with retry option
                 if (snapshot.hasError) {
                   return Center(
                     child: Column(
@@ -75,6 +82,7 @@ class _ClubApprovalScreenState extends State<ClubApprovalScreen> {
 
                 final pendingClubs = snapshot.data ?? [];
 
+                // Empty state - all clubs processed
                 if (pendingClubs.isEmpty) {
                   return const Center(
                     child: Column(
@@ -96,6 +104,7 @@ class _ClubApprovalScreenState extends State<ClubApprovalScreen> {
                   );
                 }
 
+                // Display pending clubs requiring admin review
                 return ListView.builder(
                   itemCount: pendingClubs.length,
                   itemBuilder: (context, index) {
@@ -108,6 +117,7 @@ class _ClubApprovalScreenState extends State<ClubApprovalScreen> {
     );
   }
 
+  /// Build club application card with review details and action buttons
   Widget _buildClubCard(Club club) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -117,6 +127,7 @@ class _ClubApprovalScreenState extends State<ClubApprovalScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Club name with pending status badge
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -151,6 +162,8 @@ class _ClubApprovalScreenState extends State<ClubApprovalScreen> {
               ],
             ),
             const SizedBox(height: 12),
+
+            // Club application details
             _buildInfoRow(
               Icons.location_on,
               'Location',
@@ -163,6 +176,8 @@ class _ClubApprovalScreenState extends State<ClubApprovalScreen> {
               _formatDate(club.createdAt),
             ),
             const SizedBox(height: 16),
+
+            // Admin decision buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -190,6 +205,7 @@ class _ClubApprovalScreenState extends State<ClubApprovalScreen> {
     );
   }
 
+  /// Build information row with icon, label, and value
   Widget _buildInfoRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -206,10 +222,12 @@ class _ClubApprovalScreenState extends State<ClubApprovalScreen> {
     );
   }
 
+  /// Format datetime for display (DD/MM/YYYY at HH:MM)
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year} at ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 
+  /// Approve club application and enable club functionality
   Future<void> _approveClub(String clubId) async {
     setState(() => _isLoading = true);
 
@@ -241,6 +259,7 @@ class _ClubApprovalScreenState extends State<ClubApprovalScreen> {
     }
   }
 
+  /// Show confirmation dialog before rejecting club application
   void _showRejectDialog(Club club) {
     showDialog(
       context: context,
@@ -267,6 +286,7 @@ class _ClubApprovalScreenState extends State<ClubApprovalScreen> {
     );
   }
 
+  /// Reject club application and remove from pending list
   Future<void> _rejectClub(String clubId) async {
     setState(() => _isLoading = true);
 

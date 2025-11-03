@@ -3,6 +3,10 @@ import '../../services/club_service.dart';
 import 'club_approval_screen.dart';
 import 'participants_management_screen.dart';
 
+/// Central administration dashboard for sport centre management
+///
+/// Provides system administrators with quick access to core management functions.
+/// Only accessible to users with admin role privileges.
 class AdminPanel extends StatelessWidget {
   AdminPanel({super.key});
   final ClubService _clubService = ClubService();
@@ -26,13 +30,13 @@ class AdminPanel extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // Quick Stats Row
+            // System overview statistics
             Row(
               children: [
                 const Expanded(
                   child: _StatCard(
                     title: 'Total Activities',
-                    value: '24', // You'd fetch this from your service
+                    value: '24', // Static placeholder - could be made dynamic
                     icon: Icons.emoji_events,
                     color: Colors.blue,
                   ),
@@ -41,18 +45,17 @@ class AdminPanel extends StatelessWidget {
                 Expanded(
                   child: _StatCard(
                     title: 'Pending Clubs',
-                    value: '0', // We'll make this dynamic
+                    value: '0', // Default fallback value
                     icon: Icons.pending_actions,
                     color: Colors.orange,
-                    future: _clubService
-                        .getPendingClubsCount(), // Add future for real data
+                    future: _clubService.getPendingClubsCount(), // Real-time count
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 20),
 
-            // Admin Actions
+            // Administrative action menu
             Expanded(
               child: ListView(
                 children: [
@@ -62,7 +65,7 @@ class AdminPanel extends StatelessWidget {
                     subtitle: 'Review and approve pending clubs',
                     onTap: () => _navigateToClubApprovals(context),
                     color: Colors.orange,
-                    badgeFuture: _clubService.getPendingClubsCount(),
+                    badgeFuture: _clubService.getPendingClubsCount(), // Shows pending count
                   ),
 
                   _AdminTile(
@@ -80,8 +83,6 @@ class AdminPanel extends StatelessWidget {
                     onTap: () => _navigateToParticipants(context),
                     color: Colors.green,
                   ),
-
-                  // Add more admin tiles as needed
                 ],
               ),
             ),
@@ -91,6 +92,7 @@ class AdminPanel extends StatelessWidget {
     );
   }
 
+  /// Navigate to club approval workflow
   void _navigateToClubApprovals(BuildContext context) {
     Navigator.push(
       context,
@@ -98,6 +100,7 @@ class AdminPanel extends StatelessWidget {
     );
   }
 
+  /// Navigate to participant management system
   void _navigateToParticipants(BuildContext context) {
     Navigator.push(
       context,
@@ -105,6 +108,7 @@ class AdminPanel extends StatelessWidget {
     );
   }
 
+  /// Show placeholder dialog for unimplemented seeding feature
   void _showSeedDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -124,9 +128,11 @@ class AdminPanel extends StatelessWidget {
   }
 }
 
+/// Statistical overview card with optional real-time data fetching
+///
+/// Displays key metrics with icons and supports both static values and
+/// dynamic data loading via Future for real-time statistics.
 class _StatCard extends StatelessWidget {
-  // Add optional future for dynamic data
-
   const _StatCard({
     required this.title,
     required this.value,
@@ -134,11 +140,12 @@ class _StatCard extends StatelessWidget {
     required this.color,
     this.future,
   });
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
-  final Future<int>? future;
+
+  final String title; // Metric name (e.g., "Total Activities")
+  final String value; // Default/fallback value
+  final IconData icon; // Visual identifier
+  final Color color; // Theme color for icon
+  final Future<int>? future; // Optional real-time data source
 
   @override
   Widget build(BuildContext context) {
@@ -158,6 +165,7 @@ class _StatCard extends StatelessWidget {
     );
   }
 
+  /// Build card content with consistent layout
   Widget _buildContent(String displayValue) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,9 +182,11 @@ class _StatCard extends StatelessWidget {
   }
 }
 
+/// Administrative function tile with optional notification badges
+///
+/// Represents a specific admin function with navigation capability and
+/// optional notification counts (e.g., pending approvals, alerts).
 class _AdminTile extends StatelessWidget {
-  // Add badge for notification counts
-
   const _AdminTile({
     required this.icon,
     required this.title,
@@ -185,12 +195,13 @@ class _AdminTile extends StatelessWidget {
     required this.color,
     this.badgeFuture,
   });
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-  final Color color;
-  final Future<int>? badgeFuture;
+
+  final IconData icon; // Function identifier
+  final String title; // Primary action name
+  final String subtitle; // Description of function
+  final VoidCallback onTap; // Navigation/action handler
+  final Color color; // Theme color for icon
+  final Future<int>? badgeFuture; // Optional notification count
 
   @override
   Widget build(BuildContext context) {
@@ -208,6 +219,7 @@ class _AdminTile extends StatelessWidget {
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: onTap,
           ),
+          // Notification badge overlay for pending items
           if (badgeFuture != null)
             Positioned(
               top: 8,

@@ -5,8 +5,11 @@ import '../../models/booking.dart';
 import '../../models/participant.dart';
 import '../../services/participant_service.dart';
 
-/// Admin screen for managing event participants
-/// Features: View, search, filter, edit, and remove participants with real-time sync
+/// Comprehensive participant management system for event administration
+/// 
+/// Enables administrators to view, search, filter, edit, and manage all event
+/// participants across the platform. Features real-time synchronization,
+/// detailed participant information, and bulk management capabilities.
 class AdminParticipantsScreen extends StatefulWidget {
   const AdminParticipantsScreen({super.key});
 
@@ -17,11 +20,11 @@ class AdminParticipantsScreen extends StatefulWidget {
 
 class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
   final TextEditingController _searchController = TextEditingController();
-  BookingStatus? _selectedStatus;
-  bool _showStats = true;
+  BookingStatus? _selectedStatus; // Active filter for booking status
+  bool _showStats = true; // Toggle for statistics panel visibility
 
-  Stream<List<Participant>>? _participantsStream;
-  Map<String, dynamic>? _stats;
+  Stream<List<Participant>>? _participantsStream; // Real-time participant updates
+  Map<String, dynamic>? _stats; // Aggregated participant statistics
 
   @override
   void initState() {
@@ -30,6 +33,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
     _loadStats();
   }
 
+  /// Apply current filters and reload participant stream
   void _loadParticipants() {
     setState(() {
       if (_searchController.text.isNotEmpty) {
@@ -46,6 +50,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
     });
   }
 
+  /// Fetch aggregated statistics for admin dashboard
   Future<void> _loadStats() async {
     final stats = await ParticipantService.getParticipantStats();
     setState(() {
@@ -53,10 +58,12 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
     });
   }
 
+  /// Handle search input changes
   void _onSearch(String query) {
     _loadParticipants();
   }
 
+  /// Apply booking status filter
   void _onStatusFilter(BookingStatus? status) {
     setState(() {
       _selectedStatus = status;
@@ -64,6 +71,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
     _loadParticipants();
   }
 
+  /// Reset all filters and show complete participant list
   void _clearFilters() {
     setState(() {
       _searchController.clear();
@@ -84,6 +92,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
       appBar: AppBar(
         title: const Text('Event Participants Management'),
         actions: [
+          // Toggle statistics visibility
           IconButton(
             icon: Icon(_showStats ? Icons.visibility_off : Icons.visibility),
             tooltip: _showStats ? 'Hide Statistics' : 'Show Statistics',
@@ -93,6 +102,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
               });
             },
           ),
+          // Manual refresh of data and statistics
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh',
@@ -105,19 +115,20 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
       ),
       body: Column(
         children: [
-          // Statistics Panel
+          // Optional statistics overview panel
           if (_showStats && _stats != null) _buildStatsPanel(),
 
-          // Search and Filter Bar
+          // Search and filtering controls
           _buildSearchAndFilterBar(),
 
-          // Participants List
+          // Main participant list with real-time updates
           Expanded(child: _buildParticipantsList()),
         ],
       ),
     );
   }
 
+  /// Build statistics dashboard with key metrics and revenue tracking
   Widget _buildStatsPanel() {
     return Container(
       margin: const EdgeInsets.all(16),
@@ -172,6 +183,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
     );
   }
 
+  /// Build individual statistic item with color coding
   Widget _buildStatItem(String label, String value, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -201,13 +213,14 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
     );
   }
 
+  /// Build search bar and status filter controls
   Widget _buildSearchAndFilterBar() {
     return Container(
       padding: const EdgeInsets.all(16),
       color: Colors.grey.shade100,
       child: Column(
         children: [
-          // Search Bar
+          // Multi-field search functionality
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
@@ -232,7 +245,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
           ),
           const SizedBox(height: 12),
 
-          // Filter Chips
+          // Booking status filter chips
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -247,6 +260,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
               _buildFilterChip('Cancelled', BookingStatus.cancelled),
               _buildFilterChip('Completed', BookingStatus.completed),
               _buildFilterChip('Waitlist', BookingStatus.waitlist),
+              // Clear filters option when filters are active
               if (_selectedStatus != null || _searchController.text.isNotEmpty)
                 ActionChip(
                   label: const Text('Clear Filters'),
@@ -260,6 +274,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
     );
   }
 
+  /// Build individual filter chip with selection state
   Widget _buildFilterChip(String label, BookingStatus? status) {
     final isSelected = _selectedStatus == status;
     return FilterChip(
@@ -272,6 +287,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
     );
   }
 
+  /// Build real-time participant list with error handling and empty states
   Widget _buildParticipantsList() {
     if (_participantsStream == null) {
       return const Center(child: CircularProgressIndicator());
@@ -284,6 +300,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
           return const Center(child: CircularProgressIndicator());
         }
 
+        // Error state with retry option
         if (snapshot.hasError) {
           return Center(
             child: Column(
@@ -308,6 +325,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
 
         final participants = snapshot.data ?? [];
 
+        // Empty state with context-aware messaging
         if (participants.isEmpty) {
           return Center(
             child: Column(
@@ -330,6 +348,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
           );
         }
 
+        // Participant list with expandable details
         return ListView.builder(
           padding: const EdgeInsets.all(16),
           itemCount: participants.length,
@@ -341,12 +360,14 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
     );
   }
 
+  /// Build expandable participant card with comprehensive details and actions
   Widget _buildParticipantCard(Participant participant) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ExpansionTile(
+        // User avatar with status color coding
         leading: CircleAvatar(
           backgroundColor: _getStatusColor(participant.status),
           child: Text(
@@ -383,6 +404,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Comprehensive participant details
                 _buildDetailRow('Activity', participant.activityTitle),
                 _buildDetailRow(
                   'Activity Date',
@@ -414,6 +436,8 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
                 if (participant.notes != null)
                   _buildDetailRow('Notes', participant.notes!),
                 const Divider(height: 24),
+                
+                // Administrative action buttons
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -448,6 +472,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
     );
   }
 
+  /// Build detail row with consistent formatting
   Widget _buildDetailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -467,6 +492,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
     );
   }
 
+  /// Build booking status badge with color coding
   Widget _buildStatusBadge(BookingStatus status) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -486,6 +512,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
     );
   }
 
+  /// Build member/guest classification badge
   Widget _buildMemberBadge(bool isMember) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -507,6 +534,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
     );
   }
 
+  /// Get status-appropriate color for UI elements
   Color _getStatusColor(BookingStatus status) {
     switch (status) {
       case BookingStatus.confirmed:
@@ -522,6 +550,7 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
     }
   }
 
+  /// Launch participant editing dialog and process updates
   Future<void> _editParticipant(Participant participant) async {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
@@ -536,13 +565,14 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
 
       if (success) {
         _showSnackBar('Participant updated successfully', Colors.green);
-        unawaited(_loadStats()); // Fix: Use unawaited for fire-and-forget
+        unawaited(_loadStats()); // Refresh statistics without blocking UI
       } else {
         _showSnackBar('Failed to update participant', Colors.red);
       }
     }
   }
 
+  /// Launch status change dialog and process updates
   Future<void> _changeStatus(Participant participant) async {
     final newStatus = await showDialog<BookingStatus>(
       context: context,
@@ -558,13 +588,14 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
 
       if (success) {
         _showSnackBar('Status updated successfully', Colors.green);
-        unawaited(_loadStats()); // Fix: Use unawaited for fire-and-forget
+        unawaited(_loadStats()); // Refresh statistics without blocking UI
       } else {
         _showSnackBar('Failed to update status', Colors.red);
       }
     }
   }
 
+  /// Confirm and process participant removal with impact warning
   Future<void> _removeParticipant(Participant participant) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -591,20 +622,21 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
       ),
     );
 
-    if ((confirmed ?? false) && mounted) { // Fix: Use if-null operator
+    if ((confirmed ?? false) && mounted) {
       final success = await ParticipantService.removeParticipant(
         participant.id,
       );
 
       if (success) {
         _showSnackBar('Participant removed successfully', Colors.green);
-        unawaited(_loadStats()); // Fix: Use unawaited for fire-and-forget
+        unawaited(_loadStats()); // Refresh statistics without blocking UI
       } else {
         _showSnackBar('Failed to remove participant', Colors.red);
       }
     }
   }
 
+  /// Display operation feedback to admin
   void _showSnackBar(String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -616,7 +648,10 @@ class _AdminParticipantsScreenState extends State<AdminParticipantsScreen> {
   }
 }
 
-/// Dialog for editing participant details
+/// Modal dialog for editing participant details and booking information
+/// 
+/// Allows administrators to modify participant count, payment amounts,
+/// points earned, membership status, and additional notes.
 class EditParticipantDialog extends StatefulWidget {
   const EditParticipantDialog({super.key, required this.participant});
   final Participant participant;
@@ -635,6 +670,7 @@ class _EditParticipantDialogState extends State<EditParticipantDialog> {
   @override
   void initState() {
     super.initState();
+    // Initialize controllers with current participant data
     _participantCountController = TextEditingController(
       text: widget.participant.participantCount.toString(),
     );
@@ -668,12 +704,15 @@ class _EditParticipantDialogState extends State<EditParticipantDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Participant identification
             Text(
               widget.participant.userName,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             Text(widget.participant.activityTitle),
             const Divider(height: 24),
+            
+            // Editable fields
             TextField(
               controller: _participantCountController,
               decoration: const InputDecoration(
@@ -735,11 +774,13 @@ class _EditParticipantDialogState extends State<EditParticipantDialog> {
     );
   }
 
+  /// Validate inputs and save changes
   void _saveChanges() {
     final participantCount = int.tryParse(_participantCountController.text);
     final amount = double.tryParse(_amountController.text);
     final points = int.tryParse(_pointsController.text);
 
+    // Input validation
     if (participantCount == null || participantCount <= 0) {
       _showError('Please enter a valid number of participants');
       return;
@@ -755,6 +796,7 @@ class _EditParticipantDialogState extends State<EditParticipantDialog> {
       return;
     }
 
+    // Prepare update data
     final updates = {
       'participantCount': participantCount,
       'amountPaid': amount,
@@ -768,6 +810,7 @@ class _EditParticipantDialogState extends State<EditParticipantDialog> {
     Navigator.pop(context, updates);
   }
 
+  /// Display validation errors
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: Colors.red),
@@ -775,7 +818,10 @@ class _EditParticipantDialogState extends State<EditParticipantDialog> {
   }
 }
 
-/// Dialog for changing participant status
+/// Modal dialog for changing participant booking status
+/// 
+/// Provides radio button selection for all available booking statuses
+/// with visual indication of current status.
 class ChangeStatusDialog extends StatelessWidget {
   const ChangeStatusDialog({super.key, required this.currentStatus});
   final BookingStatus currentStatus;
@@ -791,6 +837,7 @@ class ChangeStatusDialog extends StatelessWidget {
           const SizedBox(height: 16),
           const Text('Select new status:'),
           const SizedBox(height: 12),
+          // Radio button list for all booking statuses
           ...BookingStatus.values.map((status) {
             return ListTile(
               title: Text(status.value.toUpperCase()),

@@ -10,6 +10,8 @@ import '../profile/profile_screen.dart';
 import '../rewards.dart';
 import 'bookings.dart';
 
+/// Booking confirmation screen displaying reservation details, next steps,
+/// and navigation options for continuing user journey
 class BookingSuccessScreen extends StatelessWidget {
   const BookingSuccessScreen({
     super.key,
@@ -27,7 +29,7 @@ class BookingSuccessScreen extends StatelessWidget {
         title: const Text('Booking Confirmed'),
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
-        automaticallyImplyLeading: false, // Remove back button
+        automaticallyImplyLeading: false,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -46,6 +48,7 @@ class BookingSuccessScreen extends StatelessWidget {
     );
   }
 
+  /// Celebratory success header with confirmation messaging
   Widget _buildSuccessHeader() {
     return Container(
       width: double.infinity,
@@ -90,6 +93,7 @@ class BookingSuccessScreen extends StatelessWidget {
     );
   }
 
+  /// Comprehensive booking details with confirmation number and points preview
   Widget _buildConfirmationCard() {
     return Card(
       elevation: 4,
@@ -98,7 +102,7 @@ class BookingSuccessScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Confirmation number
+            /// Booking reference number for customer service and venue check-in
             Center(
               child: Container(
                 padding: const EdgeInsets.symmetric(
@@ -123,14 +127,13 @@ class BookingSuccessScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // Activity details
+            /// Activity visual representation and basic info
             Row(
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.network(
-                    activity
-                        .displayImageUrl, // ✅ Changed from activity.imageUrl
+                    activity.displayImageUrl,
                     width: 80,
                     height: 80,
                     fit: BoxFit.cover,
@@ -204,7 +207,7 @@ class BookingSuccessScreen extends StatelessWidget {
             const Divider(),
             const SizedBox(height: 20),
 
-            // Booking details
+            /// Essential booking information for venue attendance
             _buildDetailRow(
               Icons.calendar_today,
               'Date',
@@ -229,7 +232,7 @@ class BookingSuccessScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // Points earned
+            /// Points reward system preview for user engagement
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -273,6 +276,7 @@ class BookingSuccessScreen extends StatelessWidget {
     );
   }
 
+  /// Reusable detail row component for booking information display
   Widget _buildDetailRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -308,6 +312,7 @@ class BookingSuccessScreen extends StatelessWidget {
     );
   }
 
+  /// Clear instructions for activity participation and venue protocols
   Widget _buildNextSteps() {
     return Card(
       elevation: 2,
@@ -342,6 +347,7 @@ class BookingSuccessScreen extends StatelessWidget {
     );
   }
 
+  /// Individual step item for participation guidelines
   Widget _buildStepItem(String step, String description, IconData icon) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -376,10 +382,11 @@ class BookingSuccessScreen extends StatelessWidget {
     );
   }
 
+  /// Navigation options for continuing user journey after booking
   Widget _buildActionButtons(BuildContext context) {
     return Column(
       children: [
-        // Primary action - View My Bookings
+        /// Primary path to manage and view existing bookings
         SizedBox(
           width: double.infinity,
           height: 50,
@@ -402,7 +409,7 @@ class BookingSuccessScreen extends StatelessWidget {
         ),
         const SizedBox(height: 12),
 
-        // Secondary action - Back to Activities
+        /// Secondary path to continue browsing and booking activities
         SizedBox(
           width: double.infinity,
           height: 50,
@@ -425,7 +432,7 @@ class BookingSuccessScreen extends StatelessWidget {
         ),
         const SizedBox(height: 20),
 
-        // Support info
+        /// Customer support information for booking assistance
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -463,16 +470,16 @@ class BookingSuccessScreen extends StatelessWidget {
     );
   }
 
+  /// Navigates to bookings management screen for reservation oversight
   void _navigateToMyBookings(BuildContext context) {
-    // Navigate back to main app and show bookings tab
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const MainAppWithBookingsTab()),
       (route) => false,
     );
   }
 
+  /// Returns to main activities browsing for continued engagement
   void _navigateToActivities(BuildContext context) {
-    // Navigate back to Activities tab (index 0)
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const auth.AuthWrapper()),
       (route) => false,
@@ -480,7 +487,8 @@ class BookingSuccessScreen extends StatelessWidget {
   }
 }
 
-/// Custom wrapper that opens the main app on the bookings tab
+/// Navigation wrapper that opens the main app directly on the bookings tab
+/// for immediate access to reservation management
 class MainAppWithBookingsTab extends StatefulWidget {
   const MainAppWithBookingsTab({super.key});
 
@@ -489,13 +497,13 @@ class MainAppWithBookingsTab extends StatefulWidget {
 }
 
 class _MainAppWithBookingsTabState extends State<MainAppWithBookingsTab> {
-  int _selectedIndex = 1; // Start on bookings tab
+  int _selectedIndex = 1;
 
   final List<Widget> _screens = [
-    const HomeScreen(), // Activities screen
-    const BookingsScreen(), // My Bookings
-    const RewardsScreen(), // Rewards
-    const ProfileScreen(), // Profile/Auth
+    const HomeScreen(),
+    const BookingsScreen(),
+    const RewardsScreen(),
+    const ProfileScreen(),
   ];
 
   @override

@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Types of vouchers available in the system
+/// Voucher categories determining usage and redemption rules
 enum VoucherType { 
   fitness, // Can be used for activity bookings
   stuff    // For merchandise/food purchases
@@ -28,10 +28,11 @@ extension VoucherTypeExtension on VoucherType {
   }
 }
 
-/// Represents a voucher that can be purchased with points and used for discounts
+/// Points-based voucher system for discounts and rewards
 /// 
-/// Vouchers follow a lifecycle: created → purchased → used/expired
+/// Vouchers follow a complete lifecycle: created → purchased → used/expired
 /// Users purchase vouchers with accumulated points and can apply them to bookings
+/// for discounts. Includes anti-spam protection and expiration management.
 class Voucher {
   const Voucher({
     required this.id,
@@ -54,6 +55,7 @@ class Voucher {
     this.code,
   });
 
+  /// Create Voucher from Firestore document with Timestamp conversion
   factory Voucher.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data()! as Map<String, dynamic>;
     return Voucher(
@@ -88,6 +90,7 @@ class Voucher {
     );
   }
 
+  /// Create Voucher from JSON with flexible date parsing (ISO strings or Timestamps)
   factory Voucher.fromJson(Map<String, dynamic> json) {
     return Voucher(
       id: json['id'] ?? '',
@@ -123,57 +126,57 @@ class Voucher {
 
   // Core identifiers
   final String id;
-  final String clubId;
-  final String createdBy;
+  final String clubId; // Club that created this voucher
+  final String createdBy; // Club owner/admin who created it
 
-  // Voucher details
-  final String title;
-  final String description;
-  final VoucherType type;
-  final double amount; // CHF value
-  final int pointsCost; // Points required to purchase
-  final bool isActive;
+  // Voucher configuration
+  final String title; // Display name (e.g., "5 CHF Fitness Voucher")
+  final String description; // Terms and conditions
+  final VoucherType type; // Determines where it can be used
+  final double amount; // Discount value in CHF
+  final int pointsCost; // Points required to purchase (100 points = 1 CHF)
+  final bool isActive; // Can be disabled by club owner
 
-  // Display data (denormalized)
-  final String clubName;
+  // Denormalized display data
+  final String clubName; // For UI without additional queries
 
-  // Lifecycle timestamps
+  // Lifecycle tracking
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  // Purchase tracking (populated when bought)
-  final String? purchasedBy;
-  final DateTime? purchasedAt;
-  final DateTime? expiresAt; // 1 year from purchase
+  // Purchase lifecycle (null until purchased)
+  final String? purchasedBy; // User who bought the voucher
+  final DateTime? purchasedAt; // When purchase occurred
+  final DateTime? expiresAt; // 1 year from purchase date
 
-  // Usage tracking (populated when used)
-  final DateTime? usedAt;
-  final String? usedForBooking;
+  // Usage lifecycle (null until used)
+  final DateTime? usedAt; // When voucher was redeemed
+  final String? usedForBooking; // Booking ID where it was applied
 
-  // Unique voucher code (generated on purchase)
-  final String? code;
+  // Security features
+  final String? code; // Unique voucher code (generated on purchase)
 
-  /// Check if voucher is available for purchase
+  /// Check if voucher is available in marketplace
   bool get isAvailableForPurchase => isActive && purchasedBy == null;
 
-  /// Check if voucher is purchased but not yet used
+  /// Check if voucher is owned but not yet redeemed
   bool get isPurchasedAndUnused =>
       purchasedBy != null && usedAt == null && !isExpired;
 
-  /// Check if voucher has expired
+  /// Check if voucher has passed expiration date
   bool get isExpired {
     if (expiresAt == null) return false;
     return DateTime.now().isAfter(expiresAt!);
   }
 
-  /// Check if voucher has been used
+  /// Check if voucher has been redeemed
   bool get isUsed => usedAt != null;
 
   /// Check if voucher can be applied to activity bookings
   bool get canBeUsedForBookings =>
       type == VoucherType.fitness && isPurchasedAndUnused;
 
-  /// Get human-readable status
+  /// Get user-friendly status for display
   String get statusDisplayText {
     if (isUsed) return 'Used';
     if (isExpired) return 'Expired';
@@ -182,7 +185,7 @@ class Voucher {
     return 'Inactive';
   }
 
-  /// Generate unique voucher code (format: SC-V-YYYY-XXXX)
+  /// Generate unique voucher code with year and timestamp (SC-V-YYYY-XXXX)
   static String generateVoucherCode() {
     final year = DateTime.now().year;
     final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -190,13 +193,13 @@ class Voucher {
     return 'SC-V-$year-$random';
   }
 
-  /// Calculate expiration date (1 year from purchase)
+  /// Calculate voucher expiration date (1 year from purchase)
   static DateTime calculateExpirationDate() {
     return DateTime.now().add(const Duration(days: 365));
   }
 
-  /// Check if user can purchase same voucher type again
-  /// Prevents spam purchases - 3 month cooldown per voucher type
+  /// Anti-spam protection: Check if user can purchase same voucher type
+  /// Enforces 3-month cooldown period per voucher type per club
   static Future<bool> canUserPurchaseVoucherType({
     required String userId,
     required String clubId,
@@ -219,6 +222,7 @@ class Voucher {
     }
   }
 
+  /// Convert to Firestore format with Timestamp objects
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -242,6 +246,7 @@ class Voucher {
     };
   }
 
+  /// Create updated copy with modified fields (auto-updates timestamp)
   Voucher copyWith({
     String? id,
     String? clubId,

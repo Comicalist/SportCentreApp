@@ -10,6 +10,8 @@ import '../../screens/profile/profile_screen.dart';
 import '../../screens/rewards.dart';
 import '../auth/email_verification_banner.dart';
 
+/// Dynamic navigation system adapting to user roles and permissions
+/// Provides role-based access to management features for admins and club owners
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
 
@@ -24,7 +26,6 @@ class _MainNavigationState extends State<MainNavigation> {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
-        // Check both admin and club owner status
         final isAdmin = authProvider.isAdmin;
         final isClubOwner = authProvider.isClubOwner;
 
@@ -57,6 +58,7 @@ class _MainNavigationState extends State<MainNavigation> {
     );
   }
 
+  /// Builds screen array with conditional management panels based on user privileges
   List<Widget> _getScreens(bool isAdmin, bool isClubOwner) {
     final screens = [
       const HomeScreen(),
@@ -65,12 +67,10 @@ class _MainNavigationState extends State<MainNavigation> {
       const ProfileScreen(),
     ];
 
-    // Add Club Owner Panel if user is club owner
     if (isClubOwner) {
       screens.add(const ClubOwnerPanel());
     }
 
-    // Add Admin Panel if user is admin
     if (isAdmin) {
       screens.add(AdminPanel());
     }
@@ -78,6 +78,7 @@ class _MainNavigationState extends State<MainNavigation> {
     return screens;
   }
 
+  /// Creates navigation items matching user access level for seamless UX
   List<BottomNavigationBarItem> _getNavItems(bool isAdmin, bool isClubOwner) {
     final items = [
       const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
@@ -92,7 +93,6 @@ class _MainNavigationState extends State<MainNavigation> {
       const BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
     ];
 
-    // Add Club Owner tab if user is club owner
     if (isClubOwner) {
       items.add(
         const BottomNavigationBarItem(
@@ -102,7 +102,6 @@ class _MainNavigationState extends State<MainNavigation> {
       );
     }
 
-    // Add Admin tab if user is admin
     if (isAdmin) {
       items.add(
         const BottomNavigationBarItem(

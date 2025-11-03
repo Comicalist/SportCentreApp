@@ -11,6 +11,8 @@ import '../../utils/colors.dart';
 import '../../widgets/profile/testing_panel.dart';
 import 'notification_settings_screen.dart';
 
+/// User profile dashboard with real-time points tracking and voucher management
+/// Displays membership benefits, reward points, and provides access to settings
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -23,7 +25,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, auth, _) {
-        // 1) Pas connecté => écran d'auth
+        /// Redirect unauthenticated users to sign-in prompt
         if (!auth.isLoggedIn) {
           return Scaffold(
             appBar: AppBar(title: const Text('Profile')),
@@ -40,7 +42,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         }
 
-        // 2) Connecté mais AppUser pas encore chargé une première fois => loader
+        /// Show loading while user profile data is being fetched
         if (auth.appUser == null) {
           return Scaffold(
             backgroundColor: Colors.grey[50],
@@ -56,7 +58,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         }
 
-        // 3) Connecté + on écoute le doc Firestore en temps réel pour avoir les points à jour
+        /// Real-time points tracking via Firestore stream for accurate voucher purchases
         final uid = auth.firebaseUser!.uid;
         final userDocStream = FirebaseFirestore.instance
             .collection('users')
@@ -66,17 +68,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return StreamBuilder<DocumentSnapshot>(
           stream: userDocStream,
           builder: (context, snapshot) {
-            // fallback si le stream n'a rien encore
             var user = auth.appUser!;
 
             if (snapshot.hasError) {
-              // En cas d'erreur de stream, on affiche tout de même les infos connues
               debugPrint('Profile stream error: ${snapshot.error}');
             } else if (snapshot.hasData && snapshot.data!.exists) {
               try {
                 user = AppUser.fromFirestore(snapshot.data!);
               } catch (_) {
-                // Si parsing échoue, on garde le user déjà chargé
+                // Keep existing user data if parsing fails
               }
             }
 
@@ -160,7 +160,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 24),
                     _buildSettingsSection(context),
 
-                    // 🧪 Testing Panel (debug mode only)
+                    /// Testing tools for development environment
                     if (kDebugMode) ...[
                       const SizedBox(height: 24),
                       TestingPanel(userId: uid),
@@ -175,7 +175,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // Nouvelle section Settings avec accès facile aux notifications
+  /// Settings access panel with notification preferences and booking history
   Widget _buildSettingsSection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -232,6 +232,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// User identification card with membership status indicator
   Widget _buildUserInfoCard(AppUser user) {
     return Card(
       elevation: 2,
@@ -301,6 +302,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// Reward points dashboard with member bonus indicator and balance breakdown
   Widget _buildPointsCard(AppUser user) {
     return Card(
       elevation: 2,
@@ -406,30 +408,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                 ),
-                ElevatedButton(
-                  onPressed: user.availablePoints > 0
-                      ? () {
-                          // Navigate to rewards screen
-                          Navigator.of(
-                            context,
-                          ).popUntil((route) => route.isFirst);
-                          DefaultTabController.of(
-                            context,
-                          ).animateTo(2); // Rewards tab
-                        }
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.orange[600],
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  child: const Text(
-                    'Redeem',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
+                
               ],
             ),
           ],
@@ -438,6 +417,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// Membership benefits display with discounts and exclusive perks
   Widget _buildMembershipCard(AppUser user) {
     return Card(
       elevation: 2,
@@ -535,6 +515,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// User voucher collection with status tracking and redemption codes
   Widget _buildVouchersSection(String userId) {
     return Card(
       elevation: 2,
@@ -555,10 +536,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const Spacer(),
                 TextButton(
                   onPressed: () {
-                    // Navigate to rewards screen to buy more vouchers
+                    /// Navigate to rewards tab for voucher purchases
                     DefaultTabController.of(
                       context,
-                    ).animateTo(2); // Rewards tab
+                    ).animateTo(2);
                   },
                   child: const Text(
                     'Get More',
@@ -643,7 +624,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Available vouchers
+                    /// Active vouchers ready for use
                     if (unusedVouchers.isNotEmpty) ...[
                       const Text(
                         'Available',
@@ -660,7 +641,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 16),
                     ],
 
-                    // Used/Expired vouchers (expandable)
+                    /// Historical voucher records in expandable section
                     if (usedVouchers.isNotEmpty) ...[
                       ExpansionTile(
                         tilePadding: EdgeInsets.zero,
@@ -688,6 +669,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// Individual voucher display with category, status, and value information
   Widget _buildVoucherItem(Voucher voucher, bool isActive) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -775,6 +757,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// Voucher category color coding for easy identification
   Color _getVoucherTypeColor(VoucherType type) {
     switch (type) {
       case VoucherType.fitness:
@@ -784,6 +767,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  /// Voucher redemption code dialog with usage instructions
   void _showVoucherDetails(Voucher voucher) {
     showDialog(
       context: context,
@@ -869,6 +853,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// Secure logout with confirmation to prevent accidental sign-outs
   void _handleLogout() {
     showDialog(
       context: context,
@@ -896,6 +881,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// Date formatting for membership expiry and voucher validity
   String _formatDate(DateTime date) {
     const months = [
       'Jan',

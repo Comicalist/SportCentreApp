@@ -9,6 +9,8 @@ import '../../services/club_service.dart';
 import 'add_activity_screen.dart';
 import 'edit_activity_screen.dart';
 
+/// Club owner activity management interface with real-time activity tracking,
+/// booking oversight, and comprehensive activity lifecycle management
 class ActivityManagementScreen extends StatefulWidget {
   const ActivityManagementScreen({super.key});
 
@@ -29,6 +31,7 @@ class _ActivityManagementScreenState extends State<ActivityManagementScreen> {
     _loadOwnedClubs();
   }
 
+  /// Loads approved clubs owned by current user for activity management
   Future<void> _loadOwnedClubs() async {
     setState(() => _isLoadingClubs = true);
 
@@ -60,6 +63,7 @@ class _ActivityManagementScreenState extends State<ActivityManagementScreen> {
     }
   }
 
+  /// Handles activity deletion with booking impact consideration
   Future<void> _deleteActivity(Activity activity) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -172,7 +176,7 @@ class _ActivityManagementScreenState extends State<ActivityManagementScreen> {
             )
           : Column(
               children: [
-                // Club filter
+                /// Club selection filter for multi-club owners
                 Container(
                   padding: const EdgeInsets.all(16),
                   color: Colors.grey.shade100,
@@ -204,7 +208,7 @@ class _ActivityManagementScreenState extends State<ActivityManagementScreen> {
                   ),
                 ),
 
-                // Activities list
+                /// Real-time activity list with booking status monitoring
                 Expanded(
                   child: _selectedClub == null
                       ? const Center(child: Text('Select a club'))
@@ -288,7 +292,7 @@ class _ActivityManagementScreenState extends State<ActivityManagementScreen> {
                               );
                             }
 
-                            // Sort activities by date
+                            /// Chronological sorting for activity timeline management
                             activities.sort((a, b) => a.date.compareTo(b.date));
 
                             return ListView.builder(
@@ -299,7 +303,7 @@ class _ActivityManagementScreenState extends State<ActivityManagementScreen> {
                                 return _ActivityCard(
                                   activity: activity,
                                   onDelete: () => _deleteActivity(activity),
-                                  onEdit: () {}, // Provide a default value
+                                  onEdit: () {},
                                 );
                               },
                             );
@@ -325,16 +329,18 @@ class _ActivityManagementScreenState extends State<ActivityManagementScreen> {
   }
 }
 
+/// Individual activity card displaying comprehensive booking metrics,
+/// status indicators, and management controls for club owners
 class _ActivityCard extends StatelessWidget {
   const _ActivityCard({
     required this.activity,
     required this.onDelete,
-    required this.onEdit, // ✅ Add this required parameter
+    required this.onEdit,
   });
   
   final Activity activity;
   final VoidCallback onDelete;
-  final VoidCallback onEdit; // ✅ Remove the '?' to make it required OR add it to constructor
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -348,7 +354,7 @@ class _ActivityCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image header - NO 3-dots menu here anymore
+          /// Visual activity header with category and status indicators
           Stack(
             children: [
               ClipRRect(
@@ -418,7 +424,7 @@ class _ActivityCard extends StatelessWidget {
                 ),
               ),
 
-              // Category badge
+              /// Activity category identification badge
               Positioned(
                 top: 8,
                 right: 8,
@@ -442,7 +448,7 @@ class _ActivityCard extends StatelessWidget {
                 ),
               ),
 
-              // Past activity badge
+              /// Past activity status indicator
               if (isPast)
                 Positioned(
                   bottom: 8,
@@ -469,13 +475,13 @@ class _ActivityCard extends StatelessWidget {
             ],
           ),
 
-          // Activity details
+          /// Comprehensive activity details and management controls
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Activity name with 3-dots menu - MOVED HERE like facility card
+                /// Activity name with context menu for management actions
                 Row(
                   children: [
                     Expanded(
@@ -499,7 +505,7 @@ class _ActivityCard extends StatelessWidget {
                         }
                       },
                       itemBuilder: (BuildContext context) => [
-                        // Edit option (only if not past activity)
+                        /// Edit option restricted for past activities
                         if (!isPast)
                           const PopupMenuItem<String>(
                             value: 'edit',
@@ -512,7 +518,7 @@ class _ActivityCard extends StatelessWidget {
                             ),
                           ),
 
-                        // Delete option
+                        /// Delete option with booking impact awareness
                         const PopupMenuItem<String>(
                           value: 'delete',
                           child: Row(
@@ -532,7 +538,7 @@ class _ActivityCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
 
-                // Date and time
+                /// Activity scheduling information
                 Row(
                   children: [
                     Icon(
@@ -560,7 +566,7 @@ class _ActivityCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
 
-                // Location
+                /// Facility and club location details
                 Row(
                   children: [
                     Icon(
@@ -580,7 +586,7 @@ class _ActivityCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
 
-                // Capacity info
+                /// Real-time booking capacity monitoring
                 Row(
                   children: [
                     Icon(Icons.people, size: 16, color: Colors.blue.shade600),
@@ -607,7 +613,7 @@ class _ActivityCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
 
-                // Pricing info
+                /// Dual pricing structure for guests and members
                 Row(
                   children: [
                     Container(
@@ -649,7 +655,7 @@ class _ActivityCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
 
-                // Points
+                /// Points reward system preview
                 Row(
                   children: [
                     Icon(Icons.star, size: 16, color: Colors.amber.shade700),
@@ -671,7 +677,7 @@ class _ActivityCard extends StatelessWidget {
     );
   }
 
-  // Edit activity method
+  /// Navigates to activity editing interface for current activity
   void _editActivity(BuildContext context) async {
     final result = await Navigator.push<bool>(
       context,
@@ -680,13 +686,12 @@ class _ActivityCard extends StatelessWidget {
       ),
     );
 
-    // If edit was successful, refresh the parent list
     if (result == true && context.mounted) {
-      onEdit(); // ✅ Remove null check and ! operator
+      onEdit();
     }
   }
 
-  // Confirm delete method
+  /// Confirms activity deletion with booking impact warning
   void _confirmDelete(BuildContext context) {
     showDialog(
       context: context,
@@ -747,7 +752,7 @@ class _ActivityCard extends StatelessWidget {
     );
   }
 
-  // Helper method for category colors
+  /// Returns theme color for activity category visualization
   Color _getCategoryColor(String category) {
     switch (category) {
       case 'Wellness':
@@ -763,7 +768,7 @@ class _ActivityCard extends StatelessWidget {
     }
   }
 
-  // Helper method for category icons
+  /// Returns appropriate icon for activity category identification
   IconData _getCategoryIcon(String category) {
     switch (category) {
       case 'Wellness':

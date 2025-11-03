@@ -14,7 +14,8 @@ import '../../utils/activity_helpers.dart';
 import '../../utils/constants.dart';
 import 'booking_success_screen.dart';
 
-/// Screen for booking activity details and participant selection
+/// Comprehensive booking screen with participant selection, voucher application,
+/// calendar view of existing bookings, and pricing breakdown
 class BookingDetailsScreen extends StatefulWidget {
   const BookingDetailsScreen({super.key, required this.activity});
   final Activity activity;
@@ -29,7 +30,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   bool _isLoading = false;
   DateTime _focusedDay = DateTime.now();
 
-  // Voucher selection
+  /// Voucher system state for discount application
   Voucher? _selectedVoucher;
   List<Voucher> _availableVouchers = [];
 
@@ -43,16 +44,15 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         listen: false,
       )..startBooking(widget.activity, authProvider);
 
-      // Make sure the bookings stream is initialized (even if empty)
       final uid = authProvider.firebaseUser?.uid;
       if (uid != null) {
         bookingProvider.loadUserBookings(uid);
-        _loadAvailableVouchers(uid); // Call the local method, not on bookingProvider
+        _loadAvailableVouchers(uid);
       }
     });
   }
 
-  /// Load available vouchers for this activity
+  /// Loads user's available vouchers for this club and activity type
   Future<void> _loadAvailableVouchers(String userId) async {
     if (!widget.activity.allowVouchers) return;
 
@@ -81,14 +81,14 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             : widget.activity.guestPrice;
         final totalPrice = currentPrice * _participantCount;
 
-        // Calculate voucher discount and final price
+        /// Voucher discount calculation with price floor protection
         final voucherDiscount = _selectedVoucher?.amount ?? 0.0;
         final finalPrice = (totalPrice - voucherDiscount).clamp(
           0.0,
           totalPrice,
         );
 
-        // Calculate expected points based on final price (after voucher)
+        /// Points calculation based on final amount paid after discounts
         final expectedPoints = _calculateExpectedPoints(finalPrice, isMember);
 
         return Scaffold(
@@ -139,7 +139,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Calculate expected points based on final price paid
+  /// Calculates points earned based on final price with member bonus and category multipliers
   int _calculateExpectedPoints(double finalPrice, bool isMember) {
     var basePoints = finalPrice.floor();
 
@@ -147,7 +147,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       basePoints = (basePoints * 1.5).floor();
     }
 
-    // Activity type multiplier
     switch (widget.activity.category.toLowerCase()) {
       case 'wellness':
         basePoints = (basePoints * 1.2).floor();
@@ -162,20 +161,17 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     return basePoints;
   }
 
-  // Helper pour normaliser les dates à minuit
+  /// Normalizes dates to midnight for consistent calendar comparison
   DateTime _atMidnight(DateTime d) => DateTime(d.year, d.month, d.day);
 
-  // ---- Nouveaux champs/helpers pour la section calendrier ----
   DateTime? _selectedDay;
 
-  /// Essaie d’afficher "HH:mm – HH:mm" (si fin connue) sinon "HH:mm • X min" (si durée connue),
-  /// sinon au minimum "HH:mm".
+  /// Formats booking time display with end time or duration when available
   String _formatTimeRange(Booking b) {
     final start = b.activityDate;
     DateTime? end;
     int? dur;
 
-    // On tente d'accéder à quelques champs possibles sans casser si absents.
     try {
       end = (b as dynamic).activityEndDate as DateTime?;
     } catch (_) {}
@@ -195,8 +191,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     return s;
   }
 
+  /// Interactive calendar showing user's existing bookings to avoid scheduling conflicts
   Widget _buildCalendarSection(BookingProvider bookingProvider) {
-
     return StreamBuilder<List<Booking>>(
       stream: bookingProvider.userBookingsStream,
       initialData: const <Booking>[],
@@ -208,14 +204,14 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         final bookings = snapshot.data ?? const <Booking>[];
         final isLoading = snapshot.connectionState == ConnectionState.waiting;
 
-        // Map jour -> liste de bookings
+        /// Group bookings by day for calendar display
         final byDay = <DateTime, List<Booking>>{};
         for (final b in bookings) {
           final key = _atMidnight(b.activityDate);
           byDay.putIfAbsent(key, () => []).add(b);
         }
 
-        // Sélection par défaut : aujourd’hui si dispo, sinon premier jour avec résa, sinon aujourd’hui.
+        /// Default to today if has bookings, otherwise first booking day
         _selectedDay ??= () {
           final todayKey = _atMidnight(DateTime.now());
           if (byDay.containsKey(todayKey)) return todayKey;
@@ -254,7 +250,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               ),
               const SizedBox(height: 12),
 
-              // --- Calendrier ---
+              /// Interactive calendar with booking indicators
               TableCalendar<Booking>(
                 focusedDay: _focusedDay,
                 firstDay: DateTime.now().subtract(const Duration(days: 365)),
@@ -286,14 +282,13 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     _focusedDay = focused;
                   });
                 },
-                // On renvoie la liste des bookings de ce jour (et pas juste des dates)
                 eventLoader: (day) =>
                     byDay[_atMidnight(day)] ?? const <Booking>[],
               ),
 
               const SizedBox(height: 12),
 
-              // --- État / messages ---
+              /// Loading state or booking list display
               if (isLoading)
                 const Center(
                   child: Padding(
@@ -307,7 +302,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                   style: TextStyle(color: Colors.grey),
                 ),
               ] else ...[
-                // --- Titre du jour sélectionné ---
                 Text(
                   DateFormat('EEEE, MMMM d, yyyy').format(_selectedDay!),
                   style: const TextStyle(
@@ -317,7 +311,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 ),
                 const SizedBox(height: 8),
 
-                // --- Liste des réservations du jour sélectionné ---
+                /// Daily booking list for selected day
                 if (selectedBookings.isEmpty)
                   const Text(
                     'No bookings this day.',
@@ -332,7 +326,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     itemBuilder: (context, i) {
                       final b = selectedBookings[i];
 
-                      // Champs facultatifs selon ton modèle
                       var title = 'Booking';
                       String? place;
                       try {
@@ -401,6 +394,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
+  /// Fallback calendar display when bookings fail to load
   Widget _buildEmptyCalendar({String? message}) {
     return Container(
       decoration: BoxDecoration(
@@ -447,7 +441,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Build activity information card
+  /// Displays activity details with gradient header and comprehensive information
   Widget _buildActivityCard() {
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -464,7 +458,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Activity header with gradient background
+          /// Category-themed gradient header with activity icon
           Container(
             height: 120,
             decoration: BoxDecoration(
@@ -486,7 +480,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             ),
             child: Stack(
               children: [
-                // Category badge
                 Positioned(
                   top: 12,
                   left: 12,
@@ -513,7 +506,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     ),
                   ),
                 ),
-                // Activity icon
                 Center(
                   child: Icon(
                     ActivityHelpers.getCategoryIcon(widget.activity.category),
@@ -524,7 +516,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               ],
             ),
           ),
-          // Activity details
           Padding(
             padding: const EdgeInsets.all(AppConstants.largeSpacing),
             child: Column(
@@ -557,7 +548,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Build activity information rows
+  /// Displays essential activity information in structured rows
   Widget _buildActivityInfo() {
     return Column(
       children: [
@@ -594,7 +585,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Build information row
+  /// Reusable information row component for activity details
   Widget _buildInfoRow(IconData icon, String label, String value) {
     return Row(
       children: [
@@ -623,7 +614,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Build requirements section
+  /// Displays activity requirements as bulleted list when present
   Widget _buildRequirementsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -677,7 +668,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Build booking details section
+  /// Shows member benefits or prompts guest signup with pricing context
   Widget _buildBookingDetails(
     bool isMember,
     double currentPrice,
@@ -764,7 +755,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Build participant count selector
+  /// Interactive participant count selector with capacity limits
   Widget _buildParticipantSelector() {
     return Container(
       decoration: BoxDecoration(
@@ -852,7 +843,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Build voucher selection section
+  /// Voucher selection interface with discount preview and points impact warning
   Widget _buildVoucherSection() {
     return Container(
       decoration: BoxDecoration(
@@ -885,7 +876,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           ),
           const SizedBox(height: AppConstants.largeSpacing),
 
-          // Voucher selection
+          /// Individual voucher selection cards
           ...List.generate(_availableVouchers.length, (index) {
             final voucher = _availableVouchers[index];
             final isSelected = _selectedVoucher?.id == voucher.id;
@@ -914,7 +905,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                   ),
                   child: Row(
                     children: [
-                      // Selection indicator
                       Container(
                         width: 20,
                         height: 20,
@@ -936,7 +926,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       ),
                       const SizedBox(width: 12),
 
-                      // Voucher type badge
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 6,
@@ -961,7 +950,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       ),
                       const SizedBox(width: 8),
 
-                      // Voucher details
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -985,7 +973,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                         ),
                       ),
 
-                      // Voucher value
                       Text(
                         '${voucher.amount.toStringAsFixed(2)} CHF',
                         style: const TextStyle(
@@ -1001,6 +988,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             );
           }),
 
+          /// Points impact warning for voucher usage
           if (_selectedVoucher != null) ...[
             const SizedBox(height: AppConstants.mediumSpacing),
             Container(
@@ -1029,7 +1017,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             ),
           ],
 
-          // Clear selection button
           if (_selectedVoucher != null) ...[
             const SizedBox(height: AppConstants.mediumSpacing),
             TextButton(
@@ -1046,6 +1033,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
+  /// Returns theme color for voucher type badges
   Color _getVoucherTypeColor(VoucherType type) {
     switch (type) {
       case VoucherType.fitness:
@@ -1055,6 +1043,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     }
   }
 
+  /// Comprehensive pricing breakdown showing all fees, discounts, and point earnings
   Widget _buildPricingBreakdown(
     bool isMember,
     double currentPrice,
@@ -1121,6 +1110,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               ),
             ],
           ),
+          
+          /// Member savings display for guest users
           if (!isMember &&
               widget.activity.memberPrice != widget.activity.guestPrice) ...[
             const SizedBox(height: AppConstants.mediumSpacing),
@@ -1139,7 +1130,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             ),
           ],
 
-          // Voucher discount section
+          /// Voucher discount line item
           if (voucherDiscount > 0) ...[
             const SizedBox(height: AppConstants.mediumSpacing),
             Row(
@@ -1177,7 +1168,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
           const Divider(height: 32),
 
-          // Subtotal (if voucher applied)
+          /// Subtotal with strikethrough when voucher applied
           if (voucherDiscount > 0) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1199,6 +1190,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             const SizedBox(height: 8),
           ],
 
+          /// Final total amount
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -1221,6 +1213,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             ],
           ),
           const SizedBox(height: AppConstants.mediumSpacing),
+          
+          /// Points earning preview
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -1249,7 +1243,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Build terms and conditions checkbox
+  /// Terms and conditions acceptance with cancellation policy
   Widget _buildTermsAndConditions() {
     return Container(
       decoration: BoxDecoration(
@@ -1338,7 +1332,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Build confirm booking button
+  /// Final booking confirmation button with price display
   Widget _buildBookingButton(
     BookingProvider bookingProvider,
     double totalPrice,
@@ -1380,7 +1374,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Increment participant count
+  /// Increases participant count within capacity limits
   void _incrementParticipants() {
     if (_participantCount < widget.activity.spotsLeft) {
       setState(() {
@@ -1390,7 +1384,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     }
   }
 
-  /// Decrement participant count
+  /// Decreases participant count with minimum of 1
   void _decrementParticipants() {
     if (_participantCount > 1) {
       setState(() {
@@ -1400,7 +1394,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     }
   }
 
-  /// Update booking details in provider
+  /// Updates booking provider with current participant selection
   void _updateBookingDetails() {
     final bookingProvider = Provider.of<BookingProvider>(
       context,
@@ -1414,7 +1408,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Confirm the booking
+  /// Processes final booking with voucher application and error handling
   Future<void> _confirmBooking(
     BookingProvider bookingProvider,
     double totalPrice,
@@ -1423,7 +1417,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       _isLoading = true;
     });
 
-    // Update final booking details with voucher information
+    /// Apply voucher selection to booking details
     bookingProvider
       ..updateBookingDetails(
         participantCount: _participantCount,
@@ -1440,7 +1434,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         });
 
         if (success && bookingProvider.lastCreatedBooking != null) {
-          // Navigate directly to success screen since booking is already confirmed
           unawaited(
             Navigator.pushReplacement(
               context,
@@ -1453,7 +1446,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             ),
           );
         } else {
-          // Show error message
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(

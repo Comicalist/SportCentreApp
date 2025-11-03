@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // date/time formatting
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:table_calendar/table_calendar.dart'; // calendar widget
+import 'package:table_calendar/table_calendar.dart';
 
 import '../../models/booking.dart';
 import '../../providers/auth_provider.dart';
@@ -13,6 +13,8 @@ import '../../services/notification_service.dart';
 import '../../utils/colors.dart';
 import '../../widgets/notifications/notifications_drawer.dart';
 
+/// Comprehensive booking management screen with calendar view, status filtering,
+/// and booking lifecycle operations for user reservation oversight
 class BookingsScreen extends StatefulWidget {
   const BookingsScreen({super.key});
 
@@ -21,7 +23,7 @@ class BookingsScreen extends StatefulWidget {
 }
 
 class _BookingsScreenState extends State<BookingsScreen> {
-  // ---- Filters (original feature) ----
+  /// Status filter for booking display management
   String selectedFilter = 'All';
   final List<String> filterOptions = [
     'All',
@@ -30,14 +32,13 @@ class _BookingsScreenState extends State<BookingsScreen> {
     'Cancelled',
   ];
 
-  // ---- Calendar state (required by TableCalendar) ----
-  DateTime _focusedDay = DateTime.now(); // must be non-null
+  /// Calendar navigation state for booking timeline view
+  DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
 
   @override
   void initState() {
     super.initState();
-    // Load user bookings when screen initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       if (authProvider.appUser != null) {
@@ -53,7 +54,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
-        // If not logged in, show a sign-in prompt
+        /// Guest user flow with authentication prompt
         if (!authProvider.isLoggedIn) {
           return Scaffold(
             backgroundColor: Colors.grey[50],
@@ -105,7 +106,6 @@ class _BookingsScreenState extends State<BookingsScreen> {
           );
         }
 
-        // Logged-in view: calendar + filters + list
         final userId = firebase_auth.FirebaseAuth.instance.currentUser?.uid;
 
         return Scaffold(
@@ -119,7 +119,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
             elevation: 0,
             actions: [
               if (userId != null)
-                // Bell icon with badge
+                /// Notification system with unread badge display
                 StreamBuilder<int>(
                   stream: NotificationService().getUnreadCount(userId),
                   builder: (context, snapshot) {
@@ -173,11 +173,11 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ---- 📅 Calendar (identical behavior) ----
+                    /// Interactive calendar for booking timeline visualization
                     _buildCalendarSection(bookingProvider),
                     const SizedBox(height: 24),
 
-                    // ---- Filter chips (original feature) ----
+                    /// Status-based filtering for booking organization
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
@@ -200,9 +200,9 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // ---- Bookings list (with safe date handling) ----
+                    /// Real-time booking list with management capabilities
                     StreamBuilder<List<Booking>>(
-                      stream: bookingProvider.userBookingsStream, // ✅ This is fine since userBookingsStream is never null
+                      stream: bookingProvider.userBookingsStream,
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
@@ -296,14 +296,10 @@ class _BookingsScreenState extends State<BookingsScreen> {
     );
   }
 
-  // ============================================================================
-  // Calendar helpers (identical logic + safe date conversion)
-  // ============================================================================
-
-  // Normalize a DateTime to midnight
+  /// Normalizes DateTime to midnight for consistent calendar date comparison
   DateTime _atMidnight(DateTime d) => DateTime(d.year, d.month, d.day);
 
-  // Safely converts dynamic (DateTime or Firestore Timestamp) to DateTime
+  /// Safely converts dynamic timestamp formats to DateTime for Firebase compatibility
   DateTime? _asDateTime(dynamic v) {
     if (v == null) return null;
     if (v is DateTime) return v;
@@ -314,7 +310,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
     return null;
   }
 
-  // Extractors that try multiple possible fields from your Booking model
+  /// Extracts activity start date from multiple possible booking field formats
   DateTime? _getStartDate(Booking b) {
     try {
       final v1 = (b as dynamic).activityDate;
@@ -329,6 +325,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
     return null;
   }
 
+  /// Extracts activity end date from booking when available
   DateTime? _getEndDate(Booking b) {
     try {
       final v1 = (b as dynamic).activityEndDate;
@@ -343,6 +340,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
     return null;
   }
 
+  /// Extracts activity duration from booking metadata
   int? _getDurationMinutes(Booking b) {
     try {
       return (b as dynamic).durationMinutes as int?;
@@ -351,9 +349,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
     }
   }
 
-  /// Formats as "HH:mm – HH:mm" if end exists,
-  /// else "HH:mm • X min" if only duration exists,
-  /// else "HH:mm", else "Time TBA".
+  /// Formats comprehensive time display with end time or duration fallback
   String _formatTimeRange(Booking b) {
     final start = _getStartDate(b);
     if (start == null) return 'Time TBA';
@@ -370,7 +366,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
     return s;
   }
 
-  /// Calendar card: same behavior as the working page
+  /// Interactive calendar with booking visualization and day selection
   Widget _buildCalendarSection(BookingProvider bookingProvider) {
     return StreamBuilder<List<Booking>>(
       stream: bookingProvider.userBookingsStream,
@@ -383,7 +379,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
         final bookings = snapshot.data ?? const <Booking>[];
         final isLoading = snapshot.connectionState == ConnectionState.waiting;
         
-        // Map day -> list of bookings (skip rows without valid date)
+        /// Group bookings by calendar day for visual organization
         final byDay = <DateTime, List<Booking>>{};
         for (final b in bookings) {
           final start = _getStartDate(b);
@@ -392,7 +388,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
           byDay.putIfAbsent(key, () => []).add(b);
         }
 
-        // Default selection: today if available, else first day with bookings, else today
+        /// Smart default selection prioritizing today's bookings
         _selectedDay ??= () {
           final todayKey = _atMidnight(DateTime.now());
           if (byDay.containsKey(todayKey)) return todayKey;
@@ -431,7 +427,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
               ),
               const SizedBox(height: 12),
 
-              // --- Calendar ---
+              /// Calendar interface with booking indicators
               TableCalendar<Booking>(
                 focusedDay: _focusedDay,
                 firstDay: DateTime.now().subtract(const Duration(days: 365)),
@@ -463,14 +459,13 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     _focusedDay = focused;
                   });
                 },
-                // Return the list of bookings for that day
                 eventLoader: (day) =>
                     byDay[_atMidnight(day)] ?? const <Booking>[],
               ),
 
               const SizedBox(height: 12),
 
-              // --- States / messages ---
+              /// Calendar state display and selected day bookings
               if (isLoading)
                 const Center(
                   child: Padding(
@@ -484,7 +479,6 @@ class _BookingsScreenState extends State<BookingsScreen> {
                   style: TextStyle(color: Colors.grey),
                 ),
               ] else ...[
-                // Selected day title
                 Text(
                   DateFormat('EEEE, MMMM d, yyyy').format(_selectedDay!),
                   style: const TextStyle(
@@ -494,7 +488,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 ),
                 const SizedBox(height: 8),
 
-                // Selected day bookings list
+                /// Daily booking summary for selected calendar day
                 if (selectedBookings.isEmpty)
                   const Text(
                     'No bookings this day.',
@@ -509,7 +503,6 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     itemBuilder: (context, i) {
                       final b = selectedBookings[i];
 
-                      // Optional fields depending on your Booking model
                       var title = 'Booking';
                       String? place;
                       try {
@@ -578,17 +571,13 @@ class _BookingsScreenState extends State<BookingsScreen> {
     );
   }
 
-  // ============================================================================
-  // Existing list UI & actions (with safe date usage)
-  // ============================================================================
-
+  /// Individual booking card with status, actions, and booking lifecycle management
   Widget _buildBookingCard(Booking booking) {
-    // Safely derive date + time for the card
     final startForList = _getStartDate(booking);
     final dateLabel = startForList != null
         ? _formatDate(startForList)
         : 'Date TBA';
-    // If activityTime is missing, reuse computed time range as a fallback
+    
     String? activityTime;
     try {
       activityTime = (booking as dynamic).activityTime as String?;
@@ -608,7 +597,6 @@ class _BookingsScreenState extends State<BookingsScreen> {
           children: [
             Row(
               children: [
-                // Title + date/time
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -651,7 +639,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 ),
               ],
             ),
-            // Points for completed bookings
+            
+            /// Points reward display for completed activities
             if (booking.pointsEarned > 0 &&
                 booking.status == BookingStatus.completed) ...[
               const SizedBox(height: 8),
@@ -670,7 +659,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 ],
               ),
             ],
-            // Actions for confirmed bookings
+            
+            /// Booking management actions for confirmed reservations
             if (booking.status == BookingStatus.confirmed) ...[
               const SizedBox(height: 12),
               Row(
@@ -705,7 +695,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 ],
               ),
               const SizedBox(height: 8),
-              // Temporary testing button
+              
+              /// Testing functionality for booking completion workflow
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -730,6 +721,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
     );
   }
 
+  /// Status badge with color coding for booking lifecycle states
   Widget _buildStatusBadge(BookingStatus status) {
     Color backgroundColor;
     Color textColor;
@@ -780,6 +772,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
     );
   }
 
+  /// Filters booking list based on selected status criteria
   List<Booking> _filterBookings(List<Booking> bookings) {
     if (selectedFilter == 'All') return bookings;
     final status = BookingStatus.values.firstWhere(
@@ -790,6 +783,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
     return bookings.where((booking) => booking.status == status).toList();
   }
 
+  /// Displays comprehensive booking information modal
   void _showBookingDetails(Booking booking) {
     final start = _getStartDate(booking);
     final startLabel = start != null ? _formatDate(start) : 'TBA';
@@ -830,6 +824,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
     );
   }
 
+  /// Processes booking completion with points credit workflow
   void _completeBooking(Booking booking) {
     showDialog(
       context: context,
@@ -899,6 +894,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
     );
   }
 
+  /// Handles booking cancellation with confirmation workflow
   void _cancelBooking(Booking booking) {
     showDialog(
       context: context,
@@ -967,7 +963,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
     );
   }
 
-  /// Minimal empty calendar used for errors or no data
+  /// Fallback calendar display for error states and empty data
   Widget _buildEmptyCalendar({String? message}) {
     return Container(
       decoration: BoxDecoration(
@@ -1014,7 +1010,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
     );
   }
 
-  // Format a DateTime for list cards
+  /// Formats date for booking card display in abbreviated month format
   String _formatDate(DateTime date) {
     const months = [
       'Jan',

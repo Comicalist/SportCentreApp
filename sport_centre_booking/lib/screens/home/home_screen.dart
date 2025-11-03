@@ -9,7 +9,8 @@ import 'widgets/activities_grid.dart';
 import 'widgets/advanced_filters.dart';
 import 'widgets/category_tabs.dart';
 
-/// Main home screen showing activities with filtering capabilities
+/// Primary activity discovery interface with comprehensive filtering and search
+/// Central hub for users to explore, filter, and access available sport activities
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -18,7 +19,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Filter state
+  // Activity discovery and filtering state management
   String selectedCategory = 'All';
   bool isFilterExpanded = false;
   String? selectedClub;
@@ -48,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Activities'),
         actions: [
           if (userId != null)
-            // Bell icon with badge
+            // Real-time notification system with unread count badge
             StreamBuilder<int>(
               stream: NotificationService().getUnreadCount(userId),
               builder: (context, snapshot) {
@@ -64,6 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                       tooltip: 'Notifications',
                     ),
+                    // Dynamic badge for unread notifications
                     if (unreadCount > 0)
                       Positioned(
                         right: 8,
@@ -117,7 +119,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Build the header section with title, search, and filters
+  /// Header section with user engagement and discovery tools
+  /// Combines branding, search, filtering, and category navigation
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -135,7 +138,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Build title and welcome message
+  /// Personalized welcome message and app branding
+  /// Adapts greeting based on user authentication status
   Widget _buildTitle() {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
@@ -163,7 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Build category filter tabs
+  /// Category-based activity filtering for quick discovery
   Widget _buildCategoryTabs() {
     return CategoryTabs(
       selectedCategory: selectedCategory,
@@ -175,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Build search bar and filter toggle button
+  /// Primary search interface with expandable advanced filtering
   Widget _buildSearchAndFilterToggle() {
     return Row(
       children: [
@@ -204,7 +208,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Build filter toggle button
+  /// Toggle button for advanced filtering options
+  /// Visual feedback for filter expansion state
   Widget _buildFilterToggleButton() {
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -226,7 +231,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Build advanced filters section
+  /// Advanced filtering system with hierarchical dependencies
+  /// Manages complex filter relationships and state synchronization
   Widget _buildAdvancedFilters() {
     return AdvancedFilters(
       isExpanded: isFilterExpanded,
@@ -238,7 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
       onClubChanged: (value) {
         setState(() {
           selectedClub = value;
-          // ✅ Clear facility when club changes
+          // Clear facility when club changes to maintain data integrity
           selectedFacility = null;
         });
       },
@@ -251,7 +257,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Build input border for text fields
+  /// Consistent input styling for search and filter components
   OutlineInputBorder _buildInputBorder({bool focused = false}) {
     return OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
@@ -261,7 +267,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Clear all filters
+  /// Reset all filters to default state for fresh discovery
+  /// Maintains search interface consistency and user experience
   void _clearFilters() {
     setState(() {
       selectedClub = null;

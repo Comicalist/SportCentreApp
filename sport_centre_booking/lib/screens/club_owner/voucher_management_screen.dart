@@ -7,6 +7,8 @@ import '../../providers/auth_provider.dart';
 import '../../services/club_service.dart';
 import '../../services/voucher_service.dart';
 
+/// Comprehensive voucher management system for club owners
+/// Handles creation, editing, and lifecycle management of promotional vouchers
 class VoucherManagementScreen extends StatefulWidget {
   const VoucherManagementScreen({super.key});
 
@@ -16,7 +18,7 @@ class VoucherManagementScreen extends StatefulWidget {
 }
 
 class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
-  final ClubService _clubService = ClubService(); // Add instance
+  final ClubService _clubService = ClubService();
   List<Voucher> _vouchers = [];
   List<Club> _clubs = [];
   bool _isLoading = true;
@@ -27,6 +29,7 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
     _loadData();
   }
 
+  /// Load club owner's approved clubs and associated vouchers
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
@@ -35,10 +38,10 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
       final userId = authProvider.firebaseUser?.uid;
 
       if (userId != null) {
-        // Load clubs owned by this user - use instance method
+        // Load only approved clubs for voucher creation eligibility
         _clubs = await _clubService.getApprovedOwnedClubs(ownerId: userId);
 
-        // Load vouchers for all clubs - using static method
+        // Load all vouchers across owner's clubs for management
         _vouchers = await VoucherService.getVouchersByClubOwner(userId);
       }
     } catch (e) {
@@ -75,6 +78,7 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
     );
   }
 
+  /// Display message when no approved clubs are available for voucher creation
   Widget _buildNoClubsMessage() {
     return const Center(
       child: Column(
@@ -97,6 +101,7 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
     );
   }
 
+  /// Main voucher list with empty state encouragement
   Widget _buildVoucherList() {
     if (_vouchers.isEmpty) {
       return Center(
@@ -140,7 +145,9 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
     );
   }
 
+  /// Voucher card with type classification and management controls
   Widget _buildVoucherCard(Voucher voucher) {
+    // Find associated club for display context
     final club = _clubs.firstWhere(
       (c) => c.id == voucher.clubId,
       orElse: () => Club(
@@ -162,6 +169,7 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
           children: [
             Row(
               children: [
+                // Voucher type classification badge
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -185,6 +193,7 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
                   ),
                 ),
                 const Spacer(),
+                // Voucher management actions menu
                 PopupMenuButton<String>(
                   onSelected: (action) => _handleVoucherAction(action, voucher),
                   itemBuilder: (context) => [
@@ -233,6 +242,8 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
               style: TextStyle(color: Colors.grey.shade600),
             ),
             const SizedBox(height: 12),
+            
+            // Voucher value and cost information
             Row(
               children: [
                 _buildInfoChip(
@@ -243,7 +254,7 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
                 const SizedBox(width: 8),
                 _buildInfoChip(
                   Icons.stars,
-                  '${voucher.pointsCost} points', // Changed from voucher.value to voucher.pointsCost
+                  '${voucher.pointsCost} points',
                   Colors.orange,
                 ),
                 const SizedBox(width: 8),
@@ -251,6 +262,8 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
               ],
             ),
             const SizedBox(height: 8),
+            
+            // Status and creation metadata
             Row(
               children: [
                 Icon(
@@ -279,6 +292,7 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
     );
   }
 
+  /// Styled information chip for voucher details
   Widget _buildInfoChip(IconData icon, String label, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -305,6 +319,7 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
     );
   }
 
+  /// Launch voucher creation dialog
   void _showCreateVoucherDialog() {
     showDialog(
       context: context,
@@ -313,6 +328,7 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
     );
   }
 
+  /// Handle voucher management actions from context menu
   void _handleVoucherAction(String action, Voucher voucher) async {
     switch (action) {
       case 'edit':
@@ -327,6 +343,7 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
     }
   }
 
+  /// Launch edit dialog with existing voucher data
   void _showEditVoucherDialog(Voucher voucher) {
     showDialog(
       context: context,
@@ -338,6 +355,7 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
     );
   }
 
+  /// Toggle voucher active status for availability control
   Future<void> _toggleVoucherStatus(Voucher voucher) async {
     try {
       await VoucherService.updateVoucher(voucher.id, {
@@ -362,6 +380,7 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
     }
   }
 
+  /// Confirm voucher deletion with warning
   void _showDeleteConfirmation(Voucher voucher) {
     showDialog(
       context: context,
@@ -388,6 +407,7 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
     );
   }
 
+  /// Permanently remove voucher from system
   Future<void> _deleteVoucher(Voucher voucher) async {
     try {
       await VoucherService.deleteVoucher(voucher.id);
@@ -406,11 +426,14 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
     }
   }
 
+  /// Format date for display consistency
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
   }
 }
 
+/// Voucher creation and editing dialog with validation
+/// Handles both fitness and stuff voucher types with points calculation
 class _CreateVoucherDialog extends StatefulWidget {
   const _CreateVoucherDialog({
     required this.clubs,
@@ -438,6 +461,7 @@ class _CreateVoucherDialogState extends State<_CreateVoucherDialog> {
   @override
   void initState() {
     super.initState();
+    // Initialize form with existing voucher data for editing
     if (widget.existingVoucher != null) {
       final voucher = widget.existingVoucher!;
       _titleController.text = voucher.title;
@@ -461,6 +485,7 @@ class _CreateVoucherDialogState extends State<_CreateVoucherDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Club selection for voucher association
               DropdownButtonFormField<String>(
                 initialValue: _selectedClubId,
                 decoration: const InputDecoration(
@@ -478,6 +503,8 @@ class _CreateVoucherDialogState extends State<_CreateVoucherDialog> {
                     value == null ? 'Please select a club' : null,
               ),
               const SizedBox(height: 16),
+              
+              // Voucher type classification
               DropdownButtonFormField<VoucherType>(
                 initialValue: _selectedType,
                 decoration: const InputDecoration(
@@ -497,6 +524,8 @@ class _CreateVoucherDialogState extends State<_CreateVoucherDialog> {
                 onChanged: (value) => setState(() => _selectedType = value!),
               ),
               const SizedBox(height: 16),
+              
+              // Voucher marketing content
               TextFormField(
                 controller: _titleController,
                 decoration: const InputDecoration(
@@ -521,6 +550,8 @@ class _CreateVoucherDialogState extends State<_CreateVoucherDialog> {
                     : null,
               ),
               const SizedBox(height: 16),
+              
+              // Voucher value with automatic points calculation
               TextFormField(
                 controller: _amountController,
                 decoration: const InputDecoration(
@@ -540,6 +571,8 @@ class _CreateVoucherDialogState extends State<_CreateVoucherDialog> {
                 },
               ),
               const SizedBox(height: 8),
+              
+              // Points cost calculation display
               Text(
                 'Points cost: ${_calculatePoints()} points (100 points = 1 CHF)',
                 style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
@@ -568,11 +601,13 @@ class _CreateVoucherDialogState extends State<_CreateVoucherDialog> {
     );
   }
 
+  /// Calculate points cost based on CHF amount (100 points = 1 CHF)
   int _calculatePoints() {
     final amount = double.tryParse(_amountController.text) ?? 0;
-    return (amount * 100).round(); // 100 points = 1 CHF
+    return (amount * 100).round();
   }
 
+  /// Create or update voucher with validation and points calculation
   Future<void> _saveVoucher() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -588,17 +623,17 @@ class _CreateVoucherDialogState extends State<_CreateVoucherDialog> {
       final points = _calculatePoints();
 
       if (widget.existingVoucher != null) {
-        // Update existing voucher
+        // Update existing voucher configuration
         await VoucherService.updateVoucher(widget.existingVoucher!.id, {
           'clubId': _selectedClubId,
           'type': _selectedType.toString().split('.').last,
           'title': _titleController.text.trim(),
           'description': _descriptionController.text.trim(),
           'amount': amount,
-          'pointsCost': points, // Changed from 'value' to 'pointsCost'
+          'pointsCost': points,
         });
       } else {
-        // Create new voucher
+        // Create new voucher type for club
         await VoucherService.createVoucherType(
           clubId: _selectedClubId!,
           createdBy: userId,
@@ -606,7 +641,7 @@ class _CreateVoucherDialogState extends State<_CreateVoucherDialog> {
           title: _titleController.text.trim(),
           description: _descriptionController.text.trim(),
           amount: amount,
-          pointsCost: points, // Changed from 'value' to 'pointsCost'
+          pointsCost: points,
         );
       }
 

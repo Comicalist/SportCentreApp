@@ -6,6 +6,8 @@ import '../../services/facility_service.dart';
 import 'add_facility_screen.dart';
 import 'edit_facility_screen.dart';
 
+/// Club facility management dashboard with search and CRUD operations
+/// Displays all facilities owned by a club with management controls
 class ClubFacilitiesScreen extends StatefulWidget {
   const ClubFacilitiesScreen({super.key, required this.club});
   final Club club;
@@ -22,10 +24,10 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
   @override
   void initState() {
     super.initState();
-
     _loadFacilities();
   }
 
+  /// Load all facilities belonging to the current club
   void _loadFacilities() {
     _facilitiesFuture = _facilityService.getClubFacilities(
       clubId: widget.club.id,
@@ -78,6 +80,7 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
                 }
 
                 final facilities = snapshot.data ?? [];
+                // Apply real-time search filtering to facility list
                 final filteredFacilities = facilities.where((facility) {
                   return facility.title.toLowerCase().contains(
                         _searchQuery.toLowerCase(),
@@ -118,6 +121,7 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
     );
   }
 
+  /// Search input for filtering facilities by name or description
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -141,6 +145,7 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
     );
   }
 
+  /// Facility card with image, details, and management actions
   Widget _buildFacilityCard(Facility facility) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -148,12 +153,12 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Facility Image - FIXED
+          // Facility promotional image with fallback handling
           SizedBox(
             height: 160,
             width: double.infinity,
             child: Image.network(
-              facility.displayImageUrl, // ✅ This is correct now
+              facility.displayImageUrl,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
                 return Container(
@@ -175,7 +180,7 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
             ),
           ),
 
-          // Facility Information
+          // Facility information and management controls
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -192,6 +197,7 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
                         ),
                       ),
                     ),
+                    // Facility management action menu
                     PopupMenuButton<String>(
                       onSelected: (value) => _handleMenuAction(value, facility),
                       itemBuilder: (context) => [
@@ -230,6 +236,7 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 12),
+                // Capacity information for booking management
                 Row(
                   children: [
                     Icon(Icons.people, size: 16, color: Colors.grey[600]),
@@ -248,6 +255,7 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
     );
   }
 
+  /// Empty state with encouragement to add first facility
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -282,6 +290,7 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
     );
   }
 
+  /// Handle facility management actions from context menu
   void _handleMenuAction(String action, Facility facility) {
     switch (action) {
       case 'edit':
@@ -293,6 +302,7 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
     }
   }
 
+  /// Navigate to facility creation with refresh handling
   void _navigateToAddFacility() async {
     final result = await Navigator.push<bool>(
       context,
@@ -306,8 +316,9 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
     }
   }
 
+  /// Navigate to facility editing with latest data synchronization
   void _navigateToEditFacility(Facility facility) async {
-    // Show loading indicator while fetching latest data
+    // Show loading while fetching current facility state
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -315,14 +326,13 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
     );
 
     try {
-      // Fetch the latest facility data from Firestore before editing
+      // Ensure we have the latest facility data before editing
       final latestFacility = await _facilityService.getFacility(
         facilityId: facility.id,
       );
 
       if (!mounted) return;
 
-      // Dismiss loading indicator
       Navigator.pop(context);
 
       if (latestFacility == null) {
@@ -347,7 +357,6 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
       }
     } catch (e) {
       if (mounted) {
-        // Dismiss loading indicator
         Navigator.pop(context);
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -360,6 +369,7 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
     }
   }
 
+  /// Confirm facility deletion with warning about permanent action
   void _confirmDelete(Facility facility) {
     showDialog(
       context: context,
@@ -386,6 +396,7 @@ class _ClubFacilitiesScreenState extends State<ClubFacilitiesScreen> {
     );
   }
 
+  /// Permanently remove facility from club
   Future<void> _deleteFacility(Facility facility) async {
     try {
       await _facilityService.deleteFacility(facilityId: facility.id);

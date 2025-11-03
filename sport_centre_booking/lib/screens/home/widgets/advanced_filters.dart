@@ -3,7 +3,8 @@ import 'package:intl/intl.dart';
 import '../../../services/activity_service.dart';
 import '../../../utils/constants.dart';
 
-/// Widget for advanced filtering options with club and facility selection
+/// Advanced filtering system for activity discovery and booking optimization
+/// Provides hierarchical filtering with club-facility dependencies and availability constraints
 class AdvancedFilters extends StatelessWidget {
   const AdvancedFilters({
     super.key,
@@ -11,25 +12,26 @@ class AdvancedFilters extends StatelessWidget {
     required this.selectedClub,
     required this.selectedDate,
     required this.selectedTimeCategory,
-    required this.selectedFacility, // ✅ Changed from selectedLocation
+    required this.selectedFacility,
     required this.onlyAvailable,
     required this.onClubChanged,
     required this.onDateChanged,
     required this.onTimeCategoryChanged,
-    required this.onFacilityChanged, // ✅ Changed from onLocationChanged
+    required this.onFacilityChanged,
     required this.onAvailabilityChanged,
     required this.onClearFilters,
   });
+  
   final bool isExpanded;
   final String? selectedClub;
   final DateTime? selectedDate;
   final String? selectedTimeCategory;
-  final String? selectedFacility; // ✅ Changed from selectedLocation
+  final String? selectedFacility;
   final bool onlyAvailable;
   final Function(String?) onClubChanged;
   final Function(DateTime?) onDateChanged;
   final Function(String?) onTimeCategoryChanged;
-  final Function(String?) onFacilityChanged; // ✅ Changed from onLocationChanged
+  final Function(String?) onFacilityChanged;
   final Function(bool) onAvailabilityChanged;
   final VoidCallback onClearFilters;
 
@@ -44,12 +46,14 @@ class AdvancedFilters extends StatelessWidget {
     );
   }
 
+  /// Main filter content with hierarchical organization
+  /// Arranges filters in logical groups for optimal user workflow
   Widget _buildFilterContent(BuildContext context) {
     return Column(
       children: [
         const SizedBox(height: 16),
 
-        // Row 1: Club and Date
+        // Primary location and timing filters
         Row(
           children: [
             Expanded(
@@ -67,7 +71,7 @@ class AdvancedFilters extends StatelessWidget {
 
         const SizedBox(height: 12),
 
-        // Row 2: Time and Facility
+        // Secondary filters with facility dependency
         Row(
           children: [
             Expanded(
@@ -100,7 +104,7 @@ class AdvancedFilters extends StatelessWidget {
 
         const SizedBox(height: 12),
 
-        // Row 3: Available checkbox and Clear button
+        // Availability constraint and filter management
         Row(
           children: [
             Expanded(
@@ -127,6 +131,7 @@ class AdvancedFilters extends StatelessWidget {
     );
   }
 
+  /// Static dropdown for predefined categories like time slots
   Widget _buildDropdown({
     required String label,
     required String? value,
@@ -146,6 +151,7 @@ class AdvancedFilters extends StatelessWidget {
           hint: Text(label, style: TextStyle(color: Colors.grey[600])),
           isExpanded: true,
           items: [
+            // Default "All" option for inclusive filtering
             DropdownMenuItem<String>(
               child: Text(
                 'All ${label == "Time" ? "Times" : "Facilities"}',
@@ -163,6 +169,8 @@ class AdvancedFilters extends StatelessWidget {
     );
   }
 
+  /// Dynamic dropdown with real-time data streaming
+  /// Updates automatically when underlying data changes
   Widget _buildStreamDropdown({
     required String label,
     required String? value,
@@ -185,10 +193,12 @@ class AdvancedFilters extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
+              // Validate selected value against current data
               value: items.contains(value) ? value : null,
               hint: Text(label, style: TextStyle(color: Colors.grey[600])),
               isExpanded: true,
               items: [
+                // Default "All" option for comprehensive filtering
                 DropdownMenuItem<String>(
                   child: Text(
                     'All ${label == "Club" ? "Clubs" : "Facilities"}',
@@ -208,6 +218,7 @@ class AdvancedFilters extends StatelessWidget {
     );
   }
 
+  /// Date selection with booking-appropriate range constraints
   Widget _buildDatePicker(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -237,6 +248,7 @@ class AdvancedFilters extends StatelessWidget {
                   ),
                 ),
               ),
+              // Clear date selection option
               if (selectedDate != null)
                 InkWell(
                   onTap: () => onDateChanged(null),
@@ -249,12 +261,14 @@ class AdvancedFilters extends StatelessWidget {
     );
   }
 
+  /// Date picker with business-appropriate constraints
+  /// Restricts selection to future dates within booking window
   Future<void> _showDatePicker(BuildContext context) async {
     final picked = await showDatePicker(
       context: context,
       initialDate: selectedDate ?? DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      firstDate: DateTime.now(), // No past bookings
+      lastDate: DateTime.now().add(const Duration(days: 365)), // 1-year horizon
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -271,7 +285,8 @@ class AdvancedFilters extends StatelessWidget {
     }
   }
 
-  /// Build a disabled dropdown when no club is selected
+  /// Disabled facility dropdown when no club is selected
+  /// Enforces hierarchical filter dependency for data integrity
   Widget _buildDisabledDropdown({required String label, required String hint}) {
     return Container(
       decoration: BoxDecoration(

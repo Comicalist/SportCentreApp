@@ -4,15 +4,16 @@ import '../main.dart';
 import '../models/booking.dart';
 import '../models/participant.dart';
 
-/// Service for managing event participants in admin panel
-/// Handles CRUD operations with real-time Firestore synchronization
+/// Administrative participant management service for event oversight and customer service
+/// Provides real-time participant tracking, status management, and booking analytics
 class ParticipantService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static const String _bookingsCollection = 'bookings';
   static const String _usersCollection = 'users';
   static const String _activitiesCollection = 'activities';
 
-  /// Get all participants with real-time updates
+  /// Real-time participant feed for administrative dashboard with comprehensive user data
+  /// Combines booking and user information for complete participant profiles
   static Stream<List<Participant>> getAllParticipants() {
     return _firestore
         .collection(_bookingsCollection)
@@ -28,7 +29,7 @@ class ParticipantService {
 
               if (userId == null) continue;
 
-              // Fetch user data
+              /// Fetch user profile data for complete participant information
               final userDoc = await _firestore
                   .collection(_usersCollection)
                   .doc(userId)
@@ -51,7 +52,7 @@ class ParticipantService {
         });
   }
 
-  /// Get participants for a specific activity
+  /// Activity-specific participant management for event coordination
   static Stream<List<Participant>> getParticipantsByActivity(
     String activityId,
   ) {
@@ -92,7 +93,7 @@ class ParticipantService {
         });
   }
 
-  /// Get participants filtered by status
+  /// Status-filtered participant views for workflow management and customer service
   static Stream<List<Participant>> getParticipantsByStatus(
     BookingStatus status,
   ) {
@@ -133,10 +134,9 @@ class ParticipantService {
         });
   }
 
-  /// Get a single participant by booking ID
-  /// 
-  /// Returns null if booking not found or user data is invalid.
-  /// Throws [FirebaseException] for Firebase-related errors.
+  /// Retrieve individual participant details for customer service and booking management
+  /// Returns null if booking not found or user data is invalid
+  /// Throws [FirebaseException] for Firebase-related errors
   static Future<Participant?> getParticipant(String bookingId) async {
     try {
       final bookingDoc = await _firestore
@@ -177,10 +177,9 @@ class ParticipantService {
     }
   }
 
-  /// Update participant booking details
-  /// 
-  /// Returns true if successful, false otherwise.
-  /// Throws exceptions for critical errors that should be handled by caller.
+  /// Administrative booking modification with capacity management and audit trail
+  /// Returns true if successful, false otherwise
+  /// Throws exceptions for critical errors that should be handled by caller
   static Future<bool> updateParticipant(
     String bookingId,
     Map<String, dynamic> updates,
@@ -203,13 +202,13 @@ class ParticipantService {
         final newStatus = updates['status'] as String?;
         final activityId = bookingData['activityId'] as String;
 
-        // Update the booking
+        /// Update booking record with timestamp for audit trail
         transaction.update(bookingRef, {
           ...updates,
           'updatedAt': FieldValue.serverTimestamp(),
         });
 
-        // If status changed, update activity capacity
+        /// Automatically adjust activity capacity when status changes
         if (oldStatus != null && newStatus != null && oldStatus != newStatus) {
           await _updateActivityCapacity(
             transaction,
@@ -235,10 +234,9 @@ class ParticipantService {
     }
   }
 
-  /// Update participant status
-  /// 
-  /// [reason] is optional and will be added to notes field.
-  /// For cancellations, automatically sets cancellation timestamp and reason.
+  /// Status management with automatic cancellation metadata
+  /// [reason] is optional and will be added to notes field
+  /// For cancellations, automatically sets cancellation timestamp and reason
   static Future<bool> updateParticipantStatus(
     String bookingId,
     BookingStatus newStatus, {
@@ -254,6 +252,7 @@ class ParticipantService {
         updates['notes'] = reason;
       }
 
+      /// Automatic cancellation workflow with audit trail
       if (newStatus == BookingStatus.cancelled) {
         updates['cancelledAt'] = FieldValue.serverTimestamp();
         updates['cancellationReason'] = reason ?? 'Cancelled by admin';
@@ -267,10 +266,9 @@ class ParticipantService {
     }
   }
 
-  /// Remove participant (delete booking)
-  /// 
-  /// This also updates activity capacity and user bookings.
-  /// Returns true if successful, false otherwise.
+  /// Complete participant removal with capacity restoration and data cleanup
+  /// Updates activity capacity and user booking references atomically
+  /// Returns true if successful, false otherwise
   static Future<bool> removeParticipant(String bookingId) async {
     try {
       logger.i('Removing participant $bookingId');
@@ -290,10 +288,10 @@ class ParticipantService {
         final userId = bookingData['userId'] as String;
         final participantCount = bookingData['participantCount'] as int? ?? 1;
 
-        // Delete the booking
+        /// Remove booking record
         transaction.delete(bookingRef);
 
-        // Update activity booked count
+        /// Restore activity capacity for future bookings
         final activityRef = _firestore
             .collection(_activitiesCollection)
             .doc(activityId);
@@ -302,7 +300,7 @@ class ParticipantService {
           'spotsLeft': FieldValue.increment(participantCount),
         });
 
-        // Remove from user's bookings
+        /// Clean up user's booking references
         final userRef = _firestore.collection(_usersCollection).doc(userId);
         transaction.update(userRef, {
           'upcomingBookings': FieldValue.arrayRemove([bookingId]),
@@ -322,10 +320,9 @@ class ParticipantService {
     }
   }
 
-  /// Search participants by name, email, or confirmation number
-  /// 
-  /// Performs client-side filtering on the participant stream.
-  /// For better performance with large datasets, consider server-side search.
+  /// Multi-criteria participant search for customer service and event management
+  /// Performs client-side filtering on the participant stream
+  /// For better performance with large datasets, consider server-side search
   static Stream<List<Participant>> searchParticipants(String query) {
     final lowerQuery = query.toLowerCase();
 
@@ -339,10 +336,9 @@ class ParticipantService {
     });
   }
 
-  /// Get participant statistics
-  /// 
-  /// Returns a map with counts for each status and total revenue.
-  /// In case of error, returns zeroed stats to prevent UI crashes.
+  /// Comprehensive booking analytics for business intelligence and reporting
+  /// Returns status counts and revenue metrics for dashboard display
+  /// In case of error, returns zeroed stats to prevent UI crashes
   static Future<Map<String, dynamic>> getParticipantStats() async {
     try {
       final snapshot = await _firestore.collection(_bookingsCollection).get();
@@ -396,7 +392,7 @@ class ParticipantService {
     }
   }
 
-  /// Returns empty stats map to prevent UI crashes
+  /// Fallback statistics to prevent dashboard crashes during errors
   static Map<String, dynamic> _getEmptyStats() {
     return {
       'total': 0,
@@ -408,7 +404,8 @@ class ParticipantService {
     };
   }
 
-  /// Helper method to update activity capacity when status changes
+  /// Intelligent capacity management based on booking status transitions
+  /// Handles spot allocation for confirmed/pending vs cancelled/completed bookings
   static Future<void> _updateActivityCapacity(
     Transaction transaction,
     String activityId,
@@ -421,18 +418,18 @@ class ParticipantService {
         .collection(_activitiesCollection)
         .doc(activityId);
 
-    // Determine if we need to adjust capacity
+    /// Determine capacity impact based on status transition
     final wasActive = oldStatus == 'confirmed' || oldStatus == 'pending';
     final isActive = newStatus == 'confirmed' || newStatus == 'pending';
 
     if (wasActive && !isActive) {
-      // Freeing up spots (cancellation/completion)
+      /// Free up spots for new bookings (cancellation/completion)
       transaction.update(activityRef, {
         'bookedCount': FieldValue.increment(-participantCount),
         'spotsLeft': FieldValue.increment(participantCount),
       });
     } else if (!wasActive && isActive) {
-      // Taking up spots (reactivation)
+      /// Reserve spots for active bookings (reactivation)
       transaction.update(activityRef, {
         'bookedCount': FieldValue.increment(participantCount),
         'spotsLeft': FieldValue.increment(-participantCount),
@@ -440,10 +437,9 @@ class ParticipantService {
     }
   }
 
-  /// Bulk update participants status
-  /// 
-  /// Returns a map of booking IDs to their update success status.
-  /// Use this for batch operations to avoid multiple individual calls.
+  /// Batch status operations for efficient administrative workflows
+  /// Returns a map of booking IDs to their update success status
+  /// Use this for bulk operations to avoid multiple individual calls
   static Future<Map<String, bool>> bulkUpdateStatus(
     List<String> bookingIds,
     BookingStatus newStatus, {
@@ -463,10 +459,9 @@ class ParticipantService {
     return results;
   }
 
-  /// Export participants data (for CSV or reports)
-  /// 
-  /// [activityId] and [status] are optional filters.
-  /// Returns list of maps suitable for CSV export or report generation.
+  /// Comprehensive data export for reporting and external system integration
+  /// [activityId] and [status] are optional filters for targeted exports
+  /// Returns structured data suitable for CSV export or report generation
   static Future<List<Map<String, dynamic>>> exportParticipants({
     String? activityId,
     BookingStatus? status,
@@ -498,6 +493,7 @@ class ParticipantService {
           userData = userDoc.exists ? userDoc.data() ?? {} : {};
         }
 
+        /// Structured export format for reporting tools
         exportData.add({
           'bookingId': doc.id,
           'userName': userData['name'] ?? 'Unknown',

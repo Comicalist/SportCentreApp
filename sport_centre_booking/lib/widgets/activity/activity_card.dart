@@ -10,6 +10,8 @@ import '../../services/booking_service.dart';
 import '../../utils/activity_helpers.dart';
 import '../../utils/constants.dart';
 
+/// Interactive activity card displaying booking information and availability status
+/// Optimized for quick browsing and conversion in activity marketplace
 class ActivityCard extends StatelessWidget {
   const ActivityCard({super.key, required this.activity});
   final Activity activity;
@@ -36,7 +38,7 @@ class ActivityCard extends StatelessWidget {
     );
   }
 
-  /// Build the activity image section with category badge and icon
+  /// Creates visual impact with category branding and fallback handling
   Widget _buildActivityImage() {
     return Container(
       height: AppConstants.activityImageHeight,
@@ -48,13 +50,12 @@ class ActivityCard extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Activity Image - FIXED: Use displayImageUrl getter
           ClipRRect(
             borderRadius: const BorderRadius.vertical(
               top: Radius.circular(AppConstants.cardBorderRadius),
             ),
             child: Image.network(
-              activity.displayImageUrl, // ✅ Changed from activity.imageUrl
+              activity.displayImageUrl,
               width: double.infinity,
               height: double.infinity,
               fit: BoxFit.cover,
@@ -89,7 +90,6 @@ class ActivityCard extends StatelessWidget {
                 );
               },
               errorBuilder: (context, error, stackTrace) {
-                // Fallback to gradient background if image fails
                 return Container(
                   width: double.infinity,
                   height: double.infinity,
@@ -118,7 +118,6 @@ class ActivityCard extends StatelessWidget {
               },
             ),
           ),
-          // Dark overlay for better text contrast on images
           Container(
             width: double.infinity,
             height: double.infinity,
@@ -136,14 +135,13 @@ class ActivityCard extends StatelessWidget {
               ),
             ),
           ),
-          // Category Badge
           _buildCategoryBadge(),
         ],
       ),
     );
   }
 
-  /// Build category badge in top-left corner
+  /// Prominent category identification for quick activity type recognition
   Widget _buildCategoryBadge() {
     return Positioned(
       top: 12,
@@ -166,7 +164,7 @@ class ActivityCard extends StatelessWidget {
     );
   }
 
-  /// Build the activity details section
+  /// Comprehensive activity information for informed booking decisions
   Widget _buildActivityDetails(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(AppConstants.cardPadding),
@@ -190,7 +188,6 @@ class ActivityCard extends StatelessWidget {
     );
   }
 
-  /// Build activity title
   Widget _buildActivityTitle() {
     return Text(
       activity.name,
@@ -199,17 +196,16 @@ class ActivityCard extends StatelessWidget {
         fontWeight: FontWeight.bold,
         color: Colors.black87,
       ),
-      maxLines: 1, // Only one line
-      overflow: TextOverflow.ellipsis, // Show ... if too long
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
     );
   }
 
-  /// Build date and time information row
+  /// Clear scheduling information for time management
   Widget _buildDateTimeInfo() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Date on first row
         Row(
           children: [
             Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
@@ -221,7 +217,6 @@ class ActivityCard extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 2),
-        // Time range on second row
         Row(
           children: [
             Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
@@ -239,7 +234,6 @@ class ActivityCard extends StatelessWidget {
     );
   }
 
-  /// Build club information row
   Widget _buildClubInfo() {
     return Row(
       children: [
@@ -260,7 +254,6 @@ class ActivityCard extends StatelessWidget {
     );
   }
 
-  /// Build location information row
   Widget _buildLocationInfo() {
     return Row(
       children: [
@@ -277,7 +270,6 @@ class ActivityCard extends StatelessWidget {
     );
   }
 
-  /// Build price, points, and availability section
   Widget _buildPriceAndAvailability(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -285,18 +277,15 @@ class ActivityCard extends StatelessWidget {
     );
   }
 
-  /// Build price and points column (points computed with backend rules)
+  /// Shows personalized pricing and rewards preview based on user status
   Widget _buildPriceAndPoints(BuildContext context) {
-    // Determine member/guest for preview
     final isMember = context.read<AuthProvider>().isLoggedIn;
 
-    // Price per person according to member status
     final currentPrice = isMember ? activity.memberPrice : activity.guestPrice;
 
-    // Compute preview points using the same backend logic as the booking flow
     final pointsPreview = BookingService.calculatePointsEarned(
       activity,
-      currentPrice, // one participant preview
+      currentPrice,
       isMember,
     );
 
@@ -329,7 +318,7 @@ class ActivityCard extends StatelessWidget {
     );
   }
 
-  /// Build availability badge
+  /// Color-coded availability status for urgent booking decisions
   Widget _buildAvailabilityBadge() {
     final isFullyBooked = activity.spotsLeft <= 0;
 
@@ -350,7 +339,7 @@ class ActivityCard extends StatelessWidget {
     );
   }
 
-  /// Build centered book now button
+  /// Primary conversion action with disabled state for sold out activities
   Widget _buildBookButton(BuildContext context) {
     final isFullyBooked = activity.spotsLeft <= 0;
 
@@ -359,7 +348,7 @@ class ActivityCard extends StatelessWidget {
         width: double.infinity,
         child: isFullyBooked
             ? ElevatedButton(
-                onPressed: null, // Disabled
+                onPressed: null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey[300],
                   foregroundColor: Colors.grey[600],
@@ -405,17 +394,15 @@ class ActivityCard extends StatelessWidget {
     );
   }
 
-  /// Handle booking button press
+  /// Routes authenticated users to booking flow or prompts login for guests
   void _handleBooking(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
     if (!authProvider.isLoggedIn) {
-      // Show login dialog for non-authenticated users
       _showLoginPrompt(context);
       return;
     }
 
-    // User is authenticated, navigate to booking details
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -424,7 +411,7 @@ class ActivityCard extends StatelessWidget {
     );
   }
 
-  /// Show login prompt for non-authenticated users
+  /// Encourages user registration with member benefits messaging
   void _showLoginPrompt(BuildContext context) {
     showDialog(
       context: context,

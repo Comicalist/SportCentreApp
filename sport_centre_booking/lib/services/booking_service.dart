@@ -5,12 +5,14 @@ import '../models/activity.dart';
 import '../models/booking.dart';
 import '../models/voucher.dart';
 
-/// Service for managing booking operations
+/// Comprehensive booking management service for sport centre reservations
+/// Handles real-time availability, voucher integration, points rewards, and transactional consistency
 class BookingService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  /// Check if a time slot is available for booking
+  /// Real-time availability validation for booking interface
+  /// Supports both general activity capacity and specific time slot allocation
   static Future<bool> checkAvailability(
     String activityId,
     String? timeSlotId,
@@ -25,14 +27,14 @@ class BookingService {
 
       final activityData = activityDoc.data()!;
 
-      // If no specific time slot, check general activity availability
+      /// General activity capacity validation for simple bookings
       if (timeSlotId == null) {
         final capacity = activityData['capacity'] ?? 0;
         final bookedCount = activityData['bookedCount'] ?? 0;
         return bookedCount < capacity;
       }
 
-      // Check specific time slot availability
+      /// Time slot specific availability for complex scheduling
       final timeSlots = activityData['timeSlots'] as List<dynamic>? ?? [];
       final timeSlot = timeSlots.firstWhere(
         (slot) => slot['id'] == timeSlotId,
@@ -51,7 +53,8 @@ class BookingService {
     }
   }
 
-  /// Create a new booking with transaction for consistency
+  /// Create new booking with atomic transaction to prevent overbooking and ensure data consistency
+  /// Integrates voucher validation, capacity management, and points calculation
   static Future<Booking?> createBooking({
     required String activityId,
     String? timeSlotId,
@@ -61,7 +64,7 @@ class BookingService {
     required double totalPrice,
     required int expectedPoints,
     Map<String, dynamic>? metadata,
-    String? voucherId, // New parameter for voucher
+    String? voucherId,
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -69,11 +72,11 @@ class BookingService {
     }
 
     try {
-      // Use transaction to ensure data consistency and prevent overbooking
+      /// Atomic transaction ensures overbooking prevention and data consistency
       final booking = await _firestore.runTransaction<Booking>((
         transaction,
       ) async {
-        // Get activity data within transaction (READS FIRST)
+        /// Fetch activity data within transaction for consistent validation
         final activityRef = _firestore.collection('activities').doc(activityId);
         final activityDoc = await transaction.get(activityRef);
 
@@ -83,10 +86,9 @@ class BookingService {
 
         final activityData = activityDoc.data()!;
 
-        // Handle voucher validation and processing
+        /// Voucher validation and discount calculation
         var voucherDiscount = 0.0;
         if (voucherId != null) {
-          // Get voucher document
           final voucherRef = _firestore.collection('vouchers').doc(voucherId);
           final voucherDoc = await transaction.get(voucherRef);
 
@@ -96,7 +98,7 @@ class BookingService {
 
           final voucher = Voucher.fromFirestore(voucherDoc);
 
-          // Validate voucher can be used
+          /// Business rule validation for voucher usage
           if (!voucher.canBeUsedForBookings) {
             throw Exception('This voucher cannot be used for bookings');
           }
@@ -118,16 +120,15 @@ class BookingService {
 
           voucherDiscount = voucher.amount;
 
-          // Mark voucher as used
+          /// Mark voucher as consumed in the transaction
           transaction.update(voucherRef, {
             'usedAt': Timestamp.fromDate(DateTime.now()),
-            'usedForBooking':
-                activityId, // Will be updated with booking ID after creation
+            'usedForBooking': activityId,
             'updatedAt': Timestamp.fromDate(DateTime.now()),
           });
         }
 
-        // Calculate final amount paid and points earned
+        /// Calculate final payment and points based on actual amount paid
         final finalAmountPaid = (totalPrice - voucherDiscount).clamp(
           0.0,
           totalPrice,
@@ -138,7 +139,7 @@ class BookingService {
           isMemberBooking,
         );
 
-        // Check capacity and update bookings count
+        /// Capacity validation to prevent overbooking
         final capacity = activityData['capacity'] ?? 0;
         final bookedCount = activityData['bookedCount'] ?? 0;
 
@@ -146,14 +147,14 @@ class BookingService {
           throw Exception('No available capacity for this booking');
         }
 
-        // Extract activity details for the booking
+        /// Extract denormalized data for booking record and notifications
         final activityTitle = activityData['name'] ?? 'Unknown Activity';
         final clubId = activityData['clubId'] ?? '';
         final clubName = activityData['clubName'] ?? '';
         final facilityId = activityData['facilityId'] ?? '';
         final facilityName = activityData['facilityName'] ?? '';
 
-        // Handle date conversion safely
+        /// Safe date/time parsing with fallback handling
         DateTime activityDateTime;
         try {
           final dateField = activityData['date'];
@@ -170,7 +171,7 @@ class BookingService {
 
         final activityTime = activityData['time'] ?? '00:00';
 
-        // 🔥 NOUVEAU : Combiner date + time pour créer scheduledDate
+        /// Combine date and time for precise scheduling and notification timing
         DateTime scheduledDateTime;
         try {
           final timeParts = activityTime.split(':');
@@ -178,16 +179,16 @@ class BookingService {
             activityDateTime.year,
             activityDateTime.month,
             activityDateTime.day,
-            int.parse(timeParts[0]), // Heure
-            int.parse(timeParts[1]), // Minutes
+            int.parse(timeParts[0]),
+            int.parse(timeParts[1]),
           );
         } catch (e) {
           scheduledDateTime = activityDateTime;
         }
 
-        // ---------------- WRITES (after all reads) ----------------
+        /// Transaction writes: Update capacity and create booking atomically
 
-        // Update activity capacity first
+        /// Reduce available capacity immediately upon booking confirmation
         final newBookedCount = bookedCount + participantCount;
         final newSpotsLeft = capacity - newBookedCount;
 
@@ -196,11 +197,10 @@ class BookingService {
           'spotsLeft': newSpotsLeft,
         });
 
-        // Create booking document
+        /// Create comprehensive booking record with denormalized data
         final bookingRef = _firestore.collection('bookings').doc();
         final confirmationNumber = _generateConfirmationNumber();
 
-        // Create booking data
         final bookingData = {
           'id': bookingRef.id,
           'userId': user.uid,
@@ -222,27 +222,25 @@ class BookingService {
           'activityTitle': activityTitle,
           'activityDate': Timestamp.fromDate(activityDateTime),
           'activityTime': activityTime,
-          'scheduledDate': Timestamp.fromDate(
-            scheduledDateTime,
-          ), // ← NOUVEAU pour notifications
+          'scheduledDate': Timestamp.fromDate(scheduledDateTime),
           'totalPrice': totalPrice,
-          // Denormalized club/facility data for display
+          /// Denormalized club/facility data for efficient querying and display
           'clubId': clubId,
           'clubName': clubName,
           'facilityId': facilityId,
           'facilityName': facilityName,
-          'activityName': activityTitle, // ← NOUVEAU pour notifications
+          'activityName': activityTitle,
         };
 
         transaction.set(bookingRef, bookingData);
 
-        // Update voucher with correct booking ID if voucher was used
+        /// Link voucher to specific booking ID for audit trail
         if (voucherId != null) {
           final voucherRef = _firestore.collection('vouchers').doc(voucherId);
           transaction.update(voucherRef, {'usedForBooking': bookingRef.id});
         }
 
-        // Create Booking object to return
+        /// Return booking object for immediate UI feedback
         return Booking(
           id: bookingRef.id,
           userId: user.uid,
@@ -270,10 +268,8 @@ class BookingService {
         );
       });
 
-      // After transaction completes, create user booking reference
-      // Points will be credited only when booking status changes to 'completed'
-
-      // Create user booking reference for easy querying
+      /// Create user booking reference for efficient user-specific queries
+      /// Points are credited only when booking status changes to 'completed'
       await _firestore
           .collection('users')
           .doc(user.uid)
@@ -294,13 +290,13 @@ class BookingService {
     }
   }
 
-  /// Cancel a booking
+  /// Cancel existing booking with capacity restoration and authorization validation
   static Future<bool> cancelBooking(String bookingId, {String? reason}) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception('User must be authenticated');
 
     try {
-      // First, get the booking to validate and get activity info
+      /// Retrieve booking for validation and capacity restoration
       final bookingDoc = await _firestore
           .collection('bookings')
           .doc(bookingId)
@@ -312,26 +308,26 @@ class BookingService {
 
       final booking = Booking.fromFirestore(bookingDoc);
 
-      // Check if user owns this booking
+      /// Authorization: only booking owner can cancel
       if (booking.userId != user.uid) {
         throw Exception('Unauthorized to cancel this booking');
       }
 
-      // Check if booking can be cancelled
+      /// Business rule: only certain statuses allow cancellation
       if (!booking.canBeCancelled) {
         throw Exception(
           'This booking cannot be cancelled (current status: ${booking.status})',
         );
       }
 
-      // Step 1: Update booking status
+      /// Update booking status with cancellation metadata
       await _firestore.collection('bookings').doc(bookingId).update({
         'status': 'cancelled',
         'cancellationReason': reason,
         'cancelledAt': Timestamp.fromDate(DateTime.now()),
       });
 
-      // Step 2: Update activity capacity separately
+      /// Restore activity capacity for future bookings
       try {
         final activityRef = _firestore
             .collection('activities')
@@ -341,13 +337,12 @@ class BookingService {
         if (activityDoc.exists) {
           final activityData = activityDoc.data()!;
 
-          // Safely get numeric values with defaults
           final currentBookedCount =
               (activityData['bookedCount'] as num?)?.toInt() ?? 0;
           final capacity = (activityData['capacity'] as num?)?.toInt() ?? 0;
 
           if (capacity > 0) {
-            // Restore spots by reducing booked count
+            /// Return cancelled spots to available capacity
             final newBookedCount =
                 (currentBookedCount - booking.participantCount).clamp(
                   0,
@@ -362,11 +357,10 @@ class BookingService {
           }
         }
       } catch (e) {
-        // Don't throw here - the booking cancellation succeeded
+        /// Non-critical: booking cancellation succeeded even if capacity update failed
       }
 
-      // Note: No need to revert points since they are only credited when status is 'completed'
-      // Cancelled bookings will never have points credited
+      /// Note: Points are never credited for cancelled bookings (only on 'completed' status)
 
       return true;
     } catch (e) {
@@ -374,14 +368,13 @@ class BookingService {
     }
   }
 
-  /// Complete a booking and credit reward points
-  /// This should be called when the activity is completed (after participation)
+  /// Mark booking as completed and credit reward points to user account
+  /// Called after activity participation to activate points reward system
   static Future<bool> completeBooking(String bookingId) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception('User must be authenticated');
 
     try {
-      // Get the booking
       final bookingDoc = await _firestore
           .collection('bookings')
           .doc(bookingId)
@@ -393,25 +386,25 @@ class BookingService {
 
       final booking = Booking.fromFirestore(bookingDoc);
 
-      // Check if user owns this booking
+      /// Authorization validation for booking completion
       if (booking.userId != user.uid) {
         throw Exception('Unauthorized to complete this booking');
       }
 
-      // Check if booking is confirmed (can only complete confirmed bookings)
+      /// Business rule: only confirmed bookings can be completed
       if (booking.status != BookingStatus.confirmed) {
         throw Exception(
           'Only confirmed bookings can be completed (current status: ${booking.status})',
         );
       }
 
-      // Update booking status to completed
+      /// Update booking status to trigger points crediting
       await _firestore.collection('bookings').doc(bookingId).update({
         'status': 'completed',
         'completedAt': Timestamp.fromDate(DateTime.now()),
       });
 
-      // Credit user's points
+      /// Credit earned points to user's reward account
       if (booking.pointsEarned > 0) {
         final userRef = _firestore.collection('users').doc(user.uid);
 
@@ -421,7 +414,7 @@ class BookingService {
           'lastRewardUpdateAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
 
-        // Create rewards ledger entry
+        /// Create audit trail for points transactions
         await userRef.collection('rewards_ledger').doc().set({
           'type': 'earn',
           'amount': booking.pointsEarned,
@@ -438,7 +431,7 @@ class BookingService {
     }
   }
 
-  /// Get user bookings as a stream
+  /// Real-time user booking history with automatic sorting
   static Stream<List<Booking>> getUserBookings(String userId) {
     return _firestore
         .collection('bookings')
@@ -447,14 +440,14 @@ class BookingService {
         .map((snapshot) {
           final bookings = snapshot.docs.map(Booking.fromFirestore).toList();
 
-          // Sort by creation date (newest first) since we can't use orderBy without index
+          /// Sort by creation date for consistent UI display (newest first)
           bookings.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
           return bookings;
         });
   }
 
-  /// Get a specific booking
+  /// Retrieve specific booking details for confirmation and management
   static Future<Booking?> getBooking(String bookingId) async {
     try {
       final doc = await _firestore.collection('bookings').doc(bookingId).get();
@@ -464,7 +457,7 @@ class BookingService {
     }
   }
 
-  /// Calculate pricing based on member status and participant count
+  /// Calculate booking price based on membership status and group size
   static double calculatePrice(
     Activity activity,
     bool isMember,
@@ -474,7 +467,7 @@ class BookingService {
     return basePrice * participantCount;
   }
 
-  /// Calculate final price after voucher discount
+  /// Apply voucher discount with price floor protection
   static double calculateFinalPrice(
     double originalPrice,
     double voucherDiscount,
@@ -482,22 +475,22 @@ class BookingService {
     return (originalPrice - voucherDiscount).clamp(0.0, originalPrice);
   }
 
-  /// Calculate points earned based on activity and amount paid
-  /// If a voucher is used, points are only earned on the amount actually paid
+  /// Comprehensive points calculation with member bonuses and category multipliers
+  /// Points are earned only on the actual amount paid (after voucher discount)
   static int calculatePointsEarned(
     Activity activity,
     double paidAmount,
     bool isMember,
   ) {
-    // Base points: 1 point per CHF spent (only on amount actually paid)
+    /// Base points: 1 point per CHF actually paid (encourages full-price bookings)
     var basePoints = paidAmount.floor();
 
-    // Member bonus: 50% more points
+    /// Member benefit: 50% bonus points for membership value
     if (isMember) {
       basePoints = (basePoints * 1.5).floor();
     }
 
-    // Activity type multiplier
+    /// Activity category multipliers to promote specific programs
     switch (activity.category.toLowerCase()) {
       case 'wellness':
         basePoints = (basePoints * 1.2).floor();
@@ -512,14 +505,14 @@ class BookingService {
     return basePoints;
   }
 
-  /// Generate a unique confirmation number
+  /// Generate unique confirmation numbers for customer service and tracking
   static String _generateConfirmationNumber() {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final random = (timestamp % 10000).toString().padLeft(4, '0');
     return 'SC$random';
   }
 
-  /// Check if user has any conflicting bookings
+  /// Detect scheduling conflicts to prevent double-booking users
   static Future<bool> hasConflictingBookings(
     String userId,
     DateTime startTime,
@@ -541,7 +534,7 @@ class BookingService {
       for (final doc in querySnapshot.docs) {
         final booking = Booking.fromFirestore(doc);
 
-        // Get activity details to check timing
+        /// Cross-reference with activity timing for overlap detection
         final activityDoc = await _firestore
             .collection('activities')
             .doc(booking.activityId)
@@ -553,7 +546,7 @@ class BookingService {
               .toDate();
           final activityEnd = (activityData['endTime'] as Timestamp).toDate();
 
-          // Check for time overlap
+          /// Time overlap detection for conflict prevention
           if (startTime.isBefore(activityEnd) &&
               endTime.isAfter(activityStart)) {
             return true;
@@ -567,7 +560,7 @@ class BookingService {
     }
   }
 
-  /// Get upcoming bookings for a user
+  /// Retrieve user's upcoming activities for calendar integration and notifications
   static Future<List<Booking>> getUpcomingBookings(String userId) async {
     try {
       final now = DateTime.now();
@@ -591,7 +584,7 @@ class BookingService {
     }
   }
 
-  /// Mark booking as completed (typically called after activity ends)
+  /// Administrative function to mark booking completion (typically automated)
   static Future<bool> markBookingCompleted(String bookingId) async {
     try {
       await _firestore.collection('bookings').doc(bookingId).update({

@@ -9,6 +9,7 @@ import '../../screens/profile/profile_screen.dart';
 import '../../screens/rewards.dart';
 import '../../widgets/navigation/main_navigation.dart';
 
+/// Central authentication flow controller managing user access to protected features
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
@@ -21,12 +22,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
-        // User not logged in - show login screen (starting with sign-in form)
         if (!authProvider.isLoggedIn) {
           return const LoginScreen(isSignUp: false);
         }
 
-        // User logged in but appUser still loading - show loading
+        // Ensures complete user profile loading before app access
         if (authProvider.isLoggedIn && authProvider.appUser == null) {
           return const Scaffold(
             body: Center(
@@ -42,14 +42,13 @@ class _AuthWrapperState extends State<AuthWrapper> {
           );
         }
 
-        // User logged in AND appUser loaded - show main app
         return const MainNavigation();
       },
     );
   }
 }
 
-/// Main application content with bottom navigation
+/// Four-tab navigation structure for authenticated sport centre members
 class MainAppContent extends StatefulWidget {
   const MainAppContent({super.key});
 
@@ -61,10 +60,10 @@ class _MainAppContentState extends State<MainAppContent> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
-    const HomeScreen(), // Activities screen
-    const BookingsScreen(), // My Bookings
-    const RewardsScreen(), // Rewards
-    const ProfileScreen(), // Profile/Auth
+    const HomeScreen(),
+    const BookingsScreen(),
+    const RewardsScreen(),
+    const ProfileScreen(),
   ];
 
   @override
@@ -98,7 +97,7 @@ class _MainAppContentState extends State<MainAppContent> {
   }
 }
 
-/// Screen shown when authentication is required (optionnel)
+/// Reusable authentication prompt for protected features throughout the app
 class AuthRequiredScreen extends StatelessWidget {
   const AuthRequiredScreen({
     super.key,

@@ -5,6 +5,8 @@ import '../../providers/auth_provider.dart';
 import '../../utils/validation_utils.dart';
 import 'email_verification_screen.dart';
 
+/// Unified authentication screen supporting both user registration and sign-in
+/// with specialized club owner registration flow and email verification
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, required this.isSignUp});
   final bool isSignUp;
@@ -23,7 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isSignUp = false;
-  bool _isClubOwner = false; // Add this
+  bool _isClubOwner = false;
 
   @override
   void initState() {
@@ -57,11 +59,9 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Logo or icon
                   const Icon(Icons.sports_soccer, size: 80, color: Colors.teal),
                   const SizedBox(height: 24),
 
-                  // Title
                   Text(
                     _isSignUp ? 'Create Account' : 'Welcome Back',
                     style: const TextStyle(
@@ -80,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 32),
 
-                  // Display Name field (only for sign up)
+                  /// Full name field for new user registration with character limit
                   if (_isSignUp) ...[
                     TextFormField(
                       controller: _displayNameController,
@@ -96,13 +96,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       validator: ValidationUtils.validateDisplayName,
                       onChanged: (value) {
-                        setState(() {}); // Update counter
+                        setState(() {});
                       },
                     ),
                     const SizedBox(height: 16),
                   ],
 
-                  // Email field
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -115,7 +114,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Password field
+                  /// Password field with different validation for sign-up vs sign-in
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
@@ -146,14 +145,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           },
                     onChanged: _isSignUp
                         ? (value) {
-                            setState(
-                              () {},
-                            ); // Update password strength indicator
+                            setState(() {});
                           }
                         : null,
                   ),
 
-                  // Password strength indicator and requirements (only for sign up)
+                  /// Real-time password strength indicator and requirements checklist
                   if (_isSignUp) ...[
                     const SizedBox(height: 8),
                     _buildPasswordStrengthIndicator(),
@@ -163,7 +160,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 16),
 
-                  // Confirm Password field (only for sign up)
+                  /// Password confirmation field with matching validation
                   if (_isSignUp) ...[
                     TextFormField(
                       controller: _confirmPasswordController,
@@ -199,7 +196,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 16),
                   ],
 
-                  // Club Owner Checkbox (only for sign up)
+                  /// Club owner registration option requiring admin approval
                   if (_isSignUp) ...[
                     Card(
                       color: Colors.blue[50],
@@ -253,7 +250,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 16),
                   ],
 
-                  // Forgot password link (only for sign in)
+                  /// Password reset option for existing users
                   if (!_isSignUp) ...[
                     Align(
                       alignment: Alignment.centerRight,
@@ -268,7 +265,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 16),
                   ],
 
-                  // Error message
+                  /// Authentication error display
                   if (authProvider.errorMessage != null) ...[
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -286,7 +283,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 16),
                   ],
 
-                  // Submit button
+                  /// Primary authentication action button
                   SizedBox(
                     height: 50,
                     child: ElevatedButton(
@@ -312,7 +309,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Switch between sign in and sign up
+                  /// Toggle between sign-in and sign-up modes
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -326,7 +323,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: () {
                           setState(() {
                             _isSignUp = !_isSignUp;
-                            // Clear any previous errors
                             authProvider.clearError();
                           });
                         },
@@ -349,6 +345,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  /// Handles user registration or sign-in with email verification flow
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -362,22 +359,20 @@ class _LoginScreenState extends State<LoginScreen> {
         _emailController.text.trim(),
         _passwordController.text,
         _displayNameController.text.trim(),
-        isClubOwner: _isClubOwner, // Pass the club owner flag
+        isClubOwner: _isClubOwner,
       );
 
       if (success && mounted) {
-        // Navigate to email verification screen
         unawaited(
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => EmailVerificationScreen(
-                isClubOwner:
-                    _isClubOwner, // Pass the flag to show appropriate message
+                isClubOwner: _isClubOwner,
               ),
             ),
           ),
         );
-        return; // Don't close the login screen yet
+        return;
       }
     } else {
       success = await authProvider.signIn(
@@ -387,10 +382,11 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     if (success && mounted) {
-      Navigator.of(context).pop(); // Go back to previous screen
+      Navigator.of(context).pop();
     }
   }
 
+  /// Displays password reset email dialog for existing users
   void _showForgotPasswordDialog(BuildContext context) {
     final emailController = TextEditingController();
 
@@ -458,7 +454,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  /// Build password strength indicator
+  /// Builds real-time password strength indicator with color-coded feedback
   Widget _buildPasswordStrengthIndicator() {
     final password = _passwordController.text;
     final strength = ValidationUtils.getPasswordStrength(password);
@@ -505,7 +501,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  /// Build password requirements checklist
+  /// Builds interactive password requirements checklist with real-time validation
   Widget _buildPasswordRequirements() {
     final password = _passwordController.text;
     final requirements = ValidationUtils.getPasswordRequirements(password);

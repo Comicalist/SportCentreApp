@@ -6,6 +6,8 @@ import '../facilities/club_facilities_screen.dart';
 import 'edit_club_screen.dart';
 import 'edit_open_hours_screen.dart';
 
+/// Comprehensive club management dashboard displaying club status, approval state,
+/// and providing access to facilities, scheduling, and administrative controls
 class ClubDetailScreen extends StatefulWidget {
   const ClubDetailScreen({super.key, required this.club});
   final Club club;
@@ -51,6 +53,7 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
     );
   }
 
+  /// Displays club information including approval status and operational state
   Widget _buildInfoCard() {
     return Card(
       child: Padding(
@@ -97,6 +100,7 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
     );
   }
 
+  /// Reusable information row with optional status color coding
   Widget _buildInfoRow(
     IconData icon,
     String label,
@@ -126,6 +130,7 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
     );
   }
 
+  /// Management actions panel for club operations and administration
   Widget _buildActionsCard() {
     return Card(
       child: Padding(
@@ -177,6 +182,7 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
     );
   }
 
+  /// Individual action tile with optional destructive styling
   Widget _buildActionTile({
     required IconData icon,
     required String title,
@@ -199,6 +205,7 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
     );
   }
 
+  /// Navigates to club editing interface with state update handling
   void _navigateToEdit() async {
     final updatedClub = await Navigator.push<Club>(
       context,
@@ -214,6 +221,7 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
     }
   }
 
+  /// Opens facility management screen for club infrastructure oversight
   void _viewFacilities() {
     Navigator.push(
       context,
@@ -223,6 +231,7 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
     );
   }
 
+  /// Opens scheduling interface for club operational hours management
   void _editOpenHours() {
     Navigator.push(
       context,
@@ -232,6 +241,7 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
     );
   }
 
+  /// Shows confirmation dialog for permanent club deletion
   void _confirmDelete() {
     showDialog(
       context: context,
@@ -258,6 +268,7 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
     );
   }
 
+  /// Processes permanent club deletion with error handling
   Future<void> _deleteClub() async {
     setState(() => _isLoading = true);
 
@@ -265,7 +276,7 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
       await _clubService.deleteClub(_currentClub.id);
 
       if (mounted) {
-        Navigator.pop(context, true); // Return true to indicate deletion
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {

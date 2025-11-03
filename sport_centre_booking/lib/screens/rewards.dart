@@ -7,9 +7,12 @@ import '../services/notification_service.dart';
 import '../services/voucher_service.dart';
 import '../widgets/notifications/notifications_drawer.dart';
 
+/// Voucher marketplace for redeeming points into club discounts and merchandise
+/// Features real-time points tracking and instant voucher purchases with notifications
 class RewardsScreen extends StatelessWidget {
   const RewardsScreen({super.key});
 
+  /// Fetch current user points data for purchase validation
   Future<Map<String, dynamic>?> _getUserData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return null;
@@ -36,7 +39,7 @@ class RewardsScreen extends StatelessWidget {
         elevation: 0,
         actions: [
           if (userId != null)
-            // Bell icon with badge
+            /// Notification bell with unread count badge
             StreamBuilder<int>(
               stream: NotificationService().getUnreadCount(userId),
               builder: (context, snapshot) {
@@ -135,7 +138,7 @@ class RewardsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Section header (subtle)
+                /// User points dashboard for purchase decisions
                 const Text(
                   'Your Reward Points',
                   style: TextStyle(
@@ -146,7 +149,7 @@ class RewardsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // Cards (match card style used elsewhere)
+                /// Points balance cards with visual hierarchy
                 _buildPointsCard(
                   'Available Points',
                   availablePoints,
@@ -161,7 +164,7 @@ class RewardsScreen extends StatelessWidget {
 
                 const SizedBox(height: 32),
 
-                // Available Vouchers Section
+                /// Voucher marketplace section
                 const Text(
                   'Available Vouchers',
                   style: TextStyle(
@@ -172,7 +175,7 @@ class RewardsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // Vouchers List
+                /// Real-time voucher catalog with purchase capabilities
                 Expanded(
                   child: StreamBuilder<List<Voucher>>(
                     stream: VoucherService.streamAvailableVouchers(),
@@ -254,6 +257,7 @@ class RewardsScreen extends StatelessWidget {
     );
   }
 
+  /// Points balance display card with color-coded categories
   Widget _buildPointsCard(String label, int points, Color color) {
     return Card(
       elevation: 1,
@@ -291,6 +295,7 @@ class RewardsScreen extends StatelessWidget {
     );
   }
 
+  /// Individual voucher card with purchase validation and category indicators
   Widget _buildVoucherCard(
     BuildContext context,
     Voucher voucher,
@@ -310,7 +315,7 @@ class RewardsScreen extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Voucher type badge
+                /// Voucher category badge for easy identification
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -332,7 +337,7 @@ class RewardsScreen extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                // Club name
+                /// Club branding and source identification
                 Text(
                   voucher.clubName,
                   style: TextStyle(
@@ -345,7 +350,7 @@ class RewardsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // Voucher title
+            /// Voucher marketing content
             Text(
               voucher.title,
               style: const TextStyle(
@@ -356,7 +361,6 @@ class RewardsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 4),
 
-            // Voucher description
             Text(
               voucher.description,
               style: TextStyle(
@@ -367,10 +371,10 @@ class RewardsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // Value and cost row
+            /// Purchase information and redemption interface
             Row(
               children: [
-                // Value
+                /// Voucher monetary value display
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -391,7 +395,7 @@ class RewardsScreen extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
 
-                // Points cost
+                /// Points cost indicator
                 Row(
                   children: [
                     Icon(Icons.star, size: 14, color: Colors.orange[700]),
@@ -409,7 +413,7 @@ class RewardsScreen extends StatelessWidget {
 
                 const Spacer(),
 
-                // Purchase button
+                /// Purchase validation and transaction initiation
                 if (userId != null)
                   ElevatedButton(
                     onPressed: canAfford
@@ -449,6 +453,7 @@ class RewardsScreen extends StatelessWidget {
     );
   }
 
+  /// Category-based color coding for voucher types
   Color _getVoucherTypeColor(VoucherType type) {
     switch (type) {
       case VoucherType.fitness:
@@ -458,32 +463,31 @@ class RewardsScreen extends StatelessWidget {
     }
   }
 
+  /// Execute voucher purchase transaction with error handling and user feedback
   Future<void> _purchaseVoucher(
     BuildContext context,
     Voucher voucher,
     String userId,
   ) async {
     try {
-      // Show loading dialog
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
-      // Purchase the voucher
       await VoucherService.purchaseVoucher(voucher.id, userId);
 
-      Navigator.of(context).pop(); // Close loading dialog
+      Navigator.of(context).pop();
 
-      // Show success dialog
       _showSuccessDialog(context, voucher);
     } catch (e) {
-      Navigator.of(context).pop(); // Close loading dialog
+      Navigator.of(context).pop();
       _showErrorDialog(context, e.toString().replaceFirst('Exception: ', ''));
     }
   }
 
+  /// Success confirmation with voucher code and usage instructions
   void _showSuccessDialog(BuildContext context, Voucher voucher) {
     showDialog(
       context: context,
@@ -505,6 +509,7 @@ class RewardsScreen extends StatelessWidget {
               style: const TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 16),
+            /// Voucher redemption code for club use
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -535,9 +540,14 @@ class RewardsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            Text(
-              'Expires: ${voucher.expiresAt != null ? _formatDate(voucher.expiresAt!) : 'N/A'}',
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            Row(
+              children: [
+                const Text(
+                  'Expires: ',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+                Text(_formatDate(voucher.expiresAt!)),
+              ],
             ),
             const SizedBox(height: 8),
             Text(
@@ -556,6 +566,7 @@ class RewardsScreen extends StatelessWidget {
     );
   }
 
+  /// Purchase failure notification with error details
   void _showErrorDialog(BuildContext context, String message) {
     showDialog(
       context: context,
@@ -579,6 +590,7 @@ class RewardsScreen extends StatelessWidget {
     );
   }
 
+  /// Date formatting for voucher expiration display
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
   }

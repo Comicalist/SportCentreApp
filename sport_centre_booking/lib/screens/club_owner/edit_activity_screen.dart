@@ -8,6 +8,8 @@ import '../../services/activity_service.dart';
 import '../../services/facility_service.dart';
 import '../../services/image_upload_service.dart';
 
+/// Activity editing interface for club owners with booking protection
+/// Handles capacity constraints, schedule updates, and image management
 class EditActivityScreen extends StatefulWidget {
   const EditActivityScreen({super.key, required this.activity});
   final Activity activity;
@@ -20,7 +22,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
   final _formKey = GlobalKey<FormState>();
   final _facilityService = FacilityService();
 
-  // Form controllers
+  // Activity form controllers for user input
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _guestPriceController = TextEditingController();
@@ -29,7 +31,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
   final _pointsController = TextEditingController();
   final _durationController = TextEditingController();
 
-  // Form state
+  // Activity configuration state
   List<Facility> _facilities = [];
   Facility? _selectedFacility;
   String _selectedCategory = 'Wellness';
@@ -38,7 +40,8 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
   final List<String> _requirements = [];
   bool _isLoading = false;
 
-  String? _newImageUrl; // For tracking new uploaded image
+  // Image management for activity branding
+  String? _newImageUrl;
   bool _isUploadingImage = false;
 
   final List<String> _categories = ['Wellness', 'Fitness', 'Kids', 'Workshops'];
@@ -50,6 +53,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
     _loadFacilities();
   }
 
+  /// Populate form fields with existing activity data
   void _initializeForm() {
     final activity = widget.activity;
 
@@ -65,8 +69,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
     _selectedDate = activity.date;
     _requirements.addAll(activity.requirements);
 
-    // Parse time
-
+    // Parse existing time from string format
     final timeParts = activity.time.split(':');
     if (timeParts.length == 2) {
       _selectedTime = TimeOfDay(
@@ -88,6 +91,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
     super.dispose();
   }
 
+  /// Load available facilities for the club with active status filtering
   Future<void> _loadFacilities() async {
     try {
       final facilities = await _facilityService.getClubFacilities(
@@ -97,7 +101,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
 
       setState(() {
         _facilities = activeFacilities;
-        // Find current facility
+        // Preserve current facility selection or default to first available
         _selectedFacility = activeFacilities.firstWhere(
           (f) => f.id == widget.activity.facilityId,
           orElse: () => activeFacilities.isNotEmpty
@@ -117,8 +121,9 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
     }
   }
 
+  /// Date picker with business rules: no past dates for future activities
   Future<void> _selectDate() async {
-    // Don't allow editing past activities
+    // Prevent editing schedule for completed activities
     if (widget.activity.isPast) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -143,6 +148,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
     }
   }
 
+  /// Time picker for activity scheduling
   Future<void> _selectTime() async {
     final picked = await showTimePicker(
       context: context,
@@ -156,6 +162,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
     }
   }
 
+  /// Activity image management with upload progress and preview
   Widget _buildImageSection() {
     final currentImageUrl = _newImageUrl ?? widget.activity.displayImageUrl;
 
@@ -168,7 +175,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
             _buildSectionTitle('Activity Image'),
             const SizedBox(height: 12),
 
-            // Current image preview
+            // Image preview with loading and error states
             Container(
               width: double.infinity,
               height: 200,
@@ -222,7 +229,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
 
             const SizedBox(height: 16),
 
-            // Upload new image button
+            // Image upload control with progress indication
             ElevatedButton.icon(
               onPressed: _isUploadingImage ? null : _uploadNewImage,
               icon: _isUploadingImage
@@ -239,6 +246,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
               ),
             ),
 
+            // Success indicator for pending image changes
             if (_newImageUrl != null) ...[
               const SizedBox(height: 8),
               Container(
@@ -276,6 +284,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
     );
   }
 
+  /// Handle image upload with error handling and user feedback
   Future<void> _uploadNewImage() async {
     setState(() {
       _isUploadingImage = true;
@@ -320,6 +329,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
     }
   }
 
+  /// Update activity with business validation and booking protection
   Future<void> _updateActivity() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -338,13 +348,13 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Get current user
+      // Verify user authentication for security
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         throw Exception('User not authenticated');
       }
 
-      // Validate capacity
+      // Protect existing bookings from capacity reduction
       final newCapacity = int.parse(_capacityController.text);
       if (newCapacity < widget.activity.bookedCount) {
         throw Exception(
@@ -352,18 +362,19 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
         );
       }
 
+      // Validate facility capacity constraints
       if (newCapacity > _selectedFacility!.maxCapacity) {
         throw Exception(
           'Capacity ($newCapacity) exceeds facility maximum (${_selectedFacility!.maxCapacity})',
         );
       }
 
-      // Create time string
+      // Format time for storage and categorization
       final timeString =
           '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
       final duration = int.parse(_durationController.text);
 
-      // Create updated activity
+      // Create updated activity with all changes
       final updatedActivity = widget.activity.copyWith(
         facilityId: _selectedFacility!.id,
         facilityName: _selectedFacility!.title,
@@ -383,7 +394,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
         updatedAt: DateTime.now(),
       );
 
-      // ✅ Fix: Pass the required currentUserId parameter
+      // Apply updates through service layer with authorization
       await ActivityService.updateActivity(
         activity: updatedActivity,
         currentUserId: user.uid,
@@ -396,7 +407,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context, true); // Return true to indicate success
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
@@ -414,6 +425,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
     }
   }
 
+  /// Consistent section heading styling
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
@@ -430,6 +442,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
         actions: [
+          // Visual indicator for past activities
           if (widget.activity.isPast)
             Container(
               margin: const EdgeInsets.only(right: 16),
@@ -456,7 +469,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Warning for past activities
+              // Warning for historical activities with limited editing
               if (widget.activity.isPast) ...[
                 Card(
                   color: Colors.orange[50],
@@ -479,7 +492,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                 const SizedBox(height: 16),
               ],
 
-              // Current bookings info
+              // Booking status information for capacity management
               if (widget.activity.bookedCount > 0) ...[
                 Card(
                   color: Colors.blue[50],
@@ -505,7 +518,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                 const SizedBox(height: 16),
               ],
 
-              // Basic Information
+              // Basic activity information section
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -565,7 +578,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
 
               const SizedBox(height: 16),
 
-              // Facility Selection
+              // Facility selection with capacity constraints
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -602,7 +615,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
 
               const SizedBox(height: 16),
 
-              // Date & Time
+              // Schedule management section
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -677,7 +690,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
 
               const SizedBox(height: 16),
 
-              // Capacity & Pricing
+              // Capacity and pricing with booking protection
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -786,12 +799,12 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
 
               const SizedBox(height: 16),
 
-              // Image Section
+              // Activity branding and visual identity
               _buildImageSection(),
 
               const SizedBox(height: 32),
 
-              // Update Button
+              // Save changes with loading state
               SizedBox(
                 width: double.infinity,
                 height: 50,

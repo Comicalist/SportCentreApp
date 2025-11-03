@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../../models/club.dart';
 import '../../models/facility.dart';
 import '../../services/facility_service.dart';
-import '../../services/image_upload_service.dart'; // Add this import
+import '../../services/image_upload_service.dart';
 
+/// Facility creation interface for approved clubs
+/// Handles facility registration with custom image upload and capacity management
 class AddFacilityScreen extends StatefulWidget {
   const AddFacilityScreen({super.key, required this.club});
   final Club club;
@@ -22,7 +24,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
   bool _isActive = true;
   bool _isLoading = false;
 
-  // Add image upload state
+  // Custom image management for facility branding
   String? _uploadedImageUrl;
   bool _isUploadingImage = false;
 
@@ -58,7 +60,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
                     const SizedBox(height: 24),
                     _buildFacilityForm(),
                     const SizedBox(height: 24),
-                    _buildImageSection(), // Updated method
+                    _buildImageSection(),
                     const SizedBox(height: 32),
                     _buildSubmitButton(),
                   ],
@@ -68,6 +70,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
     );
   }
 
+  /// Display parent club information for context
   Widget _buildClubInfoCard() {
     return Card(
       child: Padding(
@@ -109,6 +112,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
     );
   }
 
+  /// Core facility information form with validation
   Widget _buildFacilityForm() {
     return Card(
       child: Padding(
@@ -122,7 +126,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Facility Title
+            // Facility identification and branding
             TextFormField(
               controller: _titleController,
               decoration: const InputDecoration(
@@ -142,7 +146,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Description
+            // Marketing and user information
             TextFormField(
               controller: _descriptionController,
               maxLines: 3,
@@ -164,7 +168,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Max Capacity
+            // Booking capacity management
             TextFormField(
               controller: _capacityController,
               keyboardType: TextInputType.number,
@@ -190,7 +194,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Active Status
+            // Operational availability control
             SwitchListTile(
               title: const Text('Active Status'),
               subtitle: const Text('Facility is available for bookings'),
@@ -204,7 +208,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
     );
   }
 
-  // NEW: Updated image section with upload functionality
+  /// Custom image upload with fallback to type-based defaults
   Widget _buildImageSection() {
     return Card(
       child: Padding(
@@ -218,7 +222,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
             ),
             const SizedBox(height: 8),
 
-            // Requirements info box
+            // Technical requirements for image uploads
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -242,7 +246,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
 
             const SizedBox(height: 12),
 
-            // Image preview
+            // Image preview with custom or default display
             Container(
               width: double.infinity,
               height: 200,
@@ -334,7 +338,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
 
             const SizedBox(height: 12),
 
-            // Upload and remove buttons
+            // Image management controls
             Row(
               children: [
                 Expanded(
@@ -378,14 +382,14 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
     );
   }
 
-  // NEW: Upload image method
+  /// Handle custom image upload with progress feedback
   Future<void> _uploadImage() async {
     setState(() {
       _isUploadingImage = true;
     });
 
     try {
-      // Generate temporary ID for upload path
+      // Generate unique identifier for storage path
       final tempId = DateTime.now().millisecondsSinceEpoch.toString();
 
       final imageUrl = await ImageUploadService.pickAndUploadImage(
@@ -415,10 +419,10 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
     }
   }
 
-  // NEW: Remove image method
+  /// Remove custom image and revert to default
   void _removeImage() {
     if (_uploadedImageUrl != null) {
-      // Optionally delete from storage
+      // Clean up storage to prevent orphaned files
       ImageUploadService.deleteImage(_uploadedImageUrl!);
       setState(() {
         _uploadedImageUrl = null;
@@ -433,6 +437,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
     }
   }
 
+  /// Select appropriate default image based on facility type
   String _getDefaultImagePreview() {
     final title = _titleController.text.toLowerCase();
     if (title.contains('gym') || title.contains('weight')) {
@@ -453,6 +458,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
     return Facility.defaultImages['default']!;
   }
 
+  /// Submit button with loading state
   Widget _buildSubmitButton() {
     return SizedBox(
       width: double.infinity,
@@ -483,12 +489,13 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
     );
   }
 
+  /// Create facility with approval requirement validation
   Future<void> _submitFacility() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    // Validate club is approved
+    // Enforce club approval requirement for facility creation
     if (!widget.club.isApproved) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -504,12 +511,12 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
     try {
       final now = DateTime.now();
       final facility = Facility(
-        id: '', // Will be set by Firestore
+        id: '', // Firestore will generate unique identifier
         clubId: widget.club.id,
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         maxCapacity: int.parse(_capacityController.text.trim()),
-        imageUrl: _uploadedImageUrl, // Use uploaded image or null for default
+        imageUrl: _uploadedImageUrl, // Custom image or null for default
         isActive: _isActive,
         createdAt: now,
         updatedAt: now,
