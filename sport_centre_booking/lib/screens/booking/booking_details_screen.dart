@@ -144,28 +144,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Calculates points earned based on final price with member bonus and category multipliers
-  int _calculateExpectedPoints(double finalPrice, bool isMember) {
-    var basePoints = finalPrice.floor();
-
-    if (isMember) {
-      basePoints = (basePoints * 1.5).floor();
-    }
-
-    switch (widget.activity.category.toLowerCase()) {
-      case 'wellness':
-        basePoints = (basePoints * 1.2).floor();
-        break;
-      case 'workshops':
-        basePoints = (basePoints * 1.3).floor();
-        break;
-      default:
-        break;
-    }
-
-    return basePoints;
-  }
-
   /// Normalizes dates to midnight for consistent calendar comparison
   DateTime _atMidnight(DateTime d) => DateTime(d.year, d.month, d.day);
 
