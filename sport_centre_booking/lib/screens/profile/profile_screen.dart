@@ -94,9 +94,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: const Icon(Icons.more_vert),
                     onSelected: (value) {
                       switch (value) {
-                        case 'edit':
-                          // TODO: edit profile
-                          break;
                         case 'settings':
                           Navigator.push(
                             context,

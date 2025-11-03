@@ -36,15 +36,19 @@ class AuthProvider extends ChangeNotifier {
   /// Initialize real-time authentication state monitoring
   void _initAuthListener() {
     AuthService.authStateChanges.listen((User? user) async {
+      final previousUserId = _firebaseUser?.uid;
       _firebaseUser = user;
 
       if (user != null) {
-        // User signed in - load extended profile from Firestore
-        await _loadUserData(user.uid);
+        // User signed in - check if it's a different user
+        final isDifferentUser = previousUserId != null && previousUserId != user.uid;
+        
+        // Load extended profile from Firestore
+        await _loadUserData(user.uid, forceRefresh: isDifferentUser);
         await AuthService.updateLastLogin();
       } else {
-        // User signed out - clear profile data
-        _appUser = null;
+        // User signed out - completely clear state
+        await _clearUserState();
       }
 
       notifyListeners();
@@ -52,17 +56,27 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Load or create user profile in Firestore with offline fallback
-  Future<void> _loadUserData(String uid) async {
+  Future<void> _loadUserData(String uid, {bool forceRefresh = false}) async {
     try {
       final docRef = FirebaseFirestore.instance.collection('users').doc(uid);
 
-      // Attempt server-first fetch for latest data
+      // Force server fetch for different users or when explicitly requested
       DocumentSnapshot<Map<String, dynamic>> doc;
       try {
-        doc = await docRef.get(const GetOptions(source: Source.server));
+        if (forceRefresh) {
+          // Force server-only fetch to avoid stale cache
+          doc = await docRef.get(const GetOptions(source: Source.server));
+        } else {
+          // Normal server-first fetch with cache fallback
+          doc = await docRef.get(const GetOptions(source: Source.server));
+        }
       } catch (e) {
-        // Network issues - fallback to cached data
-        doc = await docRef.get(const GetOptions(source: Source.cache));
+        if (!forceRefresh) {
+          // Network issues - fallback to cached data only if not forcing refresh
+          doc = await docRef.get(const GetOptions(source: Source.cache));
+        } else {
+          rethrow; // Don't use cache if we're forcing refresh
+        }
       }
 
       // Create new user profile if doesn't exist
@@ -85,7 +99,7 @@ class AuthProvider extends ChangeNotifier {
           'isClubOwner': false,
         }, SetOptions(merge: true));
 
-        // Fetch the newly created document
+        // Fetch the newly created document from server
         doc = await docRef.get(const GetOptions(source: Source.server));
       }
 
@@ -110,6 +124,19 @@ class AuthProvider extends ChangeNotifier {
       }
     } catch (e) {
       // Silent failure - will retry on next auth state change
+    }
+  }
+
+  /// Completely clear user state and cached data
+  Future<void> _clearUserState() async {
+    _appUser = null;
+    
+    // Clear any cached Firestore data by disabling network temporarily
+    try {
+      await FirebaseFirestore.instance.clearPersistence();
+    } catch (e) {
+      // clearPersistence can fail if there are active listeners
+      // This is non-critical, so we continue
     }
   }
 
@@ -147,6 +174,8 @@ class AuthProvider extends ChangeNotifier {
   /// Sign out current user and clear state
   Future<bool> signOut() async {
     return _performAuthAction(() async {
+      // Clear state before signing out
+      await _clearUserState();
       await AuthService.signOut();
       return true;
     });

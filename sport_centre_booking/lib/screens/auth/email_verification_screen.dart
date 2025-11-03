@@ -202,18 +202,17 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                         ? () async {
                             final success = await authProvider
                                 .sendEmailVerification();
-                            if (!mounted) return;
+                            if (!context.mounted) return;
                             
                             if (success) {
                               _startResendCooldown();
-                              if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text('Verification email sent!'),
                                     backgroundColor: Colors.green,
                                   ),
                                 );
-                              }
+                              
                             }
                           }
                         : null,
@@ -247,10 +246,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                   child: OutlinedButton(
                     onPressed: () async {
                       await authProvider.checkEmailVerification();
-                      if (!mounted) return;
+                      if (!context.mounted) return;
                       
                       if (authProvider.isEmailVerified) {
-                        if (mounted) {
                           Navigator.of(context).pop();
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -258,7 +256,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                               backgroundColor: Colors.green,
                             ),
                           );
-                        }
+                        
                       } else {
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(

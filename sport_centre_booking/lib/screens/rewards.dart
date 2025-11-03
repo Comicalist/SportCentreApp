@@ -337,6 +337,7 @@ class RewardsScreen extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
+
                 /// Club branding and source identification
                 Text(
                   voucher.clubName,
@@ -469,20 +470,27 @@ class RewardsScreen extends StatelessWidget {
     Voucher voucher,
     String userId,
   ) async {
-    try {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
-      );
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
 
+    try {
       await VoucherService.purchaseVoucher(voucher.id, userId);
 
-      Navigator.of(context).pop();
+      if (!context.mounted) return;
+
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
 
       _showSuccessDialog(context, voucher);
     } catch (e) {
-      Navigator.of(context).pop();
+      if (!context.mounted) return;
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
       _showErrorDialog(context, e.toString().replaceFirst('Exception: ', ''));
     }
   }
@@ -509,6 +517,7 @@ class RewardsScreen extends StatelessWidget {
               style: const TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 16),
+
             /// Voucher redemption code for club use
             Container(
               padding: const EdgeInsets.all(12),

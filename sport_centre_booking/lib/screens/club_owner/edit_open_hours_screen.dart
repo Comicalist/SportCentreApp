@@ -63,14 +63,14 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
                     onChanged: (val) => setDialogState(() => reason = val),
                   ),
                   const SizedBox(height: 12),
-                  
+
                   // Toggle between recurring weekly and one-time blocks
                   SwitchListTile(
                     title: const Text('Recurring Weekly'),
                     value: recurring,
                     onChanged: (val) => setDialogState(() => recurring = val),
                   ),
-                  
+
                   // Recurring weekly pattern configuration
                   if (recurring) ...[
                     DropdownButtonFormField<String>(
@@ -164,7 +164,7 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
                   ],
 
                   const SizedBox(height: 12),
-                  
+
                   // Time range selection for blocked periods
                   ListTile(
                     title: const Text('Start Time'),
@@ -314,7 +314,9 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
           blockData: result,
         );
 
-        if (conflicts.isNotEmpty && mounted) {
+        if (!mounted) return;
+
+        if (conflicts.isNotEmpty) {
           // Show warning dialog for existing activity conflicts
           showDialog(
             context: context,
@@ -385,10 +387,12 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
           .doc(widget.club.id)
           .set({'blockedTimes': blockedTimes}, SetOptions(merge: true));
 
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Blocked times updated')));
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -440,7 +444,7 @@ class _EditOpenHoursScreenState extends State<EditOpenHoursScreen> {
               ),
             ),
           const SizedBox(height: 24),
-          
+
           // Add new blocked time period
           Center(
             child: ElevatedButton.icon(
