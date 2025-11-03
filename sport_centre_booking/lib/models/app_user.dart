@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// User model for the application
+/// Core user authentication and profile model integrated with Firebase Auth/Firestore
+///
+/// This is the primary user entity that handles authentication, role management,
+/// points system, and membership tracking. Used throughout the app for user
+/// identification, permissions, and business logic.
 class AppUser {
-  // Add this field
-
   const AppUser({
     required this.uid,
     required this.email,
@@ -18,10 +20,10 @@ class AppUser {
     this.isMember = false,
     this.membershipType,
     this.membershipExpiry,
-    this.isClubOwner = false, // Default to false
+    this.isClubOwner = false,
   });
 
-  /// Create AppUser from Firestore document
+  /// Create AppUser from Firestore document with proper type conversions
   factory AppUser.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data()! as Map<String, dynamic>;
 
@@ -39,25 +41,35 @@ class AppUser {
       isMember: data['isMember'] ?? false,
       membershipType: data['membershipType'],
       membershipExpiry: (data['membershipExpiry'] as Timestamp?)?.toDate(),
-      isClubOwner: data['isClubOwner'] ?? false, // Add this
+      isClubOwner: data['isClubOwner'] ?? false,
     );
   }
-  final String uid;
+
+  // Authentication identifiers
+  final String uid; // Firebase Auth UID
   final String email;
   final String displayName;
+
+  // Account lifecycle
   final DateTime? createdAt;
   final DateTime? lastLoginAt;
-  final String role;
-  final bool isActive;
-  final int totalPoints;
-  final int availablePoints;
-  final int lifetimePointsEarned;
-  final bool isMember;
+  final bool isActive; // For account suspension
+
+  // Role-based access control
+  final String role; // 'user', 'admin'
+  final bool isClubOwner; // Can create and manage clubs
+
+  // Points and rewards system
+  final int totalPoints; // All-time points earned
+  final int availablePoints; // Current spendable points
+  final int lifetimePointsEarned; // Historical tracking
+
+  // Membership system
+  final bool isMember; // Has active membership
   final String? membershipType; // 'basic', 'premium', 'vip'
   final DateTime? membershipExpiry;
-  final bool isClubOwner;
 
-  /// Convert AppUser to JSON for Firestore
+  /// Convert to Firestore-compatible format with Timestamp objects
   Map<String, dynamic> toJson() {
     return {
       'uid': uid,
@@ -77,24 +89,23 @@ class AppUser {
       'membershipExpiry': membershipExpiry != null
           ? Timestamp.fromDate(membershipExpiry!)
           : null,
-      'isClubOwner': isClubOwner, // Add this
+      'isClubOwner': isClubOwner,
     };
   }
 
-  /// Check if user is admin
+  /// Check if user has admin privileges
   bool get isAdmin => role == 'admin';
 
-  /// Check if user is club owner
-  bool get canManageClubs =>
-      isClubOwner || isAdmin; // Both club owners and admins can manage clubs
+  /// Check if user can manage clubs (admin or club owner)
+  bool get canManageClubs => isClubOwner || isAdmin;
 
-  /// Get user's first name
+  /// Extract first name from display name
   String get firstName {
     final parts = displayName.split(' ');
     return parts.isNotEmpty ? parts.first : displayName;
   }
 
-  /// Get user's initials for avatar
+  /// Generate initials for avatar display
   String get initials {
     final parts = displayName.split(' ');
     if (parts.length >= 2) {
@@ -105,7 +116,7 @@ class AppUser {
     return email[0].toUpperCase();
   }
 
-  /// Create a copy of AppUser with updated fields
+  /// Create copy with updated fields
   AppUser copyWith({
     String? uid,
     String? email,
@@ -120,7 +131,7 @@ class AppUser {
     bool? isMember,
     String? membershipType,
     DateTime? membershipExpiry,
-    bool? isClubOwner, // Add this
+    bool? isClubOwner,
   }) {
     return AppUser(
       uid: uid ?? this.uid,
@@ -136,7 +147,7 @@ class AppUser {
       isMember: isMember ?? this.isMember,
       membershipType: membershipType ?? this.membershipType,
       membershipExpiry: membershipExpiry ?? this.membershipExpiry,
-      isClubOwner: isClubOwner ?? this.isClubOwner, // Add this
+      isClubOwner: isClubOwner ?? this.isClubOwner,
     );
   }
 

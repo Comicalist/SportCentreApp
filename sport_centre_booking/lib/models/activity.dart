@@ -1,5 +1,10 @@
+
+/// Represents a sport activity offered by a club at a specific facility
+/// 
+/// Activities can be booked by both club members and guests, with different
+/// pricing tiers. Each activity has a capacity limit and tracks bookings.
 class Activity {
-  Activity({
+  const Activity({
     required this.id,
     required this.clubId,
     required this.facilityId,
@@ -39,11 +44,8 @@ class Activity {
           ? DateTime.parse(json['date'])
           : (json['date'] as DateTime),
       time: json['time'] ?? '00:00',
-      duration:
-          json['duration'] ??
-          60, // Default 60 minutes for backward compatibility
-      timeCategory:
-          json['timeCategory'] ?? getTimeCategory(json['time'] ?? '00:00'),
+      duration: json['duration'] ?? 60,
+      timeCategory: json['timeCategory'] ?? getTimeCategory(json['time'] ?? '00:00'),
       capacity: json['capacity'] ?? 0,
       bookedCount: json['bookedCount'] ?? 0,
       guestPrice: (json['guestPrice'] ?? 0).toDouble(),
@@ -61,17 +63,18 @@ class Activity {
       createdBy: json['createdBy'] ?? '',
     );
   }
-  // === IDENTIFIERS & RELATIONSHIPS ===
+
+  // Core identifiers
   final String id;
-  final String clubId; // Reference to club (for queries/security)
-  final String facilityId; // Reference to facility
+  final String clubId;
+  final String facilityId;
 
-  // === DENORMALIZED DATA (for display without extra queries) ===
-  final String clubName; // Club name for display
-  final String facilityName; // Facility name for display
+  // Display information (denormalized for performance)
+  final String clubName;
+  final String facilityName;
 
-  // === ACTIVITY INFORMATION ===
-  final String name; // Activity title
+  // Activity details
+  final String name;
   final String description;
   final String category; // "Wellness", "Fitness", "Kids", "Workshops"
   final DateTime date;
@@ -79,31 +82,29 @@ class Activity {
   final int duration; // Duration in minutes
   final String timeCategory; // "Morning", "Afternoon", "Evening"
 
-  // === CAPACITY ===
+  // Capacity management
   final int capacity;
-  final int bookedCount; // Current number of bookings
+  final int bookedCount;
 
-  // === DUAL PRICING (Guest vs Member) ===
+  // Pricing (dual tier for members vs guests)
   final double guestPrice;
   final double memberPrice;
 
-  // === POINTS & REWARDS ===
+  // Rewards and requirements
   final int pointsReward;
-
-  // === VOUCHER SETTINGS ===
-  final bool allowVouchers; // Whether vouchers can be used for this activity
-
+  final bool allowVouchers;
   final List<String> requirements;
-  final String? imageUrl;
 
+  // Media and metadata
+  final String? imageUrl;
   final DateTime createdAt;
   final DateTime updatedAt;
   final String createdBy;
 
-  // Computed property for spots left
+  /// Available spots remaining for booking
   int get spotsLeft => capacity - bookedCount;
 
-  // Calculate end time based on start time and duration
+  /// Calculate activity end time based on start time and duration
   DateTime get endTime {
     try {
       final timeParts = time.split(':');
@@ -126,13 +127,13 @@ class Activity {
     }
   }
 
-  // Format end time as HH:mm
+  /// Format end time as HH:mm string
   String get endTimeFormatted {
     final endDateTime = endTime;
     return '${endDateTime.hour.toString().padLeft(2, '0')}:${endDateTime.minute.toString().padLeft(2, '0')}';
   }
 
-  // Add this getter
+  /// Get display-ready image URL with fallback to category defaults
   String get displayImageUrl {
     if (imageUrl != null && imageUrl!.isNotEmpty) {
       return imageUrl!;
@@ -140,6 +141,7 @@ class Activity {
     return _getDefaultImageForCategory(category);
   }
 
+  /// Default images for activity categories
   String _getDefaultImageForCategory(String category) {
     switch (category) {
       case 'Wellness':
@@ -153,6 +155,44 @@ class Activity {
       default:
         return 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=200&fit=crop';
     }
+  }
+
+  /// Check if activity is in the past
+  bool get isPast {
+    try {
+      final timeParts = time.split(':');
+      final hour = int.tryParse(timeParts[0]) ?? 0;
+      final minute = int.tryParse(timeParts[1]) ?? 0;
+      
+      final activityDateTime = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        hour,
+        minute,
+      );
+      
+      return activityDateTime.isBefore(DateTime.now());
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Check if activity has available spots
+  bool get hasAvailableSpots => spotsLeft > 0;
+
+  /// Check if activity is almost full (less than 20% spots left)
+  bool get isAlmostFull => spotsLeft > 0 && spotsLeft <= (capacity * 0.2);
+
+  /// Check if activity is completely booked
+  bool get isFull => spotsLeft <= 0;
+
+  /// Determine time category from time string
+  static String getTimeCategory(String time) {
+    final hour = int.tryParse(time.split(':')[0]) ?? 12;
+    if (hour >= 6 && hour < 12) return 'Morning';
+    if (hour >= 12 && hour < 18) return 'Afternoon';
+    return 'Evening';
   }
 
   Map<String, dynamic> toJson() {
@@ -183,7 +223,6 @@ class Activity {
     };
   }
 
-  // CopyWith method for creating modified copies
   Activity copyWith({
     String? id,
     String? clubId,
@@ -234,45 +273,5 @@ class Activity {
       updatedAt: updatedAt ?? DateTime.now(),
       createdBy: createdBy ?? this.createdBy,
     );
-  }
-
-  // Helper to check if activity is in the past
-  bool get isPast {
-    try {
-      final timeParts = time.split(':');
-      if (timeParts.length != 2) return false;
-
-      final hour = int.parse(timeParts[0]);
-      final minute = int.parse(timeParts[1]);
-
-      final activityDateTime = DateTime(
-        date.year,
-        date.month,
-        date.day,
-        hour,
-        minute,
-      );
-
-      return activityDateTime.isBefore(DateTime.now());
-    } catch (e) {
-      return false;
-    }
-  }
-
-  // Helper to check if activity has available spots
-  bool get hasAvailableSpots => spotsLeft > 0;
-
-  // Helper to check if activity is almost full (less than 20% spots left)
-  bool get isAlmostFull => spotsLeft > 0 && spotsLeft <= (capacity * 0.2);
-
-  // Helper to check if activity is full
-  bool get isFull => spotsLeft <= 0;
-
-  // Helper method to determine time category from time string
-  static String getTimeCategory(String time) {
-    final hour = int.tryParse(time.split(':')[0]) ?? 12;
-    if (hour >= 6 && hour < 12) return 'Morning';
-    if (hour >= 12 && hour < 18) return 'Afternoon';
-    return 'Evening';
   }
 }
