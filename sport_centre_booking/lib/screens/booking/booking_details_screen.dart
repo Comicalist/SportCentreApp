@@ -9,6 +9,7 @@ import '../../models/booking.dart';
 import '../../models/voucher.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/booking_provider.dart';
+import '../../services/booking_service.dart';
 import '../../services/voucher_service.dart';
 import '../../utils/activity_helpers.dart';
 import '../../utils/constants.dart';
@@ -88,8 +89,12 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           totalPrice,
         );
 
-        /// Points calculation based on final amount paid after discounts
-        final expectedPoints = _calculateExpectedPoints(finalPrice, isMember);
+        /// Points calculation using the corrected BookingService method
+        final expectedPoints = BookingService.calculatePointsEarned(
+          widget.activity,
+          finalPrice,
+          isMember,
+        );
 
         return Scaffold(
           backgroundColor: Colors.grey[50],

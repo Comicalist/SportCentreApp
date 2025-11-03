@@ -110,14 +110,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     },
                     itemBuilder: (context) => const [
                       PopupMenuItem(
-                        value: 'edit',
-                        child: ListTile(
-                          leading: Icon(Icons.edit),
-                          title: Text('Edit Profile'),
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ),
-                      PopupMenuItem(
                         value: 'settings',
                         child: ListTile(
                           leading: Icon(Icons.notifications_outlined),

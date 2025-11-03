@@ -482,27 +482,23 @@ class BookingService {
     double paidAmount,
     bool isMember,
   ) {
-    /// Base points: 1 point per CHF actually paid (encourages full-price bookings)
-    var basePoints = paidAmount.floor();
-
-    /// Member benefit: 50% bonus points for membership value
-    if (isMember) {
-      basePoints = (basePoints * 1.5).floor();
-    }
-
-    /// Activity category multipliers to promote specific programs
-    switch (activity.category.toLowerCase()) {
-      case 'wellness':
-        basePoints = (basePoints * 1.2).floor();
-        break;
-      case 'workshops':
-        basePoints = (basePoints * 1.3).floor();
-        break;
-      default:
-        break;
-    }
-
-    return basePoints;
+    /// Get the original price that was used to set the points reward
+    final originalPrice = isMember ? activity.memberPrice : activity.guestPrice;
+    
+    /// Base points from activity creation (e.g., 200 points)
+    final originalPoints = activity.pointsReward;
+    
+    /// Calculate the percentage of original price that was actually paid
+    final paymentRatio = originalPrice > 0 ? (paidAmount / originalPrice) : 0.0;
+    
+    /// Points earned = original points × payment ratio
+    /// Example: 200 points × 0.5 (half paid) = 100 points
+    var earnedPoints = (originalPoints * paymentRatio).round();
+    
+    /// Member benefit does NOT change points (as per your requirement)
+    /// Category multipliers also should NOT apply since points are set by activity
+    
+    return earnedPoints;
   }
 
   /// Generate unique confirmation numbers for customer service and tracking
