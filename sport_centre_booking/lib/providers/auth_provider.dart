@@ -88,7 +88,7 @@ class AuthProvider extends ChangeNotifier {
 
     if (doc.exists) {
       _appUser = AppUser.fromFirestore(doc);
-
+     
       notifyListeners();
       return;
     }

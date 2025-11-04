@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/booking.dart';
 import '../models/activity.dart';
+import '../models/voucher.dart';
+import 'voucher_service.dart';
 
 /// Service for managing booking operations
 class BookingService {
@@ -59,6 +61,7 @@ class BookingService {
     required double totalPrice,
     required int expectedPoints,
     Map<String, dynamic>? metadata,
+    String? voucherId, // New parameter for voucher
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -79,6 +82,55 @@ class BookingService {
         }
 
         final activityData = activityDoc.data()!;
+
+        // Handle voucher validation and processing
+        double voucherDiscount = 0.0;
+        if (voucherId != null) {
+          // Get voucher document
+          final voucherRef = _firestore.collection('vouchers').doc(voucherId);
+          final voucherDoc = await transaction.get(voucherRef);
+
+          if (!voucherDoc.exists) {
+            throw Exception('Voucher not found');
+          }
+
+          final voucher = Voucher.fromFirestore(voucherDoc);
+
+          // Validate voucher can be used
+          if (!voucher.canBeUsedForBookings) {
+            throw Exception('This voucher cannot be used for bookings');
+          }
+
+          if (voucher.purchasedBy != user.uid) {
+            throw Exception('You do not own this voucher');
+          }
+
+          if (voucher.clubId != activityData['clubId']) {
+            throw Exception('This voucher can only be used for activities from ${voucher.clubName}');
+          }
+
+          final allowVouchers = activityData['allowVouchers'] ?? true;
+          if (!allowVouchers) {
+            throw Exception('Vouchers are not allowed for this activity');
+          }
+
+          voucherDiscount = voucher.amount;
+
+          // Mark voucher as used
+          transaction.update(voucherRef, {
+            'usedAt': Timestamp.fromDate(DateTime.now()),
+            'usedForBooking': activityId, // Will be updated with booking ID after creation
+            'updatedAt': Timestamp.fromDate(DateTime.now()),
+          });
+        }
+
+        // Calculate final amount paid and points earned
+        final finalAmountPaid = (totalPrice - voucherDiscount).clamp(0.0, totalPrice);
+        final finalPointsEarned = calculatePointsEarned(
+          Activity.fromJson(activityData),
+          finalAmountPaid,
+          isMemberBooking,
+        );
 
         // Check capacity and update bookings count
         final capacity = activityData['capacity'] ?? 0;
@@ -112,6 +164,21 @@ class BookingService {
 
         final activityTime = activityData['time'] ?? '00:00';
 
+        // 🔥 NOUVEAU : Combiner date + time pour créer scheduledDate
+        DateTime scheduledDateTime;
+        try {
+          final timeParts = activityTime.split(':');
+          scheduledDateTime = DateTime(
+            activityDateTime.year,
+            activityDateTime.month,
+            activityDateTime.day,
+            int.parse(timeParts[0]), // Heure
+            int.parse(timeParts[1]), // Minutes
+          );
+        } catch (e) {
+          scheduledDateTime = activityDateTime;
+        }
+
         // ---------------- WRITES (after all reads) ----------------
 
         // Update activity capacity first
@@ -144,26 +211,38 @@ class BookingService {
           'bookingDate': Timestamp.fromDate(bookingDate),
           'createdAt': Timestamp.fromDate(DateTime.now()),
           'status': 'confirmed',
-          'amountPaid': totalPrice,
-          'pointsEarned': expectedPoints,
+          'amountPaid': finalAmountPaid,
+          'pointsEarned': finalPointsEarned,
           'participantCount': participantCount,
           'isMemberBooking': isMemberBooking,
           'cancellationReason': null,
           'cancelledAt': null,
           'confirmationNumber': confirmationNumber,
           'metadata': metadata,
+          'voucherId': voucherId,
+          'voucherDiscount': voucherDiscount > 0 ? voucherDiscount : null,
           'activityTitle': activityTitle,
           'activityDate': Timestamp.fromDate(activityDateTime),
           'activityTime': activityTime,
+          'scheduledDate': Timestamp.fromDate(scheduledDateTime), // ← NOUVEAU pour notifications
           'totalPrice': totalPrice,
           // Denormalized club/facility data for display
           'clubId': clubId,
           'clubName': clubName,
           'facilityId': facilityId,
           'facilityName': facilityName,
+          'activityName': activityTitle, // ← NOUVEAU pour notifications
         };
 
         transaction.set(bookingRef, bookingData);
+
+        // Update voucher with correct booking ID if voucher was used
+        if (voucherId != null) {
+          final voucherRef = _firestore.collection('vouchers').doc(voucherId);
+          transaction.update(voucherRef, {
+            'usedForBooking': bookingRef.id,
+          });
+        }
 
         // Create Booking object to return
         return Booking(
@@ -174,12 +253,14 @@ class BookingService {
           bookingDate: bookingDate,
           createdAt: DateTime.now(),
           status: BookingStatus.confirmed,
-          amountPaid: totalPrice,
-          pointsEarned: expectedPoints,
+          amountPaid: finalAmountPaid,
+          pointsEarned: finalPointsEarned,
           participantCount: participantCount,
           isMemberBooking: isMemberBooking,
           confirmationNumber: confirmationNumber,
           metadata: metadata,
+          voucherId: voucherId,
+          voucherDiscount: voucherDiscount > 0 ? voucherDiscount : null,
           activityTitle: activityTitle,
           activityDate: activityDateTime,
           activityTime: activityTime,
@@ -399,13 +480,22 @@ class BookingService {
     return basePrice * participantCount;
   }
 
+  /// Calculate final price after voucher discount
+  static double calculateFinalPrice(
+    double originalPrice,
+    double voucherDiscount,
+  ) {
+    return (originalPrice - voucherDiscount).clamp(0.0, originalPrice);
+  }
+
   /// Calculate points earned based on activity and amount paid
+  /// If a voucher is used, points are only earned on the amount actually paid
   static int calculatePointsEarned(
     Activity activity,
     double paidAmount,
     bool isMember,
   ) {
-    // Base points: 1 point per $1 spent
+    // Base points: 1 point per CHF spent (only on amount actually paid)
     int basePoints = paidAmount.floor();
 
     // Member bonus: 50% more points

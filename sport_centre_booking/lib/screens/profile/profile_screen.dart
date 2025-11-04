@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/colors.dart';
-// pour AuthRequiredScreen
 import '../../models/app_user.dart';
+import '../../models/voucher.dart';
+import '../../services/voucher_service.dart';
+import '../../widgets/profile/testing_panel.dart';
+import 'notification_settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -18,7 +22,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, auth, _) {
-        // 1) Pas connecté => écran d’auth
+        // 1) Pas connecté => écran d'auth
         if (!auth.isLoggedIn) {
           return Scaffold(
             appBar: AppBar(title: const Text('Profile')),
@@ -93,7 +97,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           // TODO: edit profile
                           break;
                         case 'settings':
-                          // TODO: settings
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const NotificationSettingsScreen(),
+                            ),
+                          );
                           break;
                         case 'logout':
                           _handleLogout();
@@ -112,8 +121,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       PopupMenuItem(
                         value: 'settings',
                         child: ListTile(
-                          leading: Icon(Icons.settings),
-                          title: Text('Settings'),
+                          leading: Icon(Icons.notifications_outlined),
+                          title: Text('Notification Settings'),
                           contentPadding: EdgeInsets.zero,
                         ),
                       ),
@@ -141,9 +150,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       _buildMembershipCard(user),
                       const SizedBox(height: 24),
                     ],
-                    // Si tu veux enlever l’affichage des points du profil,
-                    // supprime simplement la ligne ci-dessous.
                     _buildPointsCard(user),
+                    const SizedBox(height: 24),
+                    _buildVouchersSection(user.uid),
+                    const SizedBox(height: 24),
+                    _buildSettingsSection(context),
+                    
+                    // 🧪 Testing Panel (debug mode only)
+                    if (kDebugMode) ...[
+                      const SizedBox(height: 24),
+                      TestingPanel(userId: uid),
+                    ],
                   ],
                 ),
               ),
@@ -151,6 +168,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
           },
         );
       },
+    );
+  }
+
+  // Nouvelle section Settings avec accès facile aux notifications
+  Widget _buildSettingsSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            'Settings',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Column(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.notifications_outlined, color: AppColors.primary),
+                title: const Text('Notifications'),
+                subtitle: const Text('Email or in-app preferences'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NotificationSettingsScreen(),
+                    ),
+                  );
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.history, color: AppColors.primary),
+                title: const Text('Booking History'),
+                subtitle: const Text('View past activities'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Booking history coming soon!')),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -164,7 +234,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             CircleAvatar(
               radius: 40,
-              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+              backgroundColor: AppColors.primary.withOpacity(0.1),
               child: Text(
                 user.displayName.isNotEmpty
                     ? user.displayName[0].toUpperCase()
@@ -255,7 +325,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Text(
@@ -270,8 +340,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
             const SizedBox(height: 16),
-
-            // Big number = available/spendable points (same as Rewards page)
             Text(
               '${user.availablePoints}',
               style: const TextStyle(
@@ -284,11 +352,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               'Available Points',
               style: TextStyle(color: Colors.white70, fontSize: 14),
             ),
-
             const SizedBox(height: 16),
             Row(
               children: [
-                // Current balance (mirrors backend 'totalPoints')
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -308,7 +374,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                 ),
-                // Lifetime earned
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -328,15 +393,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                 ),
-
                 ElevatedButton(
                   onPressed: user.availablePoints > 0
                       ? () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Rewards redemption coming soon!'),
-                            ),
-                          );
+                          // Navigate to rewards screen
+                          Navigator.of(context).popUntil((route) => route.isFirst);
+                          DefaultTabController.of(context).animateTo(2); // Rewards tab
                         }
                       : null,
                   style: ElevatedButton.styleFrom(
@@ -369,7 +431,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
+            colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
           ),
         ),
         padding: const EdgeInsets.all(20),
@@ -394,7 +456,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Text(
@@ -421,8 +483,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if (user.membershipExpiry != null)
               Text(
                 'Expires: ${_formatDate(user.membershipExpiry!)}',
-                style:
-                    const TextStyle(color: Colors.white70, fontSize: 14),
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
             const SizedBox(height: 16),
             const Row(
@@ -448,6 +509,321 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildVouchersSection(String userId) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.card_giftcard, color: Colors.teal, size: 28),
+                const SizedBox(width: 12),
+                const Text(
+                  'My Vouchers',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () {
+                    // Navigate to rewards screen to buy more vouchers
+                    DefaultTabController.of(context).animateTo(2); // Rewards tab
+                  },
+                  child: const Text(
+                    'Get More',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            StreamBuilder<List<Voucher>>(
+              stream: VoucherService.streamUserVouchers(userId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          Icon(Icons.error_outline, size: 40, color: Colors.grey[400]),
+                          const SizedBox(height: 8),
+                          const Text('Failed to load vouchers'),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                final vouchers = snapshot.data ?? [];
+                final unusedVouchers = vouchers.where((v) => !v.isUsed && !v.isExpired).toList();
+                final usedVouchers = vouchers.where((v) => v.isUsed || v.isExpired).toList();
+
+                if (vouchers.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          Icon(Icons.card_giftcard_outlined, size: 48, color: Colors.grey[400]),
+                          const SizedBox(height: 8),
+                          Text(
+                            'No vouchers yet',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Get vouchers from the Rewards tab',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Available vouchers
+                    if (unusedVouchers.isNotEmpty) ...[
+                      const Text(
+                        'Available',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.green,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...unusedVouchers.map((voucher) => _buildVoucherItem(voucher, true)),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Used/Expired vouchers (expandable)
+                    if (usedVouchers.isNotEmpty) ...[
+                      ExpansionTile(
+                        tilePadding: EdgeInsets.zero,
+                        childrenPadding: const EdgeInsets.only(top: 8),
+                        title: Text(
+                          'Used & Expired (${usedVouchers.length})',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        children: usedVouchers.map((voucher) => _buildVoucherItem(voucher, false)).toList(),
+                      ),
+                    ],
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVoucherItem(Voucher voucher, bool isActive) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isActive ? Colors.teal.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isActive ? Colors.teal.withValues(alpha: 0.2) : Colors.grey.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: _getVoucherTypeColor(voucher.type).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              voucher.type == VoucherType.fitness ? 'FITNESS' : 'STUFF',
+              style: TextStyle(
+                fontSize: 8,
+                fontWeight: FontWeight.bold,
+                color: _getVoucherTypeColor(voucher.type),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  voucher.title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isActive ? Colors.black87 : Colors.grey[600],
+                  ),
+                ),
+                Text(
+                  voucher.clubName,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${voucher.amount.toStringAsFixed(2)} CHF',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: isActive ? Colors.green : Colors.grey[600],
+                ),
+              ),
+              Text(
+                voucher.statusDisplayText,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isActive ? Colors.teal : Colors.grey[500],
+                ),
+              ),
+            ],
+          ),
+          if (isActive && voucher.code != null) ...[
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: () => _showVoucherDetails(voucher),
+              icon: const Icon(Icons.info_outline, size: 18),
+              iconSize: 18,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Color _getVoucherTypeColor(VoucherType type) {
+    switch (type) {
+      case VoucherType.fitness:
+        return Colors.teal;
+      case VoucherType.stuff:
+        return Colors.purple;
+    }
+  }
+
+  void _showVoucherDetails(Voucher voucher) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(voucher.title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              voucher.description,
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Voucher Code:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    voucher.code ?? 'N/A',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Text('Value: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                Text('${voucher.amount.toStringAsFixed(2)} CHF'),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Text('Club: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                Text(voucher.clubName),
+              ],
+            ),
+            if (voucher.expiresAt != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Text('Expires: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                  Text(_formatDate(voucher.expiresAt!)),
+                ],
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
       ),
     );
   }
@@ -484,6 +860,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
-    return '${months[date.month - 1]} ${date.day}';
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 }

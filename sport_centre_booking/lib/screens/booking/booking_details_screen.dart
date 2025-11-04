@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../models/activity.dart';
 import '../../models/booking.dart';
+import '../../models/voucher.dart';
+import '../../services/voucher_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/booking_provider.dart';
 import '../../utils/activity_helpers.dart';
@@ -28,6 +30,10 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   bool _agreeToTerms = false;
   bool _isLoading = false;
   DateTime _focusedDay = DateTime.now();
+  
+  // Voucher selection
+  Voucher? _selectedVoucher;
+  List<Voucher> _availableVouchers = [];
 
   @override
   void initState() {
@@ -41,8 +47,28 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       final uid = authProvider.firebaseUser?.uid;
       if (uid != null) {
         bookingProvider.loadUserBookings(uid);
+        _loadAvailableVouchers(uid);
       }
     });
+  }
+
+  /// Load available vouchers for this activity
+  Future<void> _loadAvailableVouchers(String userId) async {
+    if (!widget.activity.allowVouchers) return;
+    
+    try {
+      final vouchers = await VoucherService.getUsableVouchers(
+        userId, 
+        widget.activity.clubId,
+      );
+      if (mounted) {
+        setState(() {
+          _availableVouchers = vouchers;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading vouchers: $e');
+    }
   }
 
   @override
@@ -53,8 +79,13 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         final currentPrice =
             isMember ? widget.activity.memberPrice : widget.activity.guestPrice;
         final totalPrice = currentPrice * _participantCount;
-        final expectedPoints =
-            bookingProvider.currentBookingDetails?.expectedPoints ?? 0;
+        
+        // Calculate voucher discount and final price
+        final voucherDiscount = _selectedVoucher?.amount ?? 0.0;
+        final finalPrice = (totalPrice - voucherDiscount).clamp(0.0, totalPrice);
+        
+        // Calculate expected points based on final price (after voucher)
+        final expectedPoints = _calculateExpectedPoints(finalPrice, isMember);
 
         return Scaffold(
           backgroundColor: Colors.grey[50],
@@ -77,20 +108,47 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       const SizedBox(height: AppConstants.largeSpacing),
                       _buildParticipantSelector(),
                       const SizedBox(height: AppConstants.largeSpacing),
+                      if (_availableVouchers.isNotEmpty && widget.activity.allowVouchers) ...[
+                        _buildVoucherSection(),
+                        const SizedBox(height: AppConstants.largeSpacing),
+                      ],
                       _buildPricingBreakdown(
-                          isMember, currentPrice, totalPrice, expectedPoints),
+                          isMember, currentPrice, totalPrice, finalPrice, voucherDiscount, expectedPoints),
                       const SizedBox(height: AppConstants.largeSpacing),
                       _buildCalendarSection(bookingProvider),
                       const SizedBox(height: AppConstants.largeSpacing),
                       _buildTermsAndConditions(),
                       const SizedBox(height: AppConstants.largeSpacing * 2),
-                      _buildBookingButton(bookingProvider, totalPrice),
+                      _buildBookingButton(bookingProvider, finalPrice),
                     ],
                   ),
                 ),
         );
       },
     );
+  }
+
+  /// Calculate expected points based on final price paid
+  int _calculateExpectedPoints(double finalPrice, bool isMember) {
+    int basePoints = finalPrice.floor();
+    
+    if (isMember) {
+      basePoints = (basePoints * 1.5).floor();
+    }
+    
+    // Activity type multiplier
+    switch (widget.activity.category.toLowerCase()) {
+      case 'wellness':
+        basePoints = (basePoints * 1.2).floor();
+        break;
+      case 'workshops':
+        basePoints = (basePoints * 1.3).floor();
+        break;
+      default:
+        break;
+    }
+    
+    return basePoints;
   }
 
   // Helper pour normaliser les dates à minuit
@@ -120,7 +178,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     return s;
   }
 
-  /// --- 📅 CALENDAR SECTION ---
+  
   Widget _buildCalendarSection(BookingProvider bookingProvider) {
     final Stream<List<Booking>> safeStream =
         bookingProvider.userBookingsStream ?? Stream.value(const <Booking>[]);
@@ -763,8 +821,203 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Build pricing breakdown
-  Widget _buildPricingBreakdown(bool isMember, double currentPrice, double totalPrice, int expectedPoints) {
+  /// Build voucher selection section
+  Widget _buildVoucherSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: AppConstants.shadowOpacity),
+            blurRadius: AppConstants.shadowBlurRadius,
+            offset: AppConstants.shadowOffset,
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(AppConstants.largeSpacing),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Apply Voucher',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: AppConstants.mediumSpacing),
+          Text(
+            'You have ${_availableVouchers.length} voucher(s) available for this activity',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: AppConstants.largeSpacing),
+          
+          // Voucher selection
+          ...List.generate(_availableVouchers.length, (index) {
+            final voucher = _availableVouchers[index];
+            final isSelected = _selectedVoucher?.id == voucher.id;
+            
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: InkWell(
+                onTap: () {
+                  setState(() {
+                    _selectedVoucher = isSelected ? null : voucher;
+                  });
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isSelected ? Colors.teal.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isSelected ? Colors.teal : Colors.grey.withValues(alpha: 0.3),
+                      width: isSelected ? 2 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      // Selection indicator
+                      Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isSelected ? Colors.teal : Colors.transparent,
+                          border: Border.all(
+                            color: isSelected ? Colors.teal : Colors.grey,
+                            width: 2,
+                          ),
+                        ),
+                        child: isSelected
+                            ? const Icon(Icons.check, color: Colors.white, size: 14)
+                            : null,
+                      ),
+                      const SizedBox(width: 12),
+                      
+                      // Voucher type badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: _getVoucherTypeColor(voucher.type).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          voucher.type == VoucherType.fitness ? 'FITNESS' : 'STUFF',
+                          style: TextStyle(
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold,
+                            color: _getVoucherTypeColor(voucher.type),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      
+                      // Voucher details
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              voucher.title,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            Text(
+                              voucher.clubName,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      // Voucher value
+                      Text(
+                        '${voucher.amount.toStringAsFixed(2)} CHF',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
+          
+          if (_selectedVoucher != null) ...[
+            const SizedBox(height: AppConstants.mediumSpacing),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning_amber, color: Colors.orange[700], size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Voucher savings will reduce points earned. You\'ll earn points only on the amount you pay.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.orange[800],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          
+          // Clear selection button
+          if (_selectedVoucher != null) ...[
+            const SizedBox(height: AppConstants.mediumSpacing),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _selectedVoucher = null;
+                });
+              },
+              child: const Text('Remove voucher'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Color _getVoucherTypeColor(VoucherType type) {
+    switch (type) {
+      case VoucherType.fitness:
+        return Colors.teal;
+      case VoucherType.stuff:
+        return Colors.purple;
+    }
+  }
+  Widget _buildPricingBreakdown(
+    bool isMember, 
+    double currentPrice, 
+    double totalPrice, 
+    double finalPrice, 
+    double voucherDiscount, 
+    int expectedPoints
+  ) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -851,20 +1104,79 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               ],
             ),
           ],
+          
+          // Voucher discount section
+          if (voucherDiscount > 0) ...[
+            const SizedBox(height: AppConstants.mediumSpacing),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.card_giftcard, color: Colors.green[600], size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Voucher discount',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.green[600],
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  '-${voucherDiscount.toStringAsFixed(2)} CHF',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.green[600],
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          
           const Divider(height: 32),
+          
+          // Subtotal (if voucher applied)
+          if (voucherDiscount > 0) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Subtotal',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                Text(
+                  '${totalPrice.toStringAsFixed(2)} CHF',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                    decoration: TextDecoration.lineThrough,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+          
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Total',
-                style: TextStyle(
+              Text(
+                voucherDiscount > 0 ? 'Final Total' : 'Total',
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
                 ),
               ),
               Text(
-                '\$${totalPrice.toStringAsFixed(2)}',
+                '${finalPrice.toStringAsFixed(2)} CHF',
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -1023,7 +1335,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 ),
               )
             : Text(
-                'Confirm Booking - \$${totalPrice.toStringAsFixed(2)}',
+                'Confirm Booking - ${totalPrice.toStringAsFixed(2)} CHF',
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -1070,10 +1382,14 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       _isLoading = true;
     });
 
-    // Update final booking details
+    // Update final booking details with voucher information
     bookingProvider.updateBookingDetails(
       participantCount: _participantCount,
+      voucherId: _selectedVoucher?.id,
     );
+    
+    // Set the selected voucher in the provider
+    bookingProvider.setSelectedVoucher(_selectedVoucher);
 
     try {
       final success = await bookingProvider.confirmBooking();
