@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../providers/auth_provider.dart';
+// Hide firebase's AuthProvider to avoid name collision with your app's AuthProvider
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+
+import '../../providers/auth_provider.dart' as app_auth; // Alias your own AuthProvider
 import '../../utils/colors.dart';
 import '../../models/app_user.dart';
 import '../../models/voucher.dart';
@@ -18,11 +21,21 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  /// Same user data fetch as in RewardsScreen:
+  /// reads users/{uid} once to get availablePoints and lifetimePointsEarned.
+  Future<Map<String, dynamic>?> _getUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+    final doc =
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    return doc.data();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Consumer<AuthProvider>(
+    return Consumer<app_auth.AuthProvider>(
       builder: (context, auth, _) {
-        // 1) Pas connecté => écran d'auth
+        // 1) Not signed in -> simple gate screen
         if (!auth.isLoggedIn) {
           return Scaffold(
             appBar: AppBar(title: const Text('Profile')),
@@ -39,7 +52,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         }
 
-        // 2) Connecté mais AppUser pas encore chargé une première fois => loader
+        // 2) Signed in but first AppUser not loaded yet -> loader
         if (auth.appUser == null) {
           return Scaffold(
             backgroundColor: Colors.grey[50],
@@ -55,27 +68,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         }
 
-        // 3) Connecté + on écoute le doc Firestore en temps réel pour avoir les points à jour
+        // 3) Signed in + live profile stream for non-points parts (info, vouchers, etc.)
         final uid = auth.firebaseUser!.uid;
-        final userDocStream = FirebaseFirestore.instance
-            .collection('users')
-            .doc(uid)
-            .snapshots();
+        final userDocStream =
+            FirebaseFirestore.instance.collection('users').doc(uid).snapshots();
 
         return StreamBuilder<DocumentSnapshot>(
           stream: userDocStream,
           builder: (context, snapshot) {
-            // fallback si le stream n'a rien encore
+            // Use provider's user as fallback if stream hasn't emitted yet
             AppUser user = auth.appUser!;
 
             if (snapshot.hasError) {
-              // En cas d'erreur de stream, on affiche tout de même les infos connues
+              // Keep UI usable even on stream error
               debugPrint('Profile stream error: ${snapshot.error}');
             } else if (snapshot.hasData && snapshot.data!.exists) {
               try {
                 user = AppUser.fromFirestore(snapshot.data!);
               } catch (_) {
-                // Si parsing échoue, on garde le user déjà chargé
+                // Fallback to the previously loaded user
               }
             }
 
@@ -94,13 +105,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onSelected: (value) {
                       switch (value) {
                         case 'edit':
-                          // TODO: edit profile
+                          // TODO: implement edit profile
                           break;
                         case 'settings':
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const NotificationSettingsScreen(),
+                              builder: (context) =>
+                                  const NotificationSettingsScreen(),
                             ),
                           );
                           break;
@@ -130,8 +142,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         value: 'logout',
                         child: ListTile(
                           leading: Icon(Icons.logout, color: Colors.red),
-                          title: Text('Sign Out',
-                              style: TextStyle(color: Colors.red)),
+                          title: Text('Sign Out', style: TextStyle(color: Colors.red)),
                           contentPadding: EdgeInsets.zero,
                         ),
                       ),
@@ -146,17 +157,80 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     _buildUserInfoCard(user),
                     const SizedBox(height: 24),
+
                     if (user.isMember) ...[
                       _buildMembershipCard(user),
                       const SizedBox(height: 24),
                     ],
-                    _buildPointsCard(user),
+
+                    // ===== Points section: EXACTLY the same pattern as RewardsScreen =====
+                    FutureBuilder<Map<String, dynamic>?>(
+                      future: _getUserData(),
+                      builder: (context, pointsSnap) {
+                        if (pointsSnap.connectionState == ConnectionState.waiting) {
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(32),
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
+                        }
+
+                        if (!pointsSnap.hasData || pointsSnap.data == null) {
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(32),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    'Failed to load your rewards.',
+                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Please try again later.',
+                                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        final data = pointsSnap.data!;
+                        final availablePoints = (data['availablePoints'] ?? 0) as int;
+                        final lifetimePoints = (data['lifetimePointsEarned'] ?? 0) as int;
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Your Reward Points',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            _buildPointsCard('Available Points', availablePoints, Colors.green),
+                            const SizedBox(height: 12),
+                            _buildPointsCard('Lifetime Points Earned', lifetimePoints, Colors.orange),
+                          ],
+                        );
+                      },
+                    ),
+                    // =======================================================================
+
                     const SizedBox(height: 24),
                     _buildVouchersSection(user.uid),
                     const SizedBox(height: 24),
                     _buildSettingsSection(context),
-                    
-                    // 🧪 Testing Panel (debug mode only)
+
+                    // Debug/testing panel only in debug builds
                     if (kDebugMode) ...[
                       const SizedBox(height: 24),
                       TestingPanel(userId: uid),
@@ -171,7 +245,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // Nouvelle section Settings avec accès facile aux notifications
+  /// Settings section with quick access to notifications/preferences
   Widget _buildSettingsSection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,10 +254,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           padding: EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
             'Settings',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ),
         Card(
@@ -224,6 +295,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// Basic profile header with avatar, name, email, and membership badge.
   Widget _buildUserInfoCard(AppUser user) {
     return Card(
       elevation: 2,
@@ -231,14 +303,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Row(
-          children: [
+          children: {
+            // Avatar with first letter fallback
             CircleAvatar(
               radius: 40,
               backgroundColor: AppColors.primary.withOpacity(0.1),
               child: Text(
-                user.displayName.isNotEmpty
-                    ? user.displayName[0].toUpperCase()
-                    : 'U',
+                user.displayName.isNotEmpty ? user.displayName[0].toUpperCase() : 'U',
                 style: const TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
@@ -247,16 +318,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(width: 16),
+            // Name / email / role badge
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     user.displayName,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -265,11 +334,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 8),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
-                      color:
-                          user.isMember ? AppColors.primary : Colors.grey[200],
+                      color: user.isMember ? AppColors.primary : Colors.grey[200],
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -284,136 +351,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
-          ],
+          }.toList(),
         ),
       ),
     );
   }
 
-  Widget _buildPointsCard(AppUser user) {
+  /// Points card identical to the one used in RewardsScreen.
+  Widget _buildPointsCard(String label, int points, Color color) {
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Colors.orange[400]!, Colors.orange[600]!],
-          ),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+        child: Row(
           children: [
-            Row(
-              children: [
-                const Icon(Icons.star, color: Colors.white, size: 28),
-                const SizedBox(width: 8),
-                const Text(
-                  'Reward Points',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                if (user.isMember)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Text(
-                      '20% Bonus',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-              ],
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.star, color: color, size: 22),
             ),
-            const SizedBox(height: 16),
-            Text(
-              '${user.availablePoints}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
               ),
             ),
-            const Text(
-              'Available Points',
-              style: TextStyle(color: Colors.white70, fontSize: 14),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${user.totalPoints}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const Text(
-                        'Current Balance',
-                        style: TextStyle(color: Colors.white70, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${user.lifetimePointsEarned}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const Text(
-                        'Lifetime Earned',
-                        style: TextStyle(color: Colors.white70, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: user.availablePoints > 0
-                      ? () {
-                          // Navigate to rewards screen
-                          Navigator.of(context).popUntil((route) => route.isFirst);
-                          DefaultTabController.of(context).animateTo(2); // Rewards tab
-                        }
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.orange[600],
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  child: const Text(
-                    'Redeem',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
+            Text(
+              '$points pts',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
             ),
           ],
         ),
@@ -421,6 +395,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// Membership card (unchanged from your previous version).
   Widget _buildMembershipCard(AppUser user) {
     return Card(
       elevation: 2,
@@ -440,32 +415,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             Row(
               children: [
-                const Icon(Icons.card_membership,
-                    color: Colors.white, size: 28),
+                const Icon(Icons.card_membership, color: Colors.white, size: 28),
                 const SizedBox(width: 8),
                 const Text(
                   'Membership',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Text(
                     'ACTIVE',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -473,11 +438,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 16),
             Text(
               user.membershipType ?? 'Standard',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             if (user.membershipExpiry != null)
@@ -490,10 +451,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Icon(Icons.check_circle, color: Colors.white, size: 16),
                 SizedBox(width: 8),
-                Text(
-                  '20% discount on all activities',
-                  style: TextStyle(color: Colors.white, fontSize: 14),
-                ),
+                Text('20% discount on all activities', style: TextStyle(color: Colors.white, fontSize: 14)),
               ],
             ),
             const SizedBox(height: 4),
@@ -501,10 +459,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Icon(Icons.check_circle, color: Colors.white, size: 16),
                 SizedBox(width: 8),
-                Text(
-                  'Bonus points on bookings',
-                  style: TextStyle(color: Colors.white, fontSize: 14),
-                ),
+                Text('Bonus points on bookings', style: TextStyle(color: Colors.white, fontSize: 14)),
               ],
             ),
           ],
@@ -513,6 +468,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// Voucher list section for the user's vouchers.
   Widget _buildVouchersSection(String userId) {
     return Card(
       elevation: 2,
@@ -528,23 +484,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(width: 12),
                 const Text(
                   'My Vouchers',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
                 TextButton(
                   onPressed: () {
-                    // Navigate to rewards screen to buy more vouchers
-                    DefaultTabController.of(context).animateTo(2); // Rewards tab
+                    // Jump to the Rewards tab (index 2 assumed)
+                    DefaultTabController.of(context).animateTo(2);
                   },
                   child: const Text(
                     'Get More',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -591,18 +541,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           const SizedBox(height: 8),
                           Text(
                             'No vouchers yet',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey[600],
-                            ),
+                            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'Get vouchers from the Rewards tab',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[500],
-                            ),
+                            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                           ),
                         ],
                       ),
@@ -613,33 +557,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Available vouchers
+                    // Active vouchers
                     if (unusedVouchers.isNotEmpty) ...[
                       const Text(
                         'Available',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.green,
-                        ),
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.green),
                       ),
                       const SizedBox(height: 8),
                       ...unusedVouchers.map((voucher) => _buildVoucherItem(voucher, true)),
                       const SizedBox(height: 16),
                     ],
 
-                    // Used/Expired vouchers (expandable)
+                    // Used/expired vouchers (collapsible)
                     if (usedVouchers.isNotEmpty) ...[
                       ExpansionTile(
                         tilePadding: EdgeInsets.zero,
                         childrenPadding: const EdgeInsets.only(top: 8),
                         title: Text(
                           'Used & Expired (${usedVouchers.length})',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[600],
-                          ),
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey[600]),
                         ),
                         children: usedVouchers.map((voucher) => _buildVoucherItem(voucher, false)).toList(),
                       ),
@@ -654,6 +590,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// A single voucher row (active or used/expired).
   Widget _buildVoucherItem(Voucher voucher, bool isActive) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -667,6 +604,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: Row(
         children: [
+          // Small type badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
@@ -683,6 +621,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(width: 8),
+
+          // Title + club
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -697,14 +637,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 Text(
                   voucher.clubName,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
             ),
           ),
+
+          // Amount + status
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -718,13 +657,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               Text(
                 voucher.statusDisplayText,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isActive ? Colors.teal : Colors.grey[500],
-                ),
+                style: TextStyle(fontSize: 12, color: isActive ? Colors.teal : Colors.grey[500]),
               ),
             ],
           ),
+
+          // Info button for active vouchers
           if (isActive && voucher.code != null) ...[
             const SizedBox(width: 8),
             IconButton(
@@ -749,6 +687,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  /// Voucher detail modal (code, value, club, expiry).
   void _showVoucherDetails(Voucher voucher) {
     showDialog(
       context: context,
@@ -759,36 +698,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              voucher.description,
-              style: const TextStyle(fontSize: 16),
-            ),
+            Text(voucher.description, style: const TextStyle(fontSize: 16)),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
-              ),
+              decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'Voucher Code:',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     voucher.code ?? 'N/A',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                    ),
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2),
                   ),
                 ],
               ),
@@ -819,15 +744,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
         ],
       ),
     );
   }
 
+  /// Logout confirmation dialog and sign-out action.
   void _handleLogout() {
     showDialog(
       context: context,
@@ -835,19 +758,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         title: const Text('Sign Out'),
         content: const Text('Are you sure you want to sign out?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
               Navigator.of(context).pop();
-              await Provider.of<AuthProvider>(context, listen: false).signOut();
+              await Provider.of<app_auth.AuthProvider>(context, listen: false).signOut();
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
             child: const Text('Sign Out'),
           ),
         ],
@@ -855,11 +772,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// Short, human-readable date (e.g., "Jan 5, 2025").
   String _formatDate(DateTime date) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 }
