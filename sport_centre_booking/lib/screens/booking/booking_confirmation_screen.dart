@@ -1,22 +1,23 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+
 import '../../models/activity.dart';
-import '../../providers/booking_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/booking_provider.dart';
 import '../../utils/constants.dart';
 import 'booking_success_screen.dart';
 
+/// Final booking confirmation screen displaying activity details, pricing breakdown,
+/// and payment terms before confirming the reservation
 class BookingConfirmationScreen extends StatefulWidget {
+  const BookingConfirmationScreen({super.key, required this.activity});
   final Activity activity;
 
-  const BookingConfirmationScreen({
-    super.key,
-    required this.activity,
-  });
-
   @override
-  State<BookingConfirmationScreen> createState() => _BookingConfirmationScreenState();
+  State<BookingConfirmationScreen> createState() =>
+      _BookingConfirmationScreenState();
 }
 
 class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
@@ -31,11 +32,9 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
       body: Consumer<BookingProvider>(
         builder: (context, bookingProvider, child) {
           final bookingDetails = bookingProvider.currentBookingDetails;
-          
+
           if (bookingDetails == null) {
-            return const Center(
-              child: Text('No booking details found'),
-            );
+            return const Center(child: Text('No booking details found'));
           }
 
           return SingleChildScrollView(
@@ -60,6 +59,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     );
   }
 
+  /// Builds welcoming header with confirmation progress indicator
   Widget _buildConfirmationHeader() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -73,11 +73,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
       ),
       child: Column(
         children: [
-          const Icon(
-            Icons.check_circle_outline,
-            color: Colors.white,
-            size: 48,
-          ),
+          const Icon(Icons.check_circle_outline, color: Colors.white, size: 48),
           const SizedBox(height: 12),
           const Text(
             'Almost There!',
@@ -101,6 +97,8 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     );
   }
 
+  /// Displays comprehensive booking summary with activity details, 
+  /// participant count, and pricing breakdown including member/guest rates
   Widget _buildBookingSummary(dynamic bookingDetails) {
     return Card(
       elevation: 2,
@@ -111,20 +109,17 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
           children: [
             const Text(
               'Booking Summary',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            
-            // Activity name and category
+
+            /// Activity image and basic info display
             Row(
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Image.network(
-                    widget.activity.displayImageUrl, // ✅ Changed from widget.activity.imageUrl
+                    widget.activity.displayImageUrl,
                     width: 60,
                     height: 60,
                     fit: BoxFit.cover,
@@ -143,7 +138,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                               color: Colors.teal,
                               value: loadingProgress.expectedTotalBytes != null
                                   ? loadingProgress.cumulativeBytesLoaded /
-                                      loadingProgress.expectedTotalBytes!
+                                        loadingProgress.expectedTotalBytes!
                                   : null,
                             ),
                           ),
@@ -185,44 +180,37 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                       ),
                       Text(
                         widget.activity.category,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                        ),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 16),
-            
-            // Booking details
+
+            /// Reservation details: date, time, location, participants
             _buildSummaryRow(
               'Date',
-              DateFormat('EEEE, MMM dd, yyyy').format(bookingDetails.bookingDate),
+              DateFormat(
+                'EEEE, MMM dd, yyyy',
+              ).format(bookingDetails.bookingDate),
             ),
-            _buildSummaryRow(
-              'Time',
-              widget.activity.time,
-            ),
-            _buildSummaryRow(
-              'Location',
-              widget.activity.facilityName,
-            ),
+            _buildSummaryRow('Time', widget.activity.time),
+            _buildSummaryRow('Location', widget.activity.facilityName),
             _buildSummaryRow(
               'Participants',
               '${bookingDetails.participantCount} ${bookingDetails.participantCount == 1 ? 'person' : 'people'}',
             ),
-            
+
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 16),
-            
-            // Pricing breakdown
+
+            /// Dynamic pricing display based on member vs guest status
             Consumer<AuthProvider>(
               builder: (context, authProvider, child) {
                 return Column(
@@ -245,6 +233,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                       isTotal: true,
                     ),
                     const SizedBox(height: 12),
+                    /// Points reward preview for activity participation
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -276,6 +265,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     );
   }
 
+  /// Reusable summary row component with styling options for totals and highlights
   Widget _buildSummaryRow(
     String label,
     String value, {
@@ -300,7 +290,9 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
             style: TextStyle(
               fontSize: isTotal ? 16 : 14,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.w600,
-              color: isHighlighted ? Colors.teal : (isTotal ? Colors.black : Colors.grey[700]),
+              color: isHighlighted
+                  ? Colors.teal
+                  : (isTotal ? Colors.black : Colors.grey[700]),
             ),
           ),
         ],
@@ -308,6 +300,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     );
   }
 
+  /// Payment terms and collection method information
   Widget _buildPaymentInfo() {
     return Card(
       elevation: 2,
@@ -318,10 +311,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
           children: [
             const Text(
               'Payment Information',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Container(
@@ -350,6 +340,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     );
   }
 
+  /// Essential booking policies and participant guidelines
   Widget _buildImportantInfo() {
     return Card(
       elevation: 2,
@@ -360,10 +351,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
           children: [
             const Text(
               'Important Information',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             _buildInfoItem(
@@ -388,6 +376,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     );
   }
 
+  /// Reusable info item with icon and text for policy display
   Widget _buildInfoItem(IconData icon, String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -395,22 +384,19 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
         children: [
           Icon(icon, size: 20, color: Colors.grey[600]),
           const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(fontSize: 14),
-            ),
-          ),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 14))),
         ],
       ),
     );
   }
 
+  /// Final confirmation button with error handling and loading states
   Widget _buildConfirmButton() {
     return Consumer<BookingProvider>(
       builder: (context, bookingProvider, child) {
         return Column(
           children: [
+            /// Error message display for booking failures
             if (bookingProvider.errorMessage != null) ...[
               Container(
                 padding: const EdgeInsets.all(12),
@@ -434,7 +420,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                 ),
               ),
             ],
-            
+
             SizedBox(
               width: double.infinity,
               height: 56,
@@ -444,7 +430,9 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                   backgroundColor: Colors.teal,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
+                    borderRadius: BorderRadius.circular(
+                      AppConstants.buttonBorderRadius,
+                    ),
                   ),
                 ),
                 child: bookingProvider.isLoading
@@ -462,13 +450,12 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
             ),
             const SizedBox(height: 16),
             TextButton(
-              onPressed: bookingProvider.isLoading ? null : () => Navigator.pop(context),
+              onPressed: bookingProvider.isLoading
+                  ? null
+                  : () => Navigator.pop(context),
               child: const Text(
                 'Go Back to Edit',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 16,
-                ),
+                style: TextStyle(color: Colors.grey, fontSize: 16),
               ),
             ),
           ],
@@ -477,23 +464,27 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     );
   }
 
+  /// Processes final booking confirmation and navigates to success screen
   Future<void> _confirmBooking() async {
-    final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
-    
+    final bookingProvider = Provider.of<BookingProvider>(
+      context,
+      listen: false,
+    );
+
     final success = await bookingProvider.confirmBooking();
-    
+
     if (success && mounted) {
-      // Navigate to success screen
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => BookingSuccessScreen(
-            booking: bookingProvider.lastCreatedBooking!,
-            activity: widget.activity,
+      unawaited(
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BookingSuccessScreen(
+              booking: bookingProvider.lastCreatedBooking!,
+              activity: widget.activity,
+            ),
           ),
         ),
       );
     }
-    // Error handling is done by the provider and shown in the UI
   }
 }

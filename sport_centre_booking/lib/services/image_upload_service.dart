@@ -1,82 +1,91 @@
 import 'dart:io';
 import 'dart:typed_data';
+
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
-import 'package:flutter/material.dart';
 
+/// Secure image upload service with validation and Firebase Storage integration
+/// Handles facility and activity images with format validation, size limits, and automatic optimization
 class ImageUploadService {
   static final FirebaseStorage _storage = FirebaseStorage.instance;
   static final ImagePicker _picker = ImagePicker();
 
-  // Image validation constants aligned with your current implementation
-  static const int maxFileSizeBytes = 5 * 1024 * 1024; // 5MB
-  static const int maxWidthPixels = 1200;
+  /// Image constraints for optimal performance and security
+  static const int maxFileSizeBytes = 5 * 1024 * 1024; // 5MB limit for reasonable upload times
+  static const int maxWidthPixels = 1200; // Balance quality vs loading speed
   static const int maxHeightPixels = 900;
   static const List<String> allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
   static const List<String> allowedMimeTypes = [
     'image/jpeg',
-    'image/jpg', 
+    'image/jpg',
     'image/png',
-    'image/webp'
+    'image/webp',
   ];
 
-  /// Validate image file before upload
+  /// Comprehensive image validation to prevent malicious uploads and ensure quality
   static Future<String?> _validateImage(XFile imageFile) async {
     try {
-      // Check file extension
-      final extension = path.extension(imageFile.path).toLowerCase().replaceAll('.', '');
+      /// File extension validation for basic security filtering
+      final extension = path
+          .extension(imageFile.path)
+          .toLowerCase()
+          .replaceAll('.', '');
       if (!allowedExtensions.contains(extension)) {
         return 'Invalid file format. Please use JPG, PNG, or WebP images only.';
       }
 
-      // Check file size
+      /// File size validation to prevent storage abuse and slow uploads
       final fileSize = await imageFile.length();
       if (fileSize > maxFileSizeBytes) {
         final sizeMB = (fileSize / (1024 * 1024)).toStringAsFixed(1);
         return 'File too large (${sizeMB}MB). Maximum size is 5MB.';
       }
 
-      // Check MIME type if available
-      if (imageFile.mimeType != null && 
+      /// MIME type validation for additional security layer
+      if (imageFile.mimeType != null &&
           !allowedMimeTypes.contains(imageFile.mimeType!.toLowerCase())) {
         return 'Invalid file type detected. Please use a valid image file.';
       }
 
-      // Read image bytes to validate it's a real image
+      /// File content validation to ensure legitimate image data
       final bytes = await imageFile.readAsBytes();
       if (bytes.isEmpty) {
         return 'Invalid image file. Please select a different image.';
       }
 
-      // Basic image header validation
+      /// Binary header validation to prevent disguised malicious files
       if (!_isValidImageHeader(bytes)) {
         return 'Invalid image format. Please select a valid image file.';
       }
 
-      return null; // Validation passed
+      return null;
     } catch (e) {
       return 'Error validating image: Please try again with a different image.';
     }
   }
 
-  /// Check if file has valid image header bytes
+  /// Binary header validation to verify authentic image file formats
+  /// Prevents upload of non-image files with spoofed extensions
   static bool _isValidImageHeader(Uint8List bytes) {
     if (bytes.length < 4) return false;
 
-    // JPEG header: FF D8 FF
+    /// JPEG signature: FF D8 FF (Start of Image marker)
     if (bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF) {
       return true;
     }
 
-    // PNG header: 89 50 4E 47
-    if (bytes.length >= 8 && 
-        bytes[0] == 0x89 && bytes[1] == 0x50 && 
-        bytes[2] == 0x4E && bytes[3] == 0x47) {
+    /// PNG signature: 89 50 4E 47 (PNG file header)
+    if (bytes.length >= 8 &&
+        bytes[0] == 0x89 &&
+        bytes[1] == 0x50 &&
+        bytes[2] == 0x4E &&
+        bytes[3] == 0x47) {
       return true;
     }
 
-    // WebP header: starts with "RIFF" and contains "WEBP"
+    /// WebP signature: RIFF container with WEBP identifier
     if (bytes.length >= 12) {
       final riff = String.fromCharCodes(bytes.sublist(0, 4));
       final webp = String.fromCharCodes(bytes.sublist(8, 12));
@@ -88,28 +97,29 @@ class ImageUploadService {
     return false;
   }
 
-  /// Pick and upload image with validation - following your existing pattern
+  /// Complete image upload workflow with user guidance and automatic optimization
+  /// Supports both facility and activity image management
   static Future<String?> pickAndUploadImage({
-    required String type, // 'activities' or 'facilities'
+    required String type, // 'activities' or 'facilities' for organized storage
     required String id,
     required BuildContext context,
   }) async {
     try {
-      // Show image source selection with requirements
-      final ImageSource? source = await _showImageSourceDialog(context);
+      /// User-friendly source selection with upload requirements
+      final source = await _showImageSourceDialog(context);
       if (source == null) return null;
 
-      // Pick image with automatic resizing (following your existing approach)
-      final XFile? image = await _picker.pickImage(
+      /// Image capture with automatic optimization for web display
+      final image = await _picker.pickImage(
         source: source,
         maxWidth: maxWidthPixels.toDouble(),
         maxHeight: maxHeightPixels.toDouble(),
-        imageQuality: 85, // Good quality while keeping file size reasonable
+        imageQuality: 85, // Optimal balance between quality and file size
       );
 
       if (image == null) return null;
 
-      // Validate image before upload
+      /// Security and quality validation before upload
       final validationError = await _validateImage(image);
       if (validationError != null) {
         if (context.mounted) {
@@ -117,36 +127,36 @@ class ImageUploadService {
             SnackBar(
               content: Text(validationError),
               backgroundColor: Colors.red,
-              duration: const Duration(seconds: 4),
             ),
           );
         }
         return null;
       }
 
-      // Generate unique filename following your existing pattern
+      /// Unique filename generation to prevent conflicts and enable caching
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final extension = path.extension(image.path);
       final fileName = '${timestamp}_$id$extension';
 
-      // Create storage reference
-      final Reference ref = _storage.ref().child('$type/$id/$fileName');
+      /// Organized storage structure for efficient management
+      final ref = _storage.ref().child('$type/$id/$fileName');
 
-      // Upload with progress indication
-      final UploadTask uploadTask = ref.putFile(File(image.path));
-      
-      // Wait for completion and get download URL
-      final TaskSnapshot snapshot = await uploadTask;
-      final String downloadUrl = await snapshot.ref.getDownloadURL();
+      /// Upload with progress tracking for user feedback
+      final uploadTask = ref.putFile(File(image.path));
+
+      /// Retrieve download URL for database storage and display
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
 
       return downloadUrl;
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to upload image: ${e.toString().replaceAll('Exception: ', '')}'),
+            content: Text(
+              'Failed to upload image: ${e.toString().replaceAll('Exception: ', '')}',
+            ),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -154,9 +164,11 @@ class ImageUploadService {
     }
   }
 
-  /// Show image source selection dialog with requirements
-  static Future<ImageSource?> _showImageSourceDialog(BuildContext context) async {
-    return await showDialog<ImageSource>(
+  /// User-friendly source selection dialog with clear upload requirements
+  static Future<ImageSource?> _showImageSourceDialog(
+    BuildContext context,
+  ) async {
+    return showDialog<ImageSource>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
@@ -164,7 +176,7 @@ class ImageUploadService {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Requirements info
+              /// Clear requirements display to prevent upload failures
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -177,7 +189,11 @@ class ImageUploadService {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.info_outline, size: 16, color: Colors.blue[700]),
+                        Icon(
+                          Icons.info_outline,
+                          size: 16,
+                          color: Colors.blue[700],
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'Image Requirements',
@@ -198,8 +214,8 @@ class ImageUploadService {
                 ),
               ),
               const SizedBox(height: 16),
-              
-              // Source selection buttons
+
+              /// Source selection options for flexible image capture
               ListTile(
                 leading: const Icon(Icons.photo_library),
                 title: const Text('Gallery'),
@@ -223,21 +239,21 @@ class ImageUploadService {
     );
   }
 
-  /// Delete image from storage - following your existing pattern
+  /// Safe image deletion with error tolerance for cleanup operations
   static Future<void> deleteImage(String imageUrl) async {
     try {
-      final Reference ref = _storage.refFromURL(imageUrl);
+      final ref = _storage.refFromURL(imageUrl);
       await ref.delete();
     } catch (e) {
-      // Don't throw error - image might already be deleted
+      /// Silent failure acceptable - image might already be deleted or URL invalid
     }
   }
 
-  /// Get image validation requirements as text
+  /// Formatted requirements text for user guidance and support documentation
   static String getValidationRequirements() {
     return '• Format: ${allowedExtensions.join(', ').toUpperCase()}\n'
-           '• Max size: ${(maxFileSizeBytes / (1024 * 1024)).toInt()}MB\n'
-           '• Max dimensions: ${maxWidthPixels}x${maxHeightPixels}px\n'
-           '• Landscape orientation recommended';
+        '• Max size: ${(maxFileSizeBytes / (1024 * 1024)).toInt()}MB\n'
+        '• Max dimensions: ${maxWidthPixels}x${maxHeightPixels}px\n'
+        '• Landscape orientation recommended';
   }
 }

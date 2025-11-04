@@ -1,118 +1,151 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/participant.dart';
-import '../models/booking.dart';
 
-/// Service for managing event participants in admin panel
-/// Handles CRUD operations with real-time Firestore synchronization
+import '../main.dart';
+import '../models/booking.dart';
+import '../models/participant.dart';
+
+/// Administrative participant management service for event oversight and customer service
+/// Provides real-time participant tracking, status management, and booking analytics
 class ParticipantService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static const String _bookingsCollection = 'bookings';
   static const String _usersCollection = 'users';
   static const String _activitiesCollection = 'activities';
 
-  /// Get all participants with real-time updates
+  /// Real-time participant feed for administrative dashboard with comprehensive user data
+  /// Combines booking and user information for complete participant profiles
   static Stream<List<Participant>> getAllParticipants() {
     return _firestore
         .collection(_bookingsCollection)
         .orderBy('bookingDate', descending: true)
         .snapshots()
         .asyncMap((snapshot) async {
-      List<Participant> participants = [];
+          final participants = <Participant>[];
 
-      for (var doc in snapshot.docs) {
-        try {
-          final bookingData = doc.data();
-          final userId = bookingData['userId'] as String?;
+          for (final doc in snapshot.docs) {
+            try {
+              final bookingData = doc.data();
+              final userId = bookingData['userId'] as String?;
 
-          if (userId == null) continue;
+              if (userId == null) continue;
 
-          // Fetch user data
-          final userDoc = await _firestore.collection(_usersCollection).doc(userId).get();
-          final userData = userDoc.exists 
-              ? Map<String, dynamic>.from(userDoc.data() ?? {}) 
-              : <String, dynamic>{};
+              /// Fetch user profile data for complete participant information
+              final userDoc = await _firestore
+                  .collection(_usersCollection)
+                  .doc(userId)
+                  .get();
+              final userData = userDoc.exists
+                  ? Map<String, dynamic>.from(userDoc.data() ?? {})
+                  : <String, dynamic>{};
 
-          participants.add(Participant.fromFirestore(doc, userData));
-        } catch (e) {
-          print('Error processing participant ${doc.id}: $e');
-        }
-      }
+              participants.add(Participant.fromFirestore(doc, userData));
+            } on FirebaseException catch (e) {
+              logger.w('Firebase error processing participant ${doc.id}', 
+                error: e, stackTrace: StackTrace.current);
+            } catch (e, stackTrace) {
+              logger.e('Unexpected error processing participant ${doc.id}', 
+                error: e, stackTrace: stackTrace);
+            }
+          }
 
-      return participants;
-    });
+          return participants;
+        });
   }
 
-  /// Get participants for a specific activity
-  static Stream<List<Participant>> getParticipantsByActivity(String activityId) {
+  /// Activity-specific participant management for event coordination
+  static Stream<List<Participant>> getParticipantsByActivity(
+    String activityId,
+  ) {
     return _firestore
         .collection(_bookingsCollection)
         .where('activityId', isEqualTo: activityId)
         .orderBy('bookingDate', descending: true)
         .snapshots()
         .asyncMap((snapshot) async {
-      List<Participant> participants = [];
+          final participants = <Participant>[];
 
-      for (var doc in snapshot.docs) {
-        try {
-          final bookingData = doc.data();
-          final userId = bookingData['userId'] as String?;
+          for (final doc in snapshot.docs) {
+            try {
+              final bookingData = doc.data();
+              final userId = bookingData['userId'] as String?;
 
-          if (userId == null) continue;
+              if (userId == null) continue;
 
-          final userDoc = await _firestore.collection(_usersCollection).doc(userId).get();
-          final userData = userDoc.exists 
-              ? Map<String, dynamic>.from(userDoc.data() ?? {}) 
-              : <String, dynamic>{};
+              final userDoc = await _firestore
+                  .collection(_usersCollection)
+                  .doc(userId)
+                  .get();
+              final userData = userDoc.exists
+                  ? Map<String, dynamic>.from(userDoc.data() ?? {})
+                  : <String, dynamic>{};
 
-          participants.add(Participant.fromFirestore(doc, userData));
-        } catch (e) {
-          print('Error processing participant ${doc.id}: $e');
-        }
-      }
+              participants.add(Participant.fromFirestore(doc, userData));
+            } on FirebaseException catch (e) {
+              logger.w('Firebase error processing participant ${doc.id}', 
+                error: e, stackTrace: StackTrace.current);
+            } catch (e, stackTrace) {
+              logger.e('Unexpected error processing participant ${doc.id}', 
+                error: e, stackTrace: stackTrace);
+            }
+          }
 
-      return participants;
-    });
+          return participants;
+        });
   }
 
-  /// Get participants filtered by status
-  static Stream<List<Participant>> getParticipantsByStatus(BookingStatus status) {
+  /// Status-filtered participant views for workflow management and customer service
+  static Stream<List<Participant>> getParticipantsByStatus(
+    BookingStatus status,
+  ) {
     return _firestore
         .collection(_bookingsCollection)
         .where('status', isEqualTo: status.value)
         .orderBy('bookingDate', descending: true)
         .snapshots()
         .asyncMap((snapshot) async {
-      List<Participant> participants = [];
+          final participants = <Participant>[];
 
-      for (var doc in snapshot.docs) {
-        try {
-          final bookingData = doc.data();
-          final userId = bookingData['userId'] as String?;
+          for (final doc in snapshot.docs) {
+            try {
+              final bookingData = doc.data();
+              final userId = bookingData['userId'] as String?;
 
-          if (userId == null) continue;
+              if (userId == null) continue;
 
-          final userDoc = await _firestore.collection(_usersCollection).doc(userId).get();
-          final userData = userDoc.exists 
-              ? Map<String, dynamic>.from(userDoc.data() ?? {}) 
-              : <String, dynamic>{};
+              final userDoc = await _firestore
+                  .collection(_usersCollection)
+                  .doc(userId)
+                  .get();
+              final userData = userDoc.exists
+                  ? Map<String, dynamic>.from(userDoc.data() ?? {})
+                  : <String, dynamic>{};
 
-          participants.add(Participant.fromFirestore(doc, userData));
-        } catch (e) {
-          print('Error processing participant ${doc.id}: $e');
-        }
-      }
+              participants.add(Participant.fromFirestore(doc, userData));
+            } on FirebaseException catch (e) {
+              logger.w('Firebase error processing participant ${doc.id}', 
+                error: e, stackTrace: StackTrace.current);
+            } catch (e, stackTrace) {
+              logger.e('Unexpected error processing participant ${doc.id}', 
+                error: e, stackTrace: stackTrace);
+            }
+          }
 
-      return participants;
-    });
+          return participants;
+        });
   }
 
-  /// Get a single participant by booking ID
+  /// Retrieve individual participant details for customer service and booking management
+  /// Returns null if booking not found or user data is invalid
+  /// Throws [FirebaseException] for Firebase-related errors
   static Future<Participant?> getParticipant(String bookingId) async {
     try {
-      final bookingDoc = await _firestore.collection(_bookingsCollection).doc(bookingId).get();
+      final bookingDoc = await _firestore
+          .collection(_bookingsCollection)
+          .doc(bookingId)
+          .get();
 
       if (!bookingDoc.exists) {
-        print('Booking not found: $bookingId');
+        logger.w('Booking not found: $bookingId');
         return null;
       }
 
@@ -120,37 +153,48 @@ class ParticipantService {
       final userId = bookingData['userId'] as String?;
 
       if (userId == null) {
-        print('User ID not found in booking: $bookingId');
+        logger.w('User ID not found in booking: $bookingId');
         return null;
       }
 
-      final userDoc = await _firestore.collection(_usersCollection).doc(userId).get();
-      final userData = userDoc.exists 
-          ? Map<String, dynamic>.from(userDoc.data() ?? {}) 
+      final userDoc = await _firestore
+          .collection(_usersCollection)
+          .doc(userId)
+          .get();
+      final userData = userDoc.exists
+          ? Map<String, dynamic>.from(userDoc.data() ?? {})
           : <String, dynamic>{};
 
       return Participant.fromFirestore(bookingDoc, userData);
-    } catch (e) {
-      print('Error getting participant $bookingId: $e');
-      return null;
+    } on FirebaseException catch (e) {
+      logger.e('Firebase error getting participant $bookingId', 
+        error: e, stackTrace: StackTrace.current);
+      rethrow;
+    } catch (e, stackTrace) {
+      logger.e('Unexpected error getting participant $bookingId', 
+        error: e, stackTrace: stackTrace);
+      rethrow;
     }
   }
 
-  /// Update participant booking details
+  /// Administrative booking modification with capacity management and audit trail
   /// Returns true if successful, false otherwise
+  /// Throws exceptions for critical errors that should be handled by caller
   static Future<bool> updateParticipant(
     String bookingId,
     Map<String, dynamic> updates,
   ) async {
     try {
-      print('Updating participant $bookingId with: $updates');
+      logger.d('Updating participant $bookingId with: $updates');
 
       await _firestore.runTransaction((transaction) async {
-        final bookingRef = _firestore.collection(_bookingsCollection).doc(bookingId);
+        final bookingRef = _firestore
+            .collection(_bookingsCollection)
+            .doc(bookingId);
         final bookingDoc = await transaction.get(bookingRef);
 
         if (!bookingDoc.exists) {
-          throw Exception('Booking not found');
+          throw StateError('Booking not found: $bookingId');
         }
 
         final bookingData = bookingDoc.data()!;
@@ -158,13 +202,13 @@ class ParticipantService {
         final newStatus = updates['status'] as String?;
         final activityId = bookingData['activityId'] as String;
 
-        // Update the booking
+        /// Update booking record with timestamp for audit trail
         transaction.update(bookingRef, {
           ...updates,
           'updatedAt': FieldValue.serverTimestamp(),
         });
 
-        // If status changed, update activity capacity
+        /// Automatically adjust activity capacity when status changes
         if (oldStatus != null && newStatus != null && oldStatus != newStatus) {
           await _updateActivityCapacity(
             transaction,
@@ -177,15 +221,22 @@ class ParticipantService {
         }
       });
 
-      print('Participant $bookingId updated successfully');
+      logger.i('Participant $bookingId updated successfully');
       return true;
-    } catch (e) {
-      print('Error updating participant $bookingId: $e');
+    } on FirebaseException catch (e) {
+      logger.e('Firebase error updating participant $bookingId', 
+        error: e, stackTrace: StackTrace.current);
+      return false;
+    } catch (e, stackTrace) {
+      logger.e('Unexpected error updating participant $bookingId', 
+        error: e, stackTrace: stackTrace);
       return false;
     }
   }
 
-  /// Update participant status
+  /// Status management with automatic cancellation metadata
+  /// [reason] is optional and will be added to notes field
+  /// For cancellations, automatically sets cancellation timestamp and reason
   static Future<bool> updateParticipantStatus(
     String bookingId,
     BookingStatus newStatus, {
@@ -201,30 +252,35 @@ class ParticipantService {
         updates['notes'] = reason;
       }
 
+      /// Automatic cancellation workflow with audit trail
       if (newStatus == BookingStatus.cancelled) {
         updates['cancelledAt'] = FieldValue.serverTimestamp();
         updates['cancellationReason'] = reason ?? 'Cancelled by admin';
       }
 
       return await updateParticipant(bookingId, updates);
-    } catch (e) {
-      print('Error updating participant status: $e');
+    } catch (e, stackTrace) {
+      logger.e('Error updating participant status', 
+        error: e, stackTrace: stackTrace);
       return false;
     }
   }
 
-  /// Remove participant (delete booking)
-  /// This also updates activity capacity and user bookings
+  /// Complete participant removal with capacity restoration and data cleanup
+  /// Updates activity capacity and user booking references atomically
+  /// Returns true if successful, false otherwise
   static Future<bool> removeParticipant(String bookingId) async {
     try {
-      print('Removing participant $bookingId');
+      logger.i('Removing participant $bookingId');
 
       await _firestore.runTransaction((transaction) async {
-        final bookingRef = _firestore.collection(_bookingsCollection).doc(bookingId);
+        final bookingRef = _firestore
+            .collection(_bookingsCollection)
+            .doc(bookingId);
         final bookingDoc = await transaction.get(bookingRef);
 
         if (!bookingDoc.exists) {
-          throw Exception('Booking not found');
+          throw StateError('Booking not found: $bookingId');
         }
 
         final bookingData = bookingDoc.data()!;
@@ -232,32 +288,41 @@ class ParticipantService {
         final userId = bookingData['userId'] as String;
         final participantCount = bookingData['participantCount'] as int? ?? 1;
 
-        // Delete the booking
+        /// Remove booking record
         transaction.delete(bookingRef);
 
-        // Update activity booked count
-        final activityRef = _firestore.collection(_activitiesCollection).doc(activityId);
+        /// Restore activity capacity for future bookings
+        final activityRef = _firestore
+            .collection(_activitiesCollection)
+            .doc(activityId);
         transaction.update(activityRef, {
           'bookedCount': FieldValue.increment(-participantCount),
           'spotsLeft': FieldValue.increment(participantCount),
         });
 
-        // Remove from user's bookings
+        /// Clean up user's booking references
         final userRef = _firestore.collection(_usersCollection).doc(userId);
         transaction.update(userRef, {
           'upcomingBookings': FieldValue.arrayRemove([bookingId]),
         });
       });
 
-      print('Participant $bookingId removed successfully');
+      logger.i('Participant $bookingId removed successfully');
       return true;
-    } catch (e) {
-      print('Error removing participant $bookingId: $e');
+    } on FirebaseException catch (e) {
+      logger.e('Firebase error removing participant $bookingId', 
+        error: e, stackTrace: StackTrace.current);
+      return false;
+    } catch (e, stackTrace) {
+      logger.e('Unexpected error removing participant $bookingId', 
+        error: e, stackTrace: stackTrace);
       return false;
     }
   }
 
-  /// Search participants by name, email, or confirmation number
+  /// Multi-criteria participant search for customer service and event management
+  /// Performs client-side filtering on the participant stream
+  /// For better performance with large datasets, consider server-side search
   static Stream<List<Participant>> searchParticipants(String query) {
     final lowerQuery = query.toLowerCase();
 
@@ -271,19 +336,21 @@ class ParticipantService {
     });
   }
 
-  /// Get participant statistics
+  /// Comprehensive booking analytics for business intelligence and reporting
+  /// Returns status counts and revenue metrics for dashboard display
+  /// In case of error, returns zeroed stats to prevent UI crashes
   static Future<Map<String, dynamic>> getParticipantStats() async {
     try {
       final snapshot = await _firestore.collection(_bookingsCollection).get();
 
-      int total = snapshot.docs.length;
-      int confirmed = 0;
-      int pending = 0;
-      int cancelled = 0;
-      int completed = 0;
+      final total = snapshot.docs.length;
+      var confirmed = 0;
+      var pending = 0;
+      var cancelled = 0;
+      var completed = 0;
       double totalRevenue = 0;
 
-      for (var doc in snapshot.docs) {
+      for (final doc in snapshot.docs) {
         final data = doc.data();
         final status = data['status'] as String?;
         final amount = (data['amountPaid'] as num?)?.toDouble() ?? 0;
@@ -314,20 +381,31 @@ class ParticipantService {
         'completed': completed,
         'totalRevenue': totalRevenue,
       };
-    } catch (e) {
-      print('Error getting participant stats: $e');
-      return {
-        'total': 0,
-        'confirmed': 0,
-        'pending': 0,
-        'cancelled': 0,
-        'completed': 0,
-        'totalRevenue': 0.0,
-      };
+    } on FirebaseException catch (e) {
+      logger.e('Firebase error getting participant stats', 
+        error: e, stackTrace: StackTrace.current);
+      return _getEmptyStats();
+    } catch (e, stackTrace) {
+      logger.e('Unexpected error getting participant stats', 
+        error: e, stackTrace: stackTrace);
+      return _getEmptyStats();
     }
   }
 
-  /// Helper method to update activity capacity when status changes
+  /// Fallback statistics to prevent dashboard crashes during errors
+  static Map<String, dynamic> _getEmptyStats() {
+    return {
+      'total': 0,
+      'confirmed': 0,
+      'pending': 0,
+      'cancelled': 0,
+      'completed': 0,
+      'totalRevenue': 0.0,
+    };
+  }
+
+  /// Intelligent capacity management based on booking status transitions
+  /// Handles spot allocation for confirmed/pending vs cancelled/completed bookings
   static Future<void> _updateActivityCapacity(
     Transaction transaction,
     String activityId,
@@ -336,20 +414,22 @@ class ParticipantService {
     String newStatus,
     int participantCount,
   ) async {
-    final activityRef = _firestore.collection(_activitiesCollection).doc(activityId);
+    final activityRef = _firestore
+        .collection(_activitiesCollection)
+        .doc(activityId);
 
-    // Determine if we need to adjust capacity
+    /// Determine capacity impact based on status transition
     final wasActive = oldStatus == 'confirmed' || oldStatus == 'pending';
     final isActive = newStatus == 'confirmed' || newStatus == 'pending';
 
     if (wasActive && !isActive) {
-      // Freeing up spots (cancellation/completion)
+      /// Free up spots for new bookings (cancellation/completion)
       transaction.update(activityRef, {
         'bookedCount': FieldValue.increment(-participantCount),
         'spotsLeft': FieldValue.increment(participantCount),
       });
     } else if (!wasActive && isActive) {
-      // Taking up spots (reactivation)
+      /// Reserve spots for active bookings (reactivation)
       transaction.update(activityRef, {
         'bookedCount': FieldValue.increment(participantCount),
         'spotsLeft': FieldValue.increment(-participantCount),
@@ -357,23 +437,31 @@ class ParticipantService {
     }
   }
 
-  /// Bulk update participants status
+  /// Batch status operations for efficient administrative workflows
+  /// Returns a map of booking IDs to their update success status
+  /// Use this for bulk operations to avoid multiple individual calls
   static Future<Map<String, bool>> bulkUpdateStatus(
     List<String> bookingIds,
     BookingStatus newStatus, {
     String? reason,
   }) async {
-    Map<String, bool> results = {};
+    final results = <String, bool>{};
 
-    for (var bookingId in bookingIds) {
-      final success = await updateParticipantStatus(bookingId, newStatus, reason: reason);
+    for (final bookingId in bookingIds) {
+      final success = await updateParticipantStatus(
+        bookingId,
+        newStatus,
+        reason: reason,
+      );
       results[bookingId] = success;
     }
 
     return results;
   }
 
-  /// Export participants data (for CSV or reports)
+  /// Comprehensive data export for reporting and external system integration
+  /// [activityId] and [status] are optional filters for targeted exports
+  /// Returns structured data suitable for CSV export or report generation
   static Future<List<Map<String, dynamic>>> exportParticipants({
     String? activityId,
     BookingStatus? status,
@@ -390,18 +478,22 @@ class ParticipantService {
       }
 
       final snapshot = await query.get();
-      List<Map<String, dynamic>> exportData = [];
+      final exportData = <Map<String, dynamic>>[];
 
-      for (var doc in snapshot.docs) {
-        final bookingData = doc.data() as Map<String, dynamic>;
+      for (final doc in snapshot.docs) {
+        final bookingData = doc.data()! as Map<String, dynamic>;
         final userId = bookingData['userId'] as String?;
 
-        Map<String, dynamic> userData = {};
+        var userData = <String, dynamic>{};
         if (userId != null) {
-          final userDoc = await _firestore.collection(_usersCollection).doc(userId).get();
+          final userDoc = await _firestore
+              .collection(_usersCollection)
+              .doc(userId)
+              .get();
           userData = userDoc.exists ? userDoc.data() ?? {} : {};
         }
 
+        /// Structured export format for reporting tools
         exportData.add({
           'bookingId': doc.id,
           'userName': userData['name'] ?? 'Unknown',
@@ -420,9 +512,15 @@ class ParticipantService {
         });
       }
 
+      logger.i('Exported ${exportData.length} participant records');
       return exportData;
-    } catch (e) {
-      print('Error exporting participants: $e');
+    } on FirebaseException catch (e) {
+      logger.e('Firebase error exporting participants', 
+        error: e, stackTrace: StackTrace.current);
+      return [];
+    } catch (e, stackTrace) {
+      logger.e('Unexpected error exporting participants', 
+        error: e, stackTrace: stackTrace);
       return [];
     }
   }

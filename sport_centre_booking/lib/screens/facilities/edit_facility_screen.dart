@@ -1,18 +1,17 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../models/facility.dart';
-import '../../services/facility_service.dart';
-import '../../services/imageUpload_service.dart';
-import '../../services/blocking_service.dart';
 
+import '../../models/facility.dart';
+import '../../services/blocking_service.dart';
+import '../../services/facility_service.dart';
+import '../../services/image_upload_service.dart';
+
+/// Comprehensive facility editing with time blocking and image management
+/// Handles facility updates, operational scheduling, and booking conflict prevention
 class EditFacilityScreen extends StatefulWidget {
+  const EditFacilityScreen({super.key, required this.facility});
   final Facility facility;
-  
-  const EditFacilityScreen({
-    super.key,
-    required this.facility,
-  });
 
   @override
   State<EditFacilityScreen> createState() => _EditFacilityScreenState();
@@ -23,27 +22,34 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
   late TextEditingController _capacityController;
-  
+
   late bool _isActive;
   bool _isLoading = false;
-  
-  // Add image upload state
-  String? _newImageUrl; // For tracking new uploaded image
+
+  // Image management for facility branding updates
+  String? _newImageUrl;
   bool _isUploadingImage = false;
-  
-  // Add blocked times state
+
+  // Operational schedule blocking management
   late List<Map<String, dynamic>> blockedTimes;
-  
+
   final FacilityService _facilityService = FacilityService();
 
   @override
   void initState() {
     super.initState();
+    // Initialize form with existing facility data
     _titleController = TextEditingController(text: widget.facility.title);
-    _descriptionController = TextEditingController(text: widget.facility.description);
-    _capacityController = TextEditingController(text: widget.facility.maxCapacity.toString());
+    _descriptionController = TextEditingController(
+      text: widget.facility.description,
+    );
+    _capacityController = TextEditingController(
+      text: widget.facility.maxCapacity.toString(),
+    );
     _isActive = widget.facility.isActive;
-    blockedTimes = List<Map<String, dynamic>>.from(widget.facility.blockedTimes);
+    blockedTimes = List<Map<String, dynamic>>.from(
+      widget.facility.blockedTimes,
+    );
   }
 
   @override
@@ -63,10 +69,7 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: _confirmDelete,
-          ),
+          IconButton(icon: const Icon(Icons.delete), onPressed: _confirmDelete),
         ],
       ),
       body: _isLoading
@@ -82,9 +85,9 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
                     const SizedBox(height: 24),
                     _buildFacilityForm(),
                     const SizedBox(height: 24),
-                    _buildImageSection(), // Updated method
+                    _buildImageSection(),
                     const SizedBox(height: 24),
-                    _buildBlockedTimesSection(), // NEW
+                    _buildBlockedTimesSection(),
                     const SizedBox(height: 32),
                     _buildUpdateButton(),
                   ],
@@ -94,6 +97,7 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
     );
   }
 
+  /// Display current facility status and metadata
   Widget _buildFacilityInfoCard() {
     return Card(
       child: Padding(
@@ -103,9 +107,9 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
           children: [
             Row(
               children: [
-                CircleAvatar(
+                const CircleAvatar(
                   backgroundColor: Colors.teal,
-                  child: const Icon(Icons.home_work, color: Colors.white),
+                  child: Icon(Icons.home_work, color: Colors.white),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -126,8 +130,12 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
                     ],
                   ),
                 ),
+                // Operational status indicator
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: widget.facility.isActive ? Colors.green : Colors.red,
                     borderRadius: BorderRadius.circular(12),
@@ -144,6 +152,7 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
               ],
             ),
             const SizedBox(height: 12),
+            // Current capacity for booking reference
             Row(
               children: [
                 Icon(Icons.people, size: 16, color: Colors.grey[600]),
@@ -160,6 +169,7 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
     );
   }
 
+  /// Core facility information form with validation
   Widget _buildFacilityForm() {
     return Card(
       child: Padding(
@@ -169,14 +179,11 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
           children: [
             const Text(
               'Facility Details',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            
-            // Facility Title
+
+            // Facility identification and branding
             TextFormField(
               controller: _titleController,
               decoration: const InputDecoration(
@@ -195,14 +202,15 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
               },
             ),
             const SizedBox(height: 16),
-            
-            // Description
+
+            // Marketing and user information
             TextFormField(
               controller: _descriptionController,
               maxLines: 3,
               decoration: const InputDecoration(
                 labelText: 'Description *',
-                hintText: 'Describe the facility, equipment, and available activities...',
+                hintText:
+                    'Describe the facility, equipment, and available activities...',
                 border: OutlineInputBorder(),
               ),
               validator: (value) {
@@ -216,8 +224,8 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
               },
             ),
             const SizedBox(height: 16),
-            
-            // Max Capacity
+
+            // Booking capacity management
             TextFormField(
               controller: _capacityController,
               keyboardType: TextInputType.number,
@@ -242,8 +250,8 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
               },
             ),
             const SizedBox(height: 16),
-            
-            // Active Status
+
+            // Operational availability control
             SwitchListTile(
               title: const Text('Active Status'),
               subtitle: const Text('Facility is available for bookings'),
@@ -257,10 +265,10 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
     );
   }
 
-  // NEW: Updated image section with upload functionality
+  /// Image management with preview and upload capabilities
   Widget _buildImageSection() {
     final currentImageUrl = _newImageUrl ?? widget.facility.displayImageUrl;
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -272,8 +280,8 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            
-            // Current image preview
+
+            // Current image preview with loading states
             Container(
               width: double.infinity,
               height: 200,
@@ -294,7 +302,7 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
                         child: CircularProgressIndicator(
                           value: loadingProgress.expectedTotalBytes != null
                               ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
+                                    loadingProgress.expectedTotalBytes!
                               : null,
                           color: Colors.teal,
                         ),
@@ -307,9 +315,16 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.image_not_supported, size: 48, color: Colors.grey[400]),
+                          Icon(
+                            Icons.image_not_supported,
+                            size: 48,
+                            color: Colors.grey[400],
+                          ),
                           const SizedBox(height: 8),
-                          Text('Image not available', style: TextStyle(color: Colors.grey[600])),
+                          Text(
+                            'Image not available',
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
                         ],
                       ),
                     );
@@ -317,13 +332,13 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
-            // Upload new image button
+
+            // Image upload control with progress feedback
             ElevatedButton.icon(
               onPressed: _isUploadingImage ? null : _uploadNewImage,
-              icon: _isUploadingImage 
+              icon: _isUploadingImage
                   ? const SizedBox(
                       width: 16,
                       height: 16,
@@ -336,7 +351,8 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
                 foregroundColor: Colors.white,
               ),
             ),
-            
+
+            // Success indicator for pending image changes
             if (_newImageUrl != null) ...[
               const SizedBox(height: 8),
               Container(
@@ -348,7 +364,11 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.check_circle, color: Colors.green[600], size: 16),
+                    Icon(
+                      Icons.check_circle,
+                      color: Colors.green[600],
+                      size: 16,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -366,11 +386,11 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
             ],
           ],
         ),
-      ),
+      )
     );
   }
 
-  // NEW: Upload new image method
+  /// Handle new image upload with error handling
   Future<void> _uploadNewImage() async {
     setState(() {
       _isUploadingImage = true;
@@ -387,7 +407,7 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
         setState(() {
           _newImageUrl = imageUrl;
         });
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -415,22 +435,7 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
     }
   }
 
-  String _getDefaultImagePreview() {
-    final title = _titleController.text.toLowerCase();
-    if (title.contains('gym') || title.contains('weight')) {
-      return Facility.defaultImages['gym']!;
-    } else if (title.contains('pool') || title.contains('swim')) {
-      return Facility.defaultImages['pool']!;
-    } else if (title.contains('court') || title.contains('tennis') || 
-               title.contains('basketball') || title.contains('badminton')) {
-      return Facility.defaultImages['court']!;
-    } else if (title.contains('studio') || title.contains('yoga') || 
-               title.contains('dance') || title.contains('class')) {
-      return Facility.defaultImages['studio']!;
-    }
-    return Facility.defaultImages['default']!;
-  }
-
+  /// Save changes button with loading state
   Widget _buildUpdateButton() {
     return SizedBox(
       width: double.infinity,
@@ -455,15 +460,13 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
               )
             : const Text(
                 'Update Facility',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
       ),
     );
   }
 
+  /// Apply facility updates with validation
   Future<void> _updateFacility() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -476,14 +479,14 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         maxCapacity: int.parse(_capacityController.text.trim()),
-        imageUrl: _newImageUrl ?? widget.facility.imageUrl, // Use new image or keep existing
+        imageUrl: _newImageUrl ?? widget.facility.imageUrl,
         isActive: _isActive,
         updatedAt: DateTime.now(),
-        blockedTimes: blockedTimes, // Include blocked times
+        blockedTimes: blockedTimes,
       );
 
       await _facilityService.updateFacility(facility: updatedFacility);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -491,7 +494,7 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context, true); // Return true to indicate success
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
@@ -509,6 +512,7 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
     }
   }
 
+  /// Confirm facility deletion with booking impact warning
   void _confirmDelete() {
     showDialog(
       context: context,
@@ -535,12 +539,13 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
     );
   }
 
+  /// Permanently remove facility from system
   Future<void> _deleteFacility() async {
     setState(() => _isLoading = true);
 
     try {
       await _facilityService.deleteFacility(facilityId: widget.facility.id);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -548,7 +553,7 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context, true); // Return true to indicate deletion
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
@@ -566,8 +571,8 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
     }
   }
 
-  // ========== BLOCKED TIMES SECTION ==========
-
+  /// Operational schedule management section
+  /// Handles recurring and one-time availability blocks
   Widget _buildBlockedTimesSection() {
     return Card(
       child: Padding(
@@ -577,10 +582,7 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
           children: [
             const Text(
               'Blocked Times',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
@@ -599,46 +601,50 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
                 ),
               )
             else
-              ...blockedTimes.map((block) => Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  leading: const Icon(Icons.block, color: Colors.redAccent),
-                  title: Text(
-                    block['recurring'] == true
-                        ? '${block['startDayOfWeek']} ${block['startTime']} → ${block['endDayOfWeek']} ${block['endTime']}'
-                        : '${block['startDate']} ${block['startTime']} → ${block['endDate']} ${block['endTime']}',
-                  ),
-                  subtitle: Text(
-                    block['reason'] != null && block['reason'].toString().isNotEmpty
-                        ? '${block['recurring'] == true ? 'Repeats weekly' : 'One-time'} – ${block['reason']}'
-                        : (block['recurring'] == true
-                              ? 'Repeats weekly'
-                              : 'One-time block'),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () => _pickBlockedTime(existing: block),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () async {
-                          setState(() => blockedTimes.remove(block));
-                          await _saveBlockedTimesToFirestore();
-                        },
-                      ),
-                    ],
+              // Display all configured blocked time periods
+              ...blockedTimes.map(
+                (block) => Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    leading: const Icon(Icons.block, color: Colors.redAccent),
+                    title: Text(
+                      block['recurring'] == true
+                          ? '${block['startDayOfWeek']} ${block['startTime']} → ${block['endDayOfWeek']} ${block['endTime']}'
+                          : '${block['startDate']} ${block['startTime']} → ${block['endDate']} ${block['endTime']}',
+                    ),
+                    subtitle: Text(
+                      block['reason'] != null &&
+                              block['reason'].toString().isNotEmpty
+                          ? '${block['recurring'] == true ? 'Repeats weekly' : 'One-time'} – ${block['reason']}'
+                          : (block['recurring'] == true
+                                ? 'Repeats weekly'
+                                : 'One-time block'),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed: () => _pickBlockedTime(existing: block),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () async {
+                            setState(() => blockedTimes.remove(block));
+                            await _saveBlockedTimesToFirestore();
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              )),
+              ),
             const SizedBox(height: 16),
             Center(
               child: ElevatedButton.icon(
                 icon: const Icon(Icons.add),
                 label: const Text('Add Blocked Time'),
-                onPressed: () => _pickBlockedTime(),
+                onPressed: _pickBlockedTime,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.orange,
                   foregroundColor: Colors.white,
@@ -651,10 +657,13 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
     );
   }
 
+  /// Create or edit blocked time periods with conflict detection
+  /// Supports both recurring weekly patterns and one-time blocks
   Future<void> _pickBlockedTime({Map<String, dynamic>? existing}) async {
     final now = DateTime.now();
     final timeFormat = DateFormat('HH:mm');
 
+    // Initialize form state from existing block or defaults
     String? startDayOfWeek = existing?['startDayOfWeek'];
     String? endDayOfWeek = existing?['endDayOfWeek'];
     String? startDate = existing?['startDate'];
@@ -670,11 +679,14 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: Text(existing == null ? 'Add Blocked Time' : 'Edit Blocked Time'),
+              title: Text(
+                existing == null ? 'Add Blocked Time' : 'Edit Blocked Time',
+              ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Business reason for blocking time
                     TextFormField(
                       initialValue: reason,
                       decoration: const InputDecoration(
@@ -684,45 +696,68 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
                       onChanged: (val) => setDialogState(() => reason = val),
                     ),
                     const SizedBox(height: 12),
+                    
+                    // Toggle between recurring and one-time blocks
                     SwitchListTile(
                       title: const Text('Recurring Weekly'),
                       value: recurring,
                       onChanged: (val) => setDialogState(() => recurring = val),
                     ),
+                    
+                    // Recurring weekly pattern configuration
                     if (recurring) ...[
                       DropdownButtonFormField<String>(
                         decoration: const InputDecoration(
                           labelText: 'Start Day of Week',
                         ),
-                        value: startDayOfWeek,
-                        items: const [
-                          'Monday',
-                          'Tuesday',
-                          'Wednesday',
-                          'Thursday',
-                          'Friday',
-                          'Saturday',
-                          'Sunday',
-                        ].map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
-                        onChanged: (val) => setDialogState(() => startDayOfWeek = val),
+                        initialValue: startDayOfWeek,
+                        items:
+                            const [
+                                  'Monday',
+                                  'Tuesday',
+                                  'Wednesday',
+                                  'Thursday',
+                                  'Friday',
+                                  'Saturday',
+                                  'Sunday',
+                                ]
+                                .map(
+                                  (d) => DropdownMenuItem(
+                                    value: d,
+                                    child: Text(d),
+                                  ),
+                                )
+                                .toList(),
+                        onChanged: (val) =>
+                            setDialogState(() => startDayOfWeek = val),
                       ),
                       DropdownButtonFormField<String>(
                         decoration: const InputDecoration(
                           labelText: 'End Day of Week',
                         ),
-                        value: endDayOfWeek,
-                        items: const [
-                          'Monday',
-                          'Tuesday',
-                          'Wednesday',
-                          'Thursday',
-                          'Friday',
-                          'Saturday',
-                          'Sunday',
-                        ].map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
-                        onChanged: (val) => setDialogState(() => endDayOfWeek = val),
+                        initialValue: endDayOfWeek,
+                        items:
+                            const [
+                                  'Monday',
+                                  'Tuesday',
+                                  'Wednesday',
+                                  'Thursday',
+                                  'Friday',
+                                  'Saturday',
+                                  'Sunday',
+                                ]
+                                .map(
+                                  (d) => DropdownMenuItem(
+                                    value: d,
+                                    child: Text(d),
+                                  ),
+                                )
+                                .toList(),
+                        onChanged: (val) =>
+                            setDialogState(() => endDayOfWeek = val),
                       ),
                     ] else ...[
+                      // One-time date range configuration
                       ListTile(
                         title: const Text('Start Date'),
                         subtitle: Text(startDate ?? 'No date selected'),
@@ -735,7 +770,9 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
                           );
                           if (picked != null) {
                             setDialogState(
-                              () => startDate = picked.toIso8601String().split('T')[0],
+                              () => startDate = picked.toIso8601String().split(
+                                'T',
+                              )[0],
                             );
                           }
                         },
@@ -746,19 +783,25 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
                         onTap: () async {
                           final picked = await showDatePicker(
                             context: context,
-                            initialDate: startDate != null ? DateTime.parse(startDate!) : now,
+                            initialDate: startDate != null
+                                ? DateTime.parse(startDate!)
+                                : now,
                             firstDate: now,
                             lastDate: now.add(const Duration(days: 365)),
                           );
                           if (picked != null) {
                             setDialogState(
-                              () => endDate = picked.toIso8601String().split('T')[0],
+                              () => endDate = picked.toIso8601String().split(
+                                'T',
+                              )[0],
                             );
                           }
                         },
                       ),
                     ],
                     const SizedBox(height: 12),
+                    
+                    // Time range selection for blocked periods
                     ListTile(
                       title: const Text('Start Time'),
                       subtitle: Text(startTime ?? '--:--'),
@@ -768,8 +811,17 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
                           initialTime: TimeOfDay.now(),
                         );
                         if (picked != null) {
-                          setDialogState(() => startTime =
-                              timeFormat.format(DateTime(now.year, now.month, now.day, picked.hour, picked.minute)));
+                          setDialogState(
+                            () => startTime = timeFormat.format(
+                              DateTime(
+                                now.year,
+                                now.month,
+                                now.day,
+                                picked.hour,
+                                picked.minute,
+                              ),
+                            ),
+                          );
                         }
                       },
                     ),
@@ -782,8 +834,17 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
                           initialTime: TimeOfDay.now(),
                         );
                         if (picked != null) {
-                          setDialogState(() => endTime =
-                              timeFormat.format(DateTime(now.year, now.month, now.day, picked.hour, picked.minute)));
+                          setDialogState(
+                            () => endTime = timeFormat.format(
+                              DateTime(
+                                now.year,
+                                now.month,
+                                now.day,
+                                picked.hour,
+                                picked.minute,
+                              ),
+                            ),
+                          );
                         }
                       },
                     ),
@@ -797,19 +858,31 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    if ((recurring && startDayOfWeek != null && endDayOfWeek != null) ||
-                        (!recurring && startDate != null && endDate != null && startTime != null && endTime != null)) {
+                    if ((recurring &&
+                            startDayOfWeek != null &&
+                            endDayOfWeek != null) ||
+                        (!recurring &&
+                            startDate != null &&
+                            endDate != null &&
+                            startTime != null &&
+                            endTime != null)) {
                       if (!recurring) {
+                        // Validate date range for one-time blocks
                         final start = DateTime.parse(startDate!);
                         final end = DateTime.parse(endDate!);
                         if (start.isAfter(end)) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Start date cannot be after end date')),
+                            const SnackBar(
+                              content: Text(
+                                'Start date cannot be after end date',
+                              ),
+                            ),
                           );
                           return;
                         }
                       }
 
+                      // Create validated blocked time entry
                       final newEntry = {
                         'startDayOfWeek': recurring ? startDayOfWeek : null,
                         'endDayOfWeek': recurring ? endDayOfWeek : null,
@@ -832,13 +905,15 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
       },
     ).then((result) async {
       if (result != null) {
-        // Check for conflicting activities
-        final conflicts = await BlockingService.getActivitiesInFacilityTimeRange(
-          facilityId: widget.facility.id,
-          blockData: result,
-        );
+        // Check for conflicting activities before applying block
+        final conflicts =
+            await BlockingService.getActivitiesInFacilityTimeRange(
+              facilityId: widget.facility.id,
+              blockData: result,
+            );
 
         if (conflicts.isNotEmpty && mounted) {
+          // Show warning dialog for existing activity conflicts
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
@@ -859,16 +934,18 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
-                    ...conflicts.map((activity) => Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        leading: const Icon(Icons.event, color: Colors.red),
-                        title: Text(activity.name),
-                        subtitle: Text(
-                          '${DateFormat('MMM dd, yyyy').format(activity.date)} at ${activity.time}',
+                    ...conflicts.map(
+                      (activity) => Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          leading: const Icon(Icons.event, color: Colors.red),
+                          title: Text(activity.name),
+                          subtitle: Text(
+                            '${DateFormat('MMM dd, yyyy').format(activity.date)} at ${activity.time}',
+                          ),
                         ),
                       ),
-                    )),
+                    ),
                   ],
                 ),
               ),
@@ -883,7 +960,7 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
           return;
         }
 
-        // No conflicts - proceed with saving
+        // No conflicts - save the blocked time configuration
         setState(() {
           if (existing != null) {
             final index = blockedTimes.indexOf(existing);
@@ -897,26 +974,27 @@ class _EditFacilityScreenState extends State<EditFacilityScreen> {
     });
   }
 
+  /// Persist blocked times configuration to Firestore
   Future<void> _saveBlockedTimesToFirestore() async {
     try {
       await FirebaseFirestore.instance
           .collection('facilities')
           .doc(widget.facility.id)
           .update({
-        'blockedTimes': blockedTimes,
-        'updatedAt': DateTime.now().toIso8601String(),
-      });
+            'blockedTimes': blockedTimes,
+            'updatedAt': DateTime.now().toIso8601String(),
+          });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Blocked times updated')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Blocked times updated')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }

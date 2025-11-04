@@ -4,6 +4,8 @@ import '../../providers/auth_provider.dart';
 import '../../screens/auth/email_verification_screen.dart';
 import '../../utils/colors.dart';
 
+/// Security reminder banner encouraging email verification for account protection
+/// Appears persistently until user completes verification process
 class EmailVerificationBanner extends StatelessWidget {
   const EmailVerificationBanner({super.key});
 
@@ -11,7 +13,6 @@ class EmailVerificationBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
-        // Only show if user is logged in and email is not verified
         if (!authProvider.isLoggedIn || authProvider.isEmailVerified) {
           return const SizedBox.shrink();
         }
@@ -49,21 +50,21 @@ class EmailVerificationBanner extends StatelessWidget {
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.primary,
                   minimumSize: Size.zero,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 child: const Text(
                   'Verify',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                 ),
               ),
               const SizedBox(width: 8),
               GestureDetector(
                 onTap: () {
-                  // This could hide the banner temporarily, but we'll keep it simple for now
+                  // Future enhancement: temporary banner dismissal
                 },
                 child: Icon(
                   Icons.close,

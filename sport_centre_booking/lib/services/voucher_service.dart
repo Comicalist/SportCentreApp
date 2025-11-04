@@ -2,12 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/voucher.dart';
 
-/// Service for managing voucher operations
+/// Manages voucher lifecycle including creation, purchase, usage and analytics
+/// Implements points-based discount system for sport centre activities
 class VoucherService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  /// Get all available vouchers for purchase (not yet purchased)
+  /// Retrieves active vouchers available for purchase by club
   static Future<List<Voucher>> getAvailableVouchers() async {
     try {
       final querySnapshot = await _firestore
@@ -18,15 +19,13 @@ class VoucherService {
           .orderBy('amount')
           .get();
 
-      return querySnapshot.docs
-          .map((doc) => Voucher.fromFirestore(doc))
-          .toList();
+      return querySnapshot.docs.map(Voucher.fromFirestore).toList();
     } catch (e) {
       throw Exception('Failed to load available vouchers: $e');
     }
   }
 
-  /// Get vouchers purchased by a specific user
+  /// Retrieves user's purchased vouchers ordered by purchase date
   static Future<List<Voucher>> getUserVouchers(String userId) async {
     try {
       final querySnapshot = await _firestore
@@ -35,16 +34,17 @@ class VoucherService {
           .orderBy('purchasedAt', descending: true)
           .get();
 
-      return querySnapshot.docs
-          .map((doc) => Voucher.fromFirestore(doc))
-          .toList();
+      return querySnapshot.docs.map(Voucher.fromFirestore).toList();
     } catch (e) {
       throw Exception('Failed to load user vouchers: $e');
     }
   }
 
-  /// Get unused vouchers for a user that can be used for bookings
-  static Future<List<Voucher>> getUsableVouchers(String userId, String clubId) async {
+  /// Finds valid vouchers for booking discounts at specific club
+  static Future<List<Voucher>> getUsableVouchers(
+    String userId,
+    String clubId,
+  ) async {
     try {
       final querySnapshot = await _firestore
           .collection('vouchers')
@@ -55,15 +55,13 @@ class VoucherService {
           .where('expiresAt', isGreaterThan: Timestamp.fromDate(DateTime.now()))
           .get();
 
-      return querySnapshot.docs
-          .map((doc) => Voucher.fromFirestore(doc))
-          .toList();
+      return querySnapshot.docs.map(Voucher.fromFirestore).toList();
     } catch (e) {
       throw Exception('Failed to load usable vouchers: $e');
     }
   }
 
-  /// Get vouchers created by a club (for club owners)
+  /// Retrieves all vouchers created by club for management dashboard
   static Future<List<Voucher>> getClubVouchers(String clubId) async {
     try {
       final querySnapshot = await _firestore
@@ -72,15 +70,13 @@ class VoucherService {
           .orderBy('createdAt', descending: true)
           .get();
 
-      return querySnapshot.docs
-          .map((doc) => Voucher.fromFirestore(doc))
-          .toList();
+      return querySnapshot.docs.map(Voucher.fromFirestore).toList();
     } catch (e) {
       throw Exception('Failed to load club vouchers: $e');
     }
   }
 
-  /// Stream of available vouchers for real-time updates
+  /// Real-time stream of available vouchers for marketplace updates
   static Stream<List<Voucher>> streamAvailableVouchers() {
     return _firestore
         .collection('vouchers')
@@ -88,50 +84,45 @@ class VoucherService {
         .where('purchasedBy', isEqualTo: null)
         .snapshots()
         .map((snapshot) {
-          final vouchers = snapshot.docs
-              .map((doc) => Voucher.fromFirestore(doc))
-              .toList();
-          
-          // Sort in memory to avoid index requirements
+          final vouchers = snapshot.docs.map(Voucher.fromFirestore).toList();
+
           vouchers.sort((a, b) {
             final clubNameComparison = a.clubName.compareTo(b.clubName);
             if (clubNameComparison != 0) return clubNameComparison;
             return a.amount.compareTo(b.amount);
           });
-          
+
           return vouchers;
         });
   }
 
-  /// Stream of user's vouchers for real-time updates
+  /// Real-time stream of user's voucher collection for profile updates
   static Stream<List<Voucher>> streamUserVouchers(String userId) {
     return _firestore
         .collection('vouchers')
         .where('purchasedBy', isEqualTo: userId)
         .snapshots()
         .map((snapshot) {
-          final vouchers = snapshot.docs
-              .map((doc) => Voucher.fromFirestore(doc))
-              .toList();
-          
-          // Sort in memory to avoid index requirements
-          vouchers.sort((a, b) => b.purchasedAt?.compareTo(a.purchasedAt ?? DateTime.now()) ?? 0);
-          
+          final vouchers = snapshot.docs.map(Voucher.fromFirestore).toList();
+
+          vouchers.sort(
+            (a, b) =>
+                b.purchasedAt?.compareTo(a.purchasedAt ?? DateTime.now()) ?? 0,
+          );
+
           return vouchers;
         });
   }
 
-  /// Purchase a voucher with user's points
+  /// Executes voucher purchase transaction with points validation
   static Future<void> purchaseVoucher(String voucherId, String userId) async {
     try {
       await _firestore.runTransaction((transaction) async {
-        // Get current user
         final user = _auth.currentUser;
         if (user == null) {
           throw Exception('User not authenticated');
         }
 
-        // Get voucher document
         final voucherRef = _firestore.collection('vouchers').doc(voucherId);
         final voucherDoc = await transaction.get(voucherRef);
 
@@ -141,7 +132,6 @@ class VoucherService {
 
         final voucher = Voucher.fromFirestore(voucherDoc);
 
-        // Check if voucher is available for purchase
         if (voucher.purchasedBy != null) {
           throw Exception('This voucher has already been purchased');
         }
@@ -150,7 +140,6 @@ class VoucherService {
           throw Exception('This voucher is no longer available');
         }
 
-        // Get user document
         final userRef = _firestore.collection('users').doc(user.uid);
         final userDoc = await transaction.get(userRef);
 
@@ -161,17 +150,15 @@ class VoucherService {
         final userData = userDoc.data()!;
         final availablePoints = userData['availablePoints'] ?? 0;
 
-        // Check if user has enough points
         if (availablePoints < voucher.pointsCost) {
-          throw Exception('Insufficient points. You need ${voucher.pointsCost} points but only have $availablePoints.');
+          throw Exception(
+            'Insufficient points. You need ${voucher.pointsCost} points but only have $availablePoints.',
+          );
         }
 
-        // Generate voucher code and set purchase/expiration dates
         final voucherCode = Voucher.generateVoucherCode();
-        final purchaseDate = DateTime.now();
         final expirationDate = Voucher.calculateExpirationDate();
 
-        // Update voucher with purchase information
         transaction.update(voucherRef, {
           'purchasedBy': user.uid,
           'purchasedAt': FieldValue.serverTimestamp(),
@@ -180,18 +167,15 @@ class VoucherService {
           'updatedAt': FieldValue.serverTimestamp(),
         });
 
-        // Deduct points from user
         final newAvailablePoints = availablePoints - voucher.pointsCost;
-        transaction.update(userRef, {
-          'availablePoints': newAvailablePoints,
-        });
+        transaction.update(userRef, {'availablePoints': newAvailablePoints});
       });
     } catch (e) {
       throw Exception('Failed to purchase voucher: $e');
     }
   }
 
-  /// Use a voucher for a booking
+  /// Marks voucher as used for booking discount application
   static Future<void> useVoucher(String voucherId, String bookingId) async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -200,7 +184,6 @@ class VoucherService {
 
     try {
       await _firestore.runTransaction((transaction) async {
-        // Get voucher document
         final voucherRef = _firestore.collection('vouchers').doc(voucherId);
         final voucherDoc = await transaction.get(voucherRef);
 
@@ -210,7 +193,6 @@ class VoucherService {
 
         final voucher = Voucher.fromFirestore(voucherDoc);
 
-        // Verify voucher ownership and usability
         if (voucher.purchasedBy != user.uid) {
           throw Exception('You do not own this voucher');
         }
@@ -227,7 +209,6 @@ class VoucherService {
           throw Exception('This voucher cannot be used for bookings');
         }
 
-        // Mark voucher as used
         transaction.update(voucherRef, {
           'usedAt': Timestamp.fromDate(DateTime.now()),
           'usedForBooking': bookingId,
@@ -239,7 +220,7 @@ class VoucherService {
     }
   }
 
-  /// Create a new voucher (for club owners)
+  /// Creates new voucher offering with automatic points cost calculation
   static Future<Voucher> createVoucher({
     required String clubId,
     required String clubName,
@@ -254,7 +235,6 @@ class VoucherService {
     }
 
     try {
-      // Calculate points cost (100 points = 1 CHF)
       final pointsCost = (amount * 100).round();
       final now = DateTime.now();
 
@@ -292,7 +272,7 @@ class VoucherService {
     }
   }
 
-  /// Get vouchers created by a specific club owner
+  /// Retrieves vouchers created by specific club owner for management
   static Future<List<Voucher>> getVouchersByClubOwner(String ownerId) async {
     try {
       final querySnapshot = await _firestore
@@ -301,15 +281,13 @@ class VoucherService {
           .orderBy('createdAt', descending: true)
           .get();
 
-      return querySnapshot.docs
-          .map((doc) => Voucher.fromFirestore(doc))
-          .toList();
+      return querySnapshot.docs.map(Voucher.fromFirestore).toList();
     } catch (e) {
       throw Exception('Failed to load vouchers by club owner: $e');
     }
   }
 
-  /// Create a new voucher type (by club owner)
+  /// Creates new voucher type template for club (legacy method)
   static Future<String> createVoucherType({
     required String clubId,
     required String createdBy,
@@ -317,19 +295,17 @@ class VoucherService {
     required String title,
     required String description,
     required double amount,
-    required int pointsCost,  // Changed from 'value' to 'pointsCost'
+    required int pointsCost,
   }) async {
     try {
-      // Get club information for denormalized data
       final clubDoc = await _firestore.collection('clubs').doc(clubId).get();
       if (!clubDoc.exists) {
         throw Exception('Club not found');
       }
-      
+
       final clubData = clubDoc.data()!;
       final clubName = clubData['name'] as String;
 
-      // Generate unique voucher code
       final code = _generateVoucherCode();
 
       final voucherData = {
@@ -340,20 +316,16 @@ class VoucherService {
         'type': type.toString().split('.').last,
         'title': title,
         'description': description,
-        'pointsCost': pointsCost,  // Changed from 'value' to 'pointsCost'
+        'pointsCost': pointsCost,
         'amount': amount,
         'isActive': true,
         'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),  // Add updatedAt
-        
-        // Purchase info (null until purchased)
+        'updatedAt': FieldValue.serverTimestamp(),
         'purchasedBy': null,
         'purchasedAt': null,
-        
-        // Usage info (null until used)
         'usedAt': null,
         'usedForBooking': null,
-        'expiresAt': null, // Set when purchased
+        'expiresAt': null,
       };
 
       final docRef = await _firestore.collection('vouchers').add(voucherData);
@@ -363,19 +335,19 @@ class VoucherService {
     }
   }
 
-  /// Update voucher
-  static Future<void> updateVoucher(String voucherId, Map<String, dynamic> data) async {
+  /// Updates voucher properties for club management
+  static Future<void> updateVoucher(
+    String voucherId,
+    Map<String, dynamic> data,
+  ) async {
     try {
-      await _firestore
-          .collection('vouchers')
-          .doc(voucherId)
-          .update(data);
+      await _firestore.collection('vouchers').doc(voucherId).update(data);
     } catch (e) {
       throw Exception('Failed to update voucher: $e');
     }
   }
 
-  /// Delete voucher (only if not purchased)
+  /// Removes unpurchased vouchers to prevent customer confusion
   static Future<void> deleteVoucher(String voucherId) async {
     try {
       final doc = await _firestore.collection('vouchers').doc(voucherId).get();
@@ -394,7 +366,7 @@ class VoucherService {
     }
   }
 
-  /// Generate unique voucher code
+  /// Generates unique voucher code with year and timestamp
   static String _generateVoucherCode() {
     final now = DateTime.now();
     final year = now.year;
@@ -402,7 +374,7 @@ class VoucherService {
     return 'SC-V-$year-${random.toString().padLeft(4, '0')}';
   }
 
-  /// Get voucher usage statistics for a club
+  /// Calculates voucher performance metrics for club analytics
   static Future<Map<String, dynamic>> getClubVoucherStats(String clubId) async {
     try {
       final querySnapshot = await _firestore
@@ -410,10 +382,10 @@ class VoucherService {
           .where('clubId', isEqualTo: clubId)
           .get();
 
-      int totalCreated = 0;
-      int totalPurchased = 0;
-      int totalUsed = 0;
-      double totalRevenue = 0.0;
+      var totalCreated = 0;
+      var totalPurchased = 0;
+      var totalUsed = 0;
+      var totalRevenue = 0.0;
 
       for (final doc in querySnapshot.docs) {
         final voucher = Voucher.fromFirestore(doc);
@@ -434,7 +406,9 @@ class VoucherService {
         'totalPurchased': totalPurchased,
         'totalUsed': totalUsed,
         'totalRevenue': totalRevenue,
-        'purchaseRate': totalCreated > 0 ? (totalPurchased / totalCreated) : 0.0,
+        'purchaseRate': totalCreated > 0
+            ? (totalPurchased / totalCreated)
+            : 0.0,
         'usageRate': totalPurchased > 0 ? (totalUsed / totalPurchased) : 0.0,
       };
     } catch (e) {

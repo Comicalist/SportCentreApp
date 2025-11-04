@@ -1,19 +1,13 @@
 import 'package:flutter/material.dart';
+
 import '../../../models/activity.dart';
 import '../../../services/activity_service.dart';
-import '../../../widgets/activity/activity_card.dart';
 import '../../../utils/activity_helpers.dart';
+import '../../../widgets/activity/activity_card.dart';
 
-/// Widget for displaying activities in a responsive grid layout
+/// Responsive activity grid with real-time filtering and search capabilities
+/// Displays available activities based on user preferences and booking criteria
 class ActivitiesGrid extends StatelessWidget {
-  final String selectedCategory;
-  final String? selectedClub;
-  final DateTime? selectedDate;
-  final String? selectedTimeCategory;
-  final String? selectedLocation;
-  final String? searchQuery;
-  final bool onlyAvailable;
-
   const ActivitiesGrid({
     super.key,
     required this.selectedCategory,
@@ -24,17 +18,26 @@ class ActivitiesGrid extends StatelessWidget {
     required this.searchQuery,
     required this.onlyAvailable,
   });
+  
+  final String selectedCategory;
+  final String? selectedClub;
+  final DateTime? selectedDate;
+  final String? selectedTimeCategory;
+  final String? selectedLocation;
+  final String? searchQuery;
+  final bool onlyAvailable;
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<Activity>>(
+      // Real-time activity stream with comprehensive filtering
       stream: ActivityService.getFilteredActivities(
         category: selectedCategory,
         clubName: selectedClub,
         date: selectedDate,
         timeCategory: selectedTimeCategory,
         facilityId: selectedLocation,
-        searchQuery: searchQuery?.isEmpty == true ? null : searchQuery,
+        searchQuery: searchQuery?.isEmpty ?? false ? null : searchQuery,
         onlyAvailable: onlyAvailable,
       ),
       builder: (context, snapshot) {
@@ -55,6 +58,7 @@ class ActivitiesGrid extends StatelessWidget {
     );
   }
 
+  /// Loading state with user-friendly messaging
   Widget _buildLoadingState() {
     return const Center(
       child: Column(
@@ -68,6 +72,7 @@ class ActivitiesGrid extends StatelessWidget {
     );
   }
 
+  /// Error state with retry capability for network issues
   Widget _buildErrorState(BuildContext context, String error) {
     return Center(
       child: Column(
@@ -91,6 +96,7 @@ class ActivitiesGrid extends StatelessWidget {
     );
   }
 
+  /// Empty state with context-aware messaging based on selected filters
   Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Column(
@@ -105,20 +111,13 @@ class ActivitiesGrid extends StatelessWidget {
             style: const TextStyle(fontSize: 18),
           ),
           const SizedBox(height: 16),
-          // TODO: Uncomment for development
-          // ElevatedButton(
-          //   onPressed: () => _addSampleActivities(context),
-          //   style: ElevatedButton.styleFrom(
-          //     backgroundColor: Colors.teal,
-          //     foregroundColor: Colors.white,
-          //   ),
-          //   child: const Text('Add Sample Activities'),
-          // ),
         ],
       ),
     );
   }
 
+  /// Responsive grid layout with dynamic card sizing
+  /// Adapts to screen size for optimal viewing across devices
   Widget _buildActivitiesGrid(BuildContext context, List<Activity> activities) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -127,6 +126,7 @@ class ActivitiesGrid extends StatelessWidget {
         runSpacing: 16,
         children: activities.map((activity) {
           return SizedBox(
+            // Dynamic width calculation for responsive design
             width: ActivityHelpers.calculateCardWidth(context),
             child: ActivityCard(activity: activity),
           );

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../models/club.dart';
-import '../../services/club_service.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/club_service.dart';
 import 'add_club_screen.dart';
 import 'club_detail_screen.dart';
 
+/// Club owner dashboard for managing all owned sport clubs
+/// Displays clubs with approval/active status and provides navigation to detailed management
 class ClubManagementScreen extends StatefulWidget {
   const ClubManagementScreen({super.key});
 
@@ -19,6 +22,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Extract current club owner's ID for filtering owned clubs
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final ownerId = authProvider.appUser!.uid;
 
@@ -38,6 +42,8 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
+                
+                // Apply real-time search filtering to owned clubs
                 final clubs = snapshot.data!
                     .where(
                       (club) => club.name.toLowerCase().contains(
@@ -65,7 +71,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const AddClubScreen()),
-          ).then((_) => setState(() {})); // refresh after adding
+          ).then((_) => setState(() {}));
         },
         backgroundColor: Colors.orange,
         icon: const Icon(Icons.add),
@@ -74,6 +80,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
     );
   }
 
+  /// Search input for filtering clubs by name
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -88,6 +95,8 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
     );
   }
 
+  /// Club card displaying status indicators and basic info
+  /// Shows approval status (admin review) and active status (operational)
   Widget _buildClubCard(Club club) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -108,6 +117,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
             const SizedBox(height: 4),
             Row(
               children: [
+                // Admin approval status badge
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -123,6 +133,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
+                // Operational status badge
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -147,14 +158,15 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
     );
   }
 
+  /// Navigate to detailed club management with refresh handling
+  /// Refreshes list if club was deleted in detail screen
   void _navigateToClubDetail(Club club) async {
     final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(builder: (context) => ClubDetailScreen(club: club)),
     );
 
-    // If club was deleted, refresh the list
-    if (result == true) {
+    if (result ?? false) {
       setState(() {});
     }
   }

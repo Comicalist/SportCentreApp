@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'club_management_screen.dart';
+
 import 'activity_management_screen.dart';
+import 'club_management_screen.dart';
 import 'voucher_management_screen.dart';
 
+/// Main dashboard for club owners to access all management functions
+/// Provides navigation to club, activity, and voucher management systems
 class ClubOwnerPanel extends StatelessWidget {
   const ClubOwnerPanel({super.key});
 
@@ -20,7 +23,7 @@ class ClubOwnerPanel extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // Owner Actions
+            // Core management functions for club owners
             Expanded(
               child: ListView(
                 children: [
@@ -45,18 +48,6 @@ class ClubOwnerPanel extends StatelessWidget {
                     color: Colors.green,
                     onTap: () => _navigateToVoucherManagement(context),
                   ),
-                  _OwnerTile(
-                    icon: Icons.analytics,
-                    title: 'Analytics',
-                    subtitle: 'View performance of your clubs',
-                    color: Colors.purple,
-                    onTap: () {
-                      // TODO: Navigate to analytics screen
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Analytics feature coming soon!')),
-                      );
-                    },
-                  ),
                 ],
               ),
             ),
@@ -66,41 +57,34 @@ class ClubOwnerPanel extends StatelessWidget {
     );
   }
 
+  /// Navigate to club ownership and property management
   void _navigateToClubManagement(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const ClubManagementScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const ClubManagementScreen()),
     );
   }
 
+  /// Navigate to activity scheduling and management system
   void _navigateToActivityManagement(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const ActivityManagementScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const ActivityManagementScreen()),
     );
   }
 
+  /// Navigate to promotional voucher creation and tracking
   void _navigateToVoucherManagement(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const VoucherManagementScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const VoucherManagementScreen()),
     );
   }
 }
 
+/// Reusable dashboard tile for club owner management functions
+/// Provides consistent styling and navigation for business operations
 class _OwnerTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-  final Color color;
-
   const _OwnerTile({
     required this.icon,
     required this.title,
@@ -108,6 +92,12 @@ class _OwnerTile extends StatelessWidget {
     required this.onTap,
     required this.color,
   });
+  
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {

@@ -1,25 +1,30 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../utils/colors.dart';
 import 'dart:async';
 
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../providers/auth_provider.dart';
+import '../../utils/colors.dart';
+
+/// Email verification flow with automatic detection and club owner onboarding
+/// 
+/// Guides users through email verification process with periodic status checking,
+/// resend capabilities with cooldown protection, and special messaging for
+/// club owner accounts requiring admin approval workflow.
 class EmailVerificationScreen extends StatefulWidget {
-  final bool isClubOwner; // Add this parameter
+  const EmailVerificationScreen({super.key, this.isClubOwner = false});
   
-  const EmailVerificationScreen({
-    super.key,
-    this.isClubOwner = false,
-  });
+  final bool isClubOwner; // Determines UI messaging and next steps
 
   @override
-  State<EmailVerificationScreen> createState() => _EmailVerificationScreenState();
+  State<EmailVerificationScreen> createState() =>
+      _EmailVerificationScreenState();
 }
 
 class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
-  Timer? _timer;
-  bool _canResendEmail = true;
-  int _resendCooldown = 0;
+  Timer? _timer; // Periodic verification status checker
+  bool _canResendEmail = true; // Prevents spam resending
+  int _resendCooldown = 0; // Cooldown timer display
 
   @override
   void initState() {
@@ -33,16 +38,14 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     super.dispose();
   }
 
-  /// Start periodic timer to check email verification status
-  /// 
-  /// Checks verification status every 3 seconds and automatically
-  /// navigates back to the main app when verification is detected.
+  /// Establish automatic verification detection with 3-second polling
+  /// Automatically navigates back to app when verification is detected
   void _startEmailCheckTimer() {
     _timer = Timer.periodic(const Duration(seconds: 3), (timer) async {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       await authProvider.checkEmailVerification();
-      
-      // If email is verified, navigate back to main app
+
+      // Auto-navigation on successful verification
       if (authProvider.isEmailVerified && mounted) {
         timer.cancel();
         Navigator.of(context).pop();
@@ -56,6 +59,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     });
   }
 
+  /// Implement resend cooldown to prevent email spam
   void _startResendCooldown() {
     setState(() {
       _canResendEmail = false;
@@ -94,14 +98,14 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Email verification icon
+                // Visual email verification indicator
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.mark_email_unread,
                     size: 80,
                     color: AppColors.primary,
@@ -109,32 +113,24 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                // Title
+                // Primary heading
                 const Text(
                   'Check Your Email',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
 
-                // Description
+                // Email destination confirmation
                 Text(
                   'We\'ve sent a verification link to:',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
-
-                // Email address
                 Text(
                   email,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: AppColors.primary,
@@ -143,7 +139,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Club Owner Info Card (only show if user registered as club owner)
+                // Special onboarding for club owners
                 if (widget.isClubOwner) ...[
                   Card(
                     color: Colors.orange[50],
@@ -152,7 +148,11 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                       padding: const EdgeInsets.all(12.0),
                       child: Row(
                         children: [
-                          Icon(Icons.business, color: Colors.orange[700], size: 20),
+                          Icon(
+                            Icons.business,
+                            color: Colors.orange[700],
+                            size: 20,
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
@@ -183,35 +183,36 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                   ),
                 ],
 
-                // Instructions
+                // Context-aware instructions based on user type
                 Text(
                   widget.isClubOwner
                       ? 'Click the verification link to activate your club owner account. This page will automatically update when verified.'
                       : 'Click the link in the email to verify your account. This page will automatically update when your email is verified.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[700],
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
 
-                // Resend email button
+                // Resend functionality with spam protection
                 SizedBox(
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
                     onPressed: _canResendEmail && !authProvider.isLoading
                         ? () async {
-                            final success = await authProvider.sendEmailVerification();
-                            if (success && mounted) {
+                            final success = await authProvider
+                                .sendEmailVerification();
+                            if (!context.mounted) return;
+                            
+                            if (success) {
                               _startResendCooldown();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Verification email sent!'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Verification email sent!'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              
                             }
                           }
                         : null,
@@ -224,7 +225,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                     ),
                     child: authProvider.isLoading
                         ? const CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           )
                         : Text(
                             _canResendEmail
@@ -236,62 +239,63 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Check verification status button
+                // Manual verification check for immediate feedback
                 SizedBox(
                   width: double.infinity,
                   height: 50,
                   child: OutlinedButton(
                     onPressed: () async {
                       await authProvider.checkEmailVerification();
-                      if (authProvider.isEmailVerified && mounted) {
-                        Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Email verified successfully!'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      } else if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Email not yet verified. Please check your inbox.'),
-                            backgroundColor: Colors.orange,
-                          ),
-                        );
+                      if (!context.mounted) return;
+                      
+                      if (authProvider.isEmailVerified) {
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Email verified successfully!'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        
+                      } else {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Email not yet verified. Please check your inbox.',
+                              ),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                        }
                       }
                     },
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: AppColors.primary),
+                      side: const BorderSide(color: AppColors.primary),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    child: Text(
+                    child: const Text(
                       'I\'ve Verified My Email',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: AppColors.primary,
-                      ),
+                      style: TextStyle(fontSize: 16, color: AppColors.primary),
                     ),
                   ),
                 ),
                 const SizedBox(height: 32),
 
-                // Skip for now button
+                // Optional flow exit for non-critical verification
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pop();
                   },
                   child: Text(
                     'Skip for now',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                 ),
 
-                // Error message
+                // Error state display for verification issues
                 if (authProvider.errorMessage != null) ...[
                   const SizedBox(height: 16),
                   Container(

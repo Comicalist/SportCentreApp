@@ -66,4 +66,5 @@ build/
 .env
 .env.local
 .env.production
-lib/config/firebase_config.dart
+lib/config/
+

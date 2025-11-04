@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
-import '../../services/club_service.dart';
-import '../../models/club.dart';
 
+import '../../models/club.dart';
+import '../../services/club_service.dart';
+
+/// Club editing interface with approval workflow enforcement
+/// Manages basic club information and operational status with admin approval requirements
 class EditClubScreen extends StatefulWidget {
-  final Club club;
   const EditClubScreen({super.key, required this.club});
+  final Club club;
 
   @override
   State<EditClubScreen> createState() => _EditClubScreenState();
@@ -21,6 +24,7 @@ class _EditClubScreenState extends State<EditClubScreen> {
   @override
   void initState() {
     super.initState();
+    // Initialize form with existing club data
     _nameController = TextEditingController(text: widget.club.name);
     _locationController = TextEditingController(
       text: widget.club.location ?? '',
@@ -48,6 +52,7 @@ class _EditClubScreenState extends State<EditClubScreen> {
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
+                  // Basic club information fields
                   TextFormField(
                     controller: _nameController,
                     decoration: const InputDecoration(labelText: 'Club Name'),
@@ -58,6 +63,8 @@ class _EditClubScreenState extends State<EditClubScreen> {
                     decoration: const InputDecoration(labelText: 'Location'),
                   ),
                   const SizedBox(height: 12),
+                  
+                  // Admin approval status warning for unapproved clubs
                   if (!widget.club.isApproved) ...[
                     Card(
                       color: Colors.orange.shade50,
@@ -65,7 +72,10 @@ class _EditClubScreenState extends State<EditClubScreen> {
                         padding: const EdgeInsets.all(12.0),
                         child: Row(
                           children: [
-                            Icon(Icons.info_outline, color: Colors.orange),
+                            const Icon(
+                              Icons.info_outline,
+                              color: Colors.orange,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -83,6 +93,7 @@ class _EditClubScreenState extends State<EditClubScreen> {
                     const SizedBox(height: 12),
                   ],
 
+                  // Operational status control with approval dependency
                   SwitchListTile(
                     title: const Text('Active'),
                     subtitle: Text(
@@ -93,10 +104,12 @@ class _EditClubScreenState extends State<EditClubScreen> {
                     value: _isActive,
                     onChanged: widget.club.isApproved
                         ? (val) => setState(() => _isActive = val)
-                        : null, // Disable if not approved
+                        : null,
                   ),
                   const SizedBox(height: 24),
                   const SizedBox(height: 24),
+                  
+                  // Save changes with loading state
                   ElevatedButton(
                     onPressed: _isLoading ? null : _updateClub,
                     style: ElevatedButton.styleFrom(
@@ -120,8 +133,10 @@ class _EditClubScreenState extends State<EditClubScreen> {
     );
   }
 
+  /// Update club information with business rule validation
+  /// Enforces approval requirements for activation status
   Future<void> _updateClub() async {
-    // Validate inputs
+    // Validate required club name
     if (_nameController.text.trim().isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -131,7 +146,7 @@ class _EditClubScreenState extends State<EditClubScreen> {
       return;
     }
 
-    // NEW: Prevent activating unapproved clubs
+    // Enforce admin approval requirement for activation
     if (_isActive && !widget.club.isApproved) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -147,6 +162,7 @@ class _EditClubScreenState extends State<EditClubScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // Create updated club with form data
       final updatedClub = widget.club.copyWith(
         name: _nameController.text.trim(),
         location: _locationController.text.trim().isEmpty

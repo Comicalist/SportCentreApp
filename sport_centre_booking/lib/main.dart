@@ -1,51 +1,49 @@
-import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
+import 'package:provider/provider.dart';
+
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'providers/booking_provider.dart';
 import 'widgets/auth/auth_wrapper.dart';
 
-// Global logger instance
+/// Application-wide logging for debugging and production monitoring
 final logger = Logger(
   printer: PrettyPrinter(
-    methodCount: 2,
-    errorMethodCount: 8,
-    lineLength: 120,
-    colors: true,
-    printEmojis: true,
-    printTime: true,
+    dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart,
   ),
 );
 
+/// Entry point for sport centre booking application
+/// Initializes Firebase backend services and state management
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
     logger.i('Firebase initialized successfully');
   } catch (e, stackTrace) {
-    logger.e(
-      'Firebase initialization failed',
-      error: e,
-      stackTrace: stackTrace,
-    );
-    
-    // In a production app, you might want to:
-    // 1. Show an error dialog to the user
-    // 2. Prevent the app from continuing
-    // 3. Send crash reports to a service like Firebase Crashlytics
-    
-    // For now, we'll continue but the app might not work properly
-    logger.w('Continuing app startup despite Firebase initialization failure');
+    logger
+      ..e(
+        'Firebase initialization failed',
+        error: e,
+        stackTrace: stackTrace,
+      )
+      ..w('Continuing app startup despite Firebase initialization failure');
+
+    // Production consideration: implement proper error handling
+    // - User notification of service unavailability
+    // - Crash reporting for monitoring
+    // - Graceful degradation or app termination
   }
-  
+
   runApp(const MyApp());
 }
 
+/// Root application widget with provider state management and Material theme
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 

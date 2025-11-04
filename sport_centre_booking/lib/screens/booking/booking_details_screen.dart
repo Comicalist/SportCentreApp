@@ -1,25 +1,25 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
+
 import '../../models/activity.dart';
 import '../../models/booking.dart';
 import '../../models/voucher.dart';
-import '../../services/voucher_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/booking_provider.dart';
+import '../../services/booking_service.dart';
+import '../../services/voucher_service.dart';
 import '../../utils/activity_helpers.dart';
 import '../../utils/constants.dart';
 import 'booking_success_screen.dart';
 
-/// Screen for booking activity details and participant selection
+/// Comprehensive booking screen with participant selection, voucher application,
+/// calendar view of existing bookings, and pricing breakdown
 class BookingDetailsScreen extends StatefulWidget {
+  const BookingDetailsScreen({super.key, required this.activity});
   final Activity activity;
-
-  const BookingDetailsScreen({
-    super.key,
-    required this.activity,
-  });
 
   @override
   State<BookingDetailsScreen> createState() => _BookingDetailsScreenState();
@@ -30,8 +30,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   bool _agreeToTerms = false;
   bool _isLoading = false;
   DateTime _focusedDay = DateTime.now();
-  
-  // Voucher selection
+
+  /// Voucher system state for discount application
   Voucher? _selectedVoucher;
   List<Voucher> _availableVouchers = [];
 
@@ -40,10 +40,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
-      bookingProvider.startBooking(widget.activity, authProvider);
+      final bookingProvider = Provider.of<BookingProvider>(
+        context,
+        listen: false,
+      )..startBooking(widget.activity, authProvider);
 
-      // Make sure the bookings stream is initialized (even if empty)
       final uid = authProvider.firebaseUser?.uid;
       if (uid != null) {
         bookingProvider.loadUserBookings(uid);
@@ -52,13 +53,13 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     });
   }
 
-  /// Load available vouchers for this activity
+  /// Loads user's available vouchers for this club and activity type
   Future<void> _loadAvailableVouchers(String userId) async {
     if (!widget.activity.allowVouchers) return;
-    
+
     try {
       final vouchers = await VoucherService.getUsableVouchers(
-        userId, 
+        userId,
         widget.activity.clubId,
       );
       if (mounted) {
@@ -76,16 +77,24 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     return Consumer2<AuthProvider, BookingProvider>(
       builder: (context, authProvider, bookingProvider, child) {
         final isMember = authProvider.isLoggedIn;
-        final currentPrice =
-            isMember ? widget.activity.memberPrice : widget.activity.guestPrice;
+        final currentPrice = isMember
+            ? widget.activity.memberPrice
+            : widget.activity.guestPrice;
         final totalPrice = currentPrice * _participantCount;
-        
-        // Calculate voucher discount and final price
+
+        /// Voucher discount calculation with price floor protection
         final voucherDiscount = _selectedVoucher?.amount ?? 0.0;
-        final finalPrice = (totalPrice - voucherDiscount).clamp(0.0, totalPrice);
-        
-        // Calculate expected points based on final price (after voucher)
-        final expectedPoints = _calculateExpectedPoints(finalPrice, isMember);
+        final finalPrice = (totalPrice - voucherDiscount).clamp(
+          0.0,
+          totalPrice,
+        );
+
+        /// Points calculation using the corrected BookingService method
+        final expectedPoints = BookingService.calculatePointsEarned(
+          widget.activity,
+          finalPrice,
+          isMember,
+        );
 
         return Scaffold(
           backgroundColor: Colors.grey[50],
@@ -108,12 +117,19 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       const SizedBox(height: AppConstants.largeSpacing),
                       _buildParticipantSelector(),
                       const SizedBox(height: AppConstants.largeSpacing),
-                      if (_availableVouchers.isNotEmpty && widget.activity.allowVouchers) ...[
+                      if (_availableVouchers.isNotEmpty &&
+                          widget.activity.allowVouchers) ...[
                         _buildVoucherSection(),
                         const SizedBox(height: AppConstants.largeSpacing),
                       ],
                       _buildPricingBreakdown(
-                          isMember, currentPrice, totalPrice, finalPrice, voucherDiscount, expectedPoints),
+                        isMember,
+                        currentPrice,
+                        totalPrice,
+                        finalPrice,
+                        voucherDiscount,
+                        expectedPoints,
+                      ),
                       const SizedBox(height: AppConstants.largeSpacing),
                       _buildCalendarSection(bookingProvider),
                       const SizedBox(height: AppConstants.largeSpacing),
@@ -128,63 +144,40 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Calculate expected points based on final price paid
-  int _calculateExpectedPoints(double finalPrice, bool isMember) {
-    int basePoints = finalPrice.floor();
-    
-    if (isMember) {
-      basePoints = (basePoints * 1.5).floor();
-    }
-    
-    // Activity type multiplier
-    switch (widget.activity.category.toLowerCase()) {
-      case 'wellness':
-        basePoints = (basePoints * 1.2).floor();
-        break;
-      case 'workshops':
-        basePoints = (basePoints * 1.3).floor();
-        break;
-      default:
-        break;
-    }
-    
-    return basePoints;
-  }
-
-  // Helper pour normaliser les dates à minuit
+  /// Normalizes dates to midnight for consistent calendar comparison
   DateTime _atMidnight(DateTime d) => DateTime(d.year, d.month, d.day);
 
-  // ---- Nouveaux champs/helpers pour la section calendrier ----
   DateTime? _selectedDay;
 
-  /// Essaie d’afficher "HH:mm – HH:mm" (si fin connue) sinon "HH:mm • X min" (si durée connue),
-  /// sinon au minimum "HH:mm".
+  /// Formats booking time display with end time or duration when available
   String _formatTimeRange(Booking b) {
     final start = b.activityDate;
     DateTime? end;
     int? dur;
 
-    // On tente d'accéder à quelques champs possibles sans casser si absents.
-    try { end = (b as dynamic).activityEndDate as DateTime?; } catch (_) {}
-    try { end ??= (b as dynamic).endDate as DateTime?; } catch (_) {}
-    try { dur = (b as dynamic).durationMinutes as int?; } catch (_) {}
+    try {
+      end = (b as dynamic).activityEndDate as DateTime?;
+    } catch (_) {}
+    try {
+      end ??= (b as dynamic).endDate as DateTime?;
+    } catch (_) {}
+    try {
+      dur = (b as dynamic).durationMinutes as int?;
+    } catch (_) {}
 
     final s = DateFormat('HH:mm').format(start);
     if (end != null) {
       final e = DateFormat('HH:mm').format(end);
       return '$s – $e';
     }
-    if (dur != null) return '$s • ${dur} min';
+    if (dur != null) return '$s • $dur min';
     return s;
   }
 
-  
+  /// Interactive calendar showing user's existing bookings to avoid scheduling conflicts
   Widget _buildCalendarSection(BookingProvider bookingProvider) {
-    final Stream<List<Booking>> safeStream =
-        bookingProvider.userBookingsStream ?? Stream.value(const <Booking>[]);
-
     return StreamBuilder<List<Booking>>(
-      stream: safeStream,
+      stream: bookingProvider.userBookingsStream,
       initialData: const <Booking>[],
       builder: (context, snapshot) {
         if (snapshot.hasError) {
@@ -194,14 +187,14 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         final bookings = snapshot.data ?? const <Booking>[];
         final isLoading = snapshot.connectionState == ConnectionState.waiting;
 
-        // Map jour -> liste de bookings
-        final Map<DateTime, List<Booking>> byDay = {};
+        /// Group bookings by day for calendar display
+        final byDay = <DateTime, List<Booking>>{};
         for (final b in bookings) {
           final key = _atMidnight(b.activityDate);
           byDay.putIfAbsent(key, () => []).add(b);
         }
 
-        // Sélection par défaut : aujourd’hui si dispo, sinon premier jour avec résa, sinon aujourd’hui.
+        /// Default to today if has bookings, otherwise first booking day
         _selectedDay ??= () {
           final todayKey = _atMidnight(DateTime.now());
           if (byDay.containsKey(todayKey)) return todayKey;
@@ -220,7 +213,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
@@ -240,12 +233,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               ),
               const SizedBox(height: 12),
 
-              // --- Calendrier ---
+              /// Interactive calendar with booking indicators
               TableCalendar<Booking>(
                 focusedDay: _focusedDay,
                 firstDay: DateTime.now().subtract(const Duration(days: 365)),
                 lastDay: DateTime.now().add(const Duration(days: 365)),
-                calendarFormat: CalendarFormat.month,
                 startingDayOfWeek: StartingDayOfWeek.monday,
                 availableGestures: AvailableGestures.horizontalSwipe,
                 headerStyle: const HeaderStyle(
@@ -254,7 +246,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 ),
                 calendarStyle: CalendarStyle(
                   todayDecoration: BoxDecoration(
-                    color: Colors.teal.withOpacity(0.3),
+                    color: Colors.teal.withValues(alpha: 0.3),
                     shape: BoxShape.circle,
                   ),
                   markerDecoration: const BoxDecoration(
@@ -273,13 +265,13 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     _focusedDay = focused;
                   });
                 },
-                // On renvoie la liste des bookings de ce jour (et pas juste des dates)
-                eventLoader: (day) => byDay[_atMidnight(day)] ?? const <Booking>[],
+                eventLoader: (day) =>
+                    byDay[_atMidnight(day)] ?? const <Booking>[],
               ),
 
               const SizedBox(height: 12),
 
-              // --- État / messages ---
+              /// Loading state or booking list display
               if (isLoading)
                 const Center(
                   child: Padding(
@@ -288,18 +280,26 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                   ),
                 )
               else if (bookings.isEmpty) ...[
-                const Text('No bookings yet.', style: TextStyle(color: Colors.grey)),
+                const Text(
+                  'No bookings yet.',
+                  style: TextStyle(color: Colors.grey),
+                ),
               ] else ...[
-                // --- Titre du jour sélectionné ---
                 Text(
                   DateFormat('EEEE, MMMM d, yyyy').format(_selectedDay!),
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 8),
 
-                // --- Liste des réservations du jour sélectionné ---
+                /// Daily booking list for selected day
                 if (selectedBookings.isEmpty)
-                  const Text('No bookings this day.', style: TextStyle(color: Colors.grey))
+                  const Text(
+                    'No bookings this day.',
+                    style: TextStyle(color: Colors.grey),
+                  )
                 else
                   ListView.separated(
                     shrinkWrap: true,
@@ -309,16 +309,22 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     itemBuilder: (context, i) {
                       final b = selectedBookings[i];
 
-                      // Champs facultatifs selon ton modèle
-                      String title = 'Booking';
+                      var title = 'Booking';
                       String? place;
-                      try { title = (b as dynamic).activityName as String? ?? title; } catch (_) {}
-                      try { place = (b as dynamic).facilityName as String?; } catch (_) {}
+                      try {
+                        title = (b as dynamic).activityName as String? ?? title;
+                      } catch (_) {}
+                      try {
+                        place = (b as dynamic).facilityName as String?;
+                      } catch (_) {}
 
                       return ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: const CircleAvatar(child: Icon(Icons.event)),
-                        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                        title: Text(
+                          title,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
                         subtitle: Padding(
                           padding: const EdgeInsets.only(top: 6),
                           child: Wrap(
@@ -328,10 +334,18 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.access_time, size: 16, color: Colors.teal),
+                                  const Icon(
+                                    Icons.access_time,
+                                    size: 16,
+                                    color: Colors.teal,
+                                  ),
                                   const SizedBox(width: 6),
-                                  Text(_formatTimeRange(b),
-                                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                                  Text(
+                                    _formatTimeRange(b),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                 ],
                               ),
                               if (place != null) ...[
@@ -339,9 +353,13 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.location_on, size: 16, color: Colors.teal),
+                                    const Icon(
+                                      Icons.location_on,
+                                      size: 16,
+                                      color: Colors.teal,
+                                    ),
                                     const SizedBox(width: 6),
-                                    Text(place!),
+                                    Text(place),
                                   ],
                                 ),
                               ],
@@ -359,6 +377,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
+  /// Fallback calendar display when bookings fail to load
   Widget _buildEmptyCalendar({String? message}) {
     return Container(
       decoration: BoxDecoration(
@@ -366,7 +385,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -389,9 +408,10 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             focusedDay: _focusedDay,
             firstDay: DateTime.now().subtract(const Duration(days: 365)),
             lastDay: DateTime.now().add(const Duration(days: 365)),
-            calendarFormat: CalendarFormat.month,
-            headerStyle:
-                const HeaderStyle(formatButtonVisible: false, titleCentered: true),
+            headerStyle: const HeaderStyle(
+              formatButtonVisible: false,
+              titleCentered: true,
+            ),
             eventLoader: (_) => const [],
           ),
           const SizedBox(height: 8),
@@ -404,9 +424,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Build activity information card
+  /// Displays activity details with gradient header and comprehensive information
   Widget _buildActivityCard() {
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
@@ -421,7 +441,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Activity header with gradient background
+          /// Category-themed gradient header with activity icon
           Container(
             height: 120,
             decoration: BoxDecoration(
@@ -432,22 +452,32 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  ActivityHelpers.getCategoryColor(widget.activity.category).withValues(alpha: 0.8),
-                  ActivityHelpers.getCategoryColor(widget.activity.category).withValues(alpha: 0.6),
+                  ActivityHelpers.getCategoryColor(
+                    widget.activity.category,
+                  ).withValues(alpha: 0.8),
+                  ActivityHelpers.getCategoryColor(
+                    widget.activity.category,
+                  ).withValues(alpha: 0.6),
                 ],
               ),
             ),
             child: Stack(
               children: [
-                // Category badge
                 Positioned(
                   top: 12,
                   left: 12,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
-                      color: ActivityHelpers.getCategoryColor(widget.activity.category),
-                      borderRadius: BorderRadius.circular(AppConstants.categoryBadgeRadius),
+                      color: ActivityHelpers.getCategoryColor(
+                        widget.activity.category,
+                      ),
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.categoryBadgeRadius,
+                      ),
                     ),
                     child: Text(
                       widget.activity.category.toUpperCase(),
@@ -459,7 +489,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     ),
                   ),
                 ),
-                // Activity icon
                 Center(
                   child: Icon(
                     ActivityHelpers.getCategoryIcon(widget.activity.category),
@@ -470,7 +499,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               ],
             ),
           ),
-          // Activity details
           Padding(
             padding: const EdgeInsets.all(AppConstants.largeSpacing),
             child: Column(
@@ -503,7 +531,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Build activity information rows
+  /// Displays essential activity information in structured rows
   Widget _buildActivityInfo() {
     return Column(
       children: [
@@ -525,11 +553,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           widget.activity.facilityName,
         ),
         const SizedBox(height: AppConstants.mediumSpacing),
-        _buildInfoRow(
-          Icons.groups,
-          'Organized by',
-          widget.activity.clubName,
-        ),
+        _buildInfoRow(Icons.groups, 'Organized by', widget.activity.clubName),
         const SizedBox(height: AppConstants.mediumSpacing),
         _buildInfoRow(
           Icons.people,
@@ -544,15 +568,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Build information row
+  /// Reusable information row component for activity details
   Widget _buildInfoRow(IconData icon, String label, String value) {
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 20,
-          color: Colors.teal,
-        ),
+        Icon(icon, size: 20, color: Colors.teal),
         const SizedBox(width: AppConstants.mediumSpacing),
         Expanded(
           child: Row(
@@ -560,10 +580,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             children: [
               Text(
                 label,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
               ),
               Text(
                 value,
@@ -580,25 +597,18 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Build requirements section
+  /// Displays activity requirements as bulleted list when present
   Widget _buildRequirementsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            const Icon(
-              Icons.info_outline,
-              size: 20,
-              color: Colors.teal,
-            ),
+            const Icon(Icons.info_outline, size: 20, color: Colors.teal),
             const SizedBox(width: AppConstants.mediumSpacing),
             Text(
               'Requirements',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
             ),
           ],
         ),
@@ -641,8 +651,12 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Build booking details section
-  Widget _buildBookingDetails(bool isMember, double currentPrice, double totalPrice) {
+  /// Shows member benefits or prompts guest signup with pricing context
+  Widget _buildBookingDetails(
+    bool isMember,
+    double currentPrice,
+    double totalPrice,
+  ) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -673,16 +687,14 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.teal.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppConstants.filterBorderRadius),
+                borderRadius: BorderRadius.circular(
+                  AppConstants.filterBorderRadius,
+                ),
                 border: Border.all(color: Colors.teal.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.star,
-                    color: Colors.teal,
-                    size: 20,
-                  ),
+                  const Icon(Icons.star, color: Colors.teal, size: 20),
                   const SizedBox(width: AppConstants.mediumSpacing),
                   Expanded(
                     child: Text(
@@ -702,24 +714,19 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.orange.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppConstants.filterBorderRadius),
+                borderRadius: BorderRadius.circular(
+                  AppConstants.filterBorderRadius,
+                ),
                 border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: Colors.orange[700],
-                    size: 20,
-                  ),
+                  Icon(Icons.info_outline, color: Colors.orange[700], size: 20),
                   const SizedBox(width: AppConstants.mediumSpacing),
                   Expanded(
                     child: Text(
                       'Guest rate applied. Sign up to get member discounts!',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.orange[700],
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.orange[700]),
                     ),
                   ),
                 ],
@@ -731,7 +738,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Build participant count selector
+  /// Interactive participant count selector with capacity limits
   Widget _buildParticipantSelector() {
     return Container(
       decoration: BoxDecoration(
@@ -763,23 +770,24 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               Expanded(
                 child: Text(
                   'Select how many people will participate',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                 ),
               ),
               const SizedBox(width: AppConstants.largeSpacing),
-              Container(
+              DecoratedBox(
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.grey[300]!),
-                  borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
+                  borderRadius: BorderRadius.circular(
+                    AppConstants.buttonBorderRadius,
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      onPressed: _participantCount > 1 ? _decrementParticipants : null,
+                      onPressed: _participantCount > 1
+                          ? _decrementParticipants
+                          : null,
                       icon: const Icon(Icons.remove),
                       color: Colors.teal,
                     ),
@@ -810,10 +818,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             const SizedBox(height: AppConstants.mediumSpacing),
             Text(
               'Maximum ${widget.activity.spotsLeft} spots available',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.orange[700],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.orange[700]),
             ),
           ],
         ],
@@ -821,7 +826,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Build voucher selection section
+  /// Voucher selection interface with discount preview and points impact warning
   Widget _buildVoucherSection() {
     return Container(
       decoration: BoxDecoration(
@@ -850,18 +855,15 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           const SizedBox(height: AppConstants.mediumSpacing),
           Text(
             'You have ${_availableVouchers.length} voucher(s) available for this activity',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
           ),
           const SizedBox(height: AppConstants.largeSpacing),
-          
-          // Voucher selection
+
+          /// Individual voucher selection cards
           ...List.generate(_availableVouchers.length, (index) {
             final voucher = _availableVouchers[index];
             final isSelected = _selectedVoucher?.id == voucher.id;
-            
+
             return Container(
               margin: const EdgeInsets.only(bottom: 8),
               child: InkWell(
@@ -873,16 +875,19 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isSelected ? Colors.teal.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.05),
+                    color: isSelected
+                        ? Colors.teal.withValues(alpha: 0.1)
+                        : Colors.grey.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: isSelected ? Colors.teal : Colors.grey.withValues(alpha: 0.3),
+                      color: isSelected
+                          ? Colors.teal
+                          : Colors.grey.withValues(alpha: 0.3),
                       width: isSelected ? 2 : 1,
                     ),
                   ),
                   child: Row(
                     children: [
-                      // Selection indicator
                       Container(
                         width: 20,
                         height: 20,
@@ -895,20 +900,30 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                           ),
                         ),
                         child: isSelected
-                            ? const Icon(Icons.check, color: Colors.white, size: 14)
+                            ? const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 14,
+                              )
                             : null,
                       ),
                       const SizedBox(width: 12),
-                      
-                      // Voucher type badge
+
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
-                          color: _getVoucherTypeColor(voucher.type).withValues(alpha: 0.12),
+                          color: _getVoucherTypeColor(
+                            voucher.type,
+                          ).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
-                          voucher.type == VoucherType.fitness ? 'FITNESS' : 'STUFF',
+                          voucher.type == VoucherType.fitness
+                              ? 'FITNESS'
+                              : 'STUFF',
                           style: TextStyle(
                             fontSize: 8,
                             fontWeight: FontWeight.bold,
@@ -917,8 +932,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      
-                      // Voucher details
+
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -941,8 +955,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                           ],
                         ),
                       ),
-                      
-                      // Voucher value
+
                       Text(
                         '${voucher.amount.toStringAsFixed(2)} CHF',
                         style: const TextStyle(
@@ -957,7 +970,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               ),
             );
           }),
-          
+
+          /// Points impact warning for voucher usage
           if (_selectedVoucher != null) ...[
             const SizedBox(height: AppConstants.mediumSpacing),
             Container(
@@ -969,23 +983,23 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.warning_amber, color: Colors.orange[700], size: 20),
+                  Icon(
+                    Icons.warning_amber,
+                    color: Colors.orange[700],
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Voucher savings will reduce points earned. You\'ll earn points only on the amount you pay.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.orange[800],
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.orange[800]),
                     ),
                   ),
                 ],
               ),
             ),
           ],
-          
-          // Clear selection button
+
           if (_selectedVoucher != null) ...[
             const SizedBox(height: AppConstants.mediumSpacing),
             TextButton(
@@ -1002,6 +1016,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
+  /// Returns theme color for voucher type badges
   Color _getVoucherTypeColor(VoucherType type) {
     switch (type) {
       case VoucherType.fitness:
@@ -1010,13 +1025,15 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         return Colors.purple;
     }
   }
+
+  /// Comprehensive pricing breakdown showing all fees, discounts, and point earnings
   Widget _buildPricingBreakdown(
-    bool isMember, 
-    double currentPrice, 
-    double totalPrice, 
-    double finalPrice, 
-    double voucherDiscount, 
-    int expectedPoints
+    bool isMember,
+    double currentPrice,
+    double totalPrice,
+    double finalPrice,
+    double voucherDiscount,
+    int expectedPoints,
   ) {
     return Container(
       decoration: BoxDecoration(
@@ -1048,10 +1065,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             children: [
               Text(
                 isMember ? 'Member price per person' : 'Guest price per person',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
               ),
               Text(
                 '\$${currentPrice.toStringAsFixed(2)}',
@@ -1068,10 +1082,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             children: [
               Text(
                 'Participants',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
               ),
               Text(
                 '$_participantCount',
@@ -1082,30 +1093,27 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               ),
             ],
           ),
-          if (!isMember && widget.activity.memberPrice != widget.activity.guestPrice) ...[
+          
+          /// Member savings display for guest users
+          if (!isMember &&
+              widget.activity.memberPrice != widget.activity.guestPrice) ...[
             const SizedBox(height: AppConstants.mediumSpacing),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   'Member savings',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.orange[600],
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.orange[600]),
                 ),
                 Text(
                   '-\$${((widget.activity.guestPrice - widget.activity.memberPrice) * _participantCount).toStringAsFixed(2)}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.orange[600],
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.orange[600]),
                 ),
               ],
             ),
           ],
-          
-          // Voucher discount section
+
+          /// Voucher discount line item
           if (voucherDiscount > 0) ...[
             const SizedBox(height: AppConstants.mediumSpacing),
             Row(
@@ -1113,7 +1121,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.card_giftcard, color: Colors.green[600], size: 16),
+                    Icon(
+                      Icons.card_giftcard,
+                      color: Colors.green[600],
+                      size: 16,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'Voucher discount',
@@ -1136,20 +1148,17 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               ],
             ),
           ],
-          
+
           const Divider(height: 32),
-          
-          // Subtotal (if voucher applied)
+
+          /// Subtotal with strikethrough when voucher applied
           if (voucherDiscount > 0) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   'Subtotal',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                 ),
                 Text(
                   '${totalPrice.toStringAsFixed(2)} CHF',
@@ -1163,7 +1172,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             ),
             const SizedBox(height: 8),
           ],
-          
+
+          /// Final total amount
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -1186,19 +1196,19 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             ],
           ),
           const SizedBox(height: AppConstants.mediumSpacing),
+          
+          /// Points earning preview
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.orange.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppConstants.filterBorderRadius),
+              borderRadius: BorderRadius.circular(
+                AppConstants.filterBorderRadius,
+              ),
             ),
             child: Row(
               children: [
-                Icon(
-                  Icons.star,
-                  color: Colors.orange[700],
-                  size: 20,
-                ),
+                Icon(Icons.star, color: Colors.orange[700], size: 20),
                 const SizedBox(width: AppConstants.mediumSpacing),
                 Text(
                   'You\'ll earn $expectedPoints points',
@@ -1216,7 +1226,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Build terms and conditions checkbox
+  /// Terms and conditions acceptance with cancellation policy
   Widget _buildTermsAndConditions() {
     return Container(
       decoration: BoxDecoration(
@@ -1272,9 +1282,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                           height: 1.5,
                         ),
                         children: [
-                          const TextSpan(
-                            text: 'I agree to the ',
-                          ),
+                          const TextSpan(text: 'I agree to the '),
                           TextSpan(
                             text: 'cancellation policy',
                             style: TextStyle(
@@ -1282,9 +1290,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const TextSpan(
-                            text: ' and ',
-                          ),
+                          const TextSpan(text: ' and '),
                           TextSpan(
                             text: 'terms of service',
                             style: TextStyle(
@@ -1293,7 +1299,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                             ),
                           ),
                           const TextSpan(
-                            text: '. Cancellations must be made 24 hours in advance for a full refund.',
+                            text:
+                                '. Cancellations must be made 24 hours in advance for a full refund.',
                           ),
                         ],
                       ),
@@ -1308,8 +1315,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Build confirm booking button
-  Widget _buildBookingButton(BookingProvider bookingProvider, double totalPrice) {
+  /// Final booking confirmation button with price display
+  Widget _buildBookingButton(
+    BookingProvider bookingProvider,
+    double totalPrice,
+  ) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
@@ -1321,7 +1331,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
+            borderRadius: BorderRadius.circular(
+              AppConstants.buttonBorderRadius,
+            ),
           ),
           elevation: 2,
         ),
@@ -1345,7 +1357,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Increment participant count
+  /// Increases participant count within capacity limits
   void _incrementParticipants() {
     if (_participantCount < widget.activity.spotsLeft) {
       setState(() {
@@ -1355,7 +1367,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     }
   }
 
-  /// Decrement participant count
+  /// Decreases participant count with minimum of 1
   void _decrementParticipants() {
     if (_participantCount > 1) {
       setState(() {
@@ -1365,9 +1377,12 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     }
   }
 
-  /// Update booking details in provider
+  /// Updates booking provider with current participant selection
   void _updateBookingDetails() {
-    final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
+    final bookingProvider = Provider.of<BookingProvider>(
+      context,
+      listen: false,
+    );
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
     bookingProvider.updateBookingDetails(
@@ -1376,20 +1391,22 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  /// Confirm the booking
-  Future<void> _confirmBooking(BookingProvider bookingProvider, double totalPrice) async {
+  /// Processes final booking with voucher application and error handling
+  Future<void> _confirmBooking(
+    BookingProvider bookingProvider,
+    double totalPrice,
+  ) async {
     setState(() {
       _isLoading = true;
     });
 
-    // Update final booking details with voucher information
-    bookingProvider.updateBookingDetails(
-      participantCount: _participantCount,
-      voucherId: _selectedVoucher?.id,
-    );
-    
-    // Set the selected voucher in the provider
-    bookingProvider.setSelectedVoucher(_selectedVoucher);
+    /// Apply voucher selection to booking details
+    bookingProvider
+      ..updateBookingDetails(
+        participantCount: _participantCount,
+        voucherId: _selectedVoucher?.id,
+      )
+      ..setSelectedVoucher(_selectedVoucher);
 
     try {
       final success = await bookingProvider.confirmBooking();
@@ -1400,24 +1417,25 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         });
 
         if (success && bookingProvider.lastCreatedBooking != null) {
-          // Navigate directly to success screen since booking is already confirmed
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => BookingSuccessScreen(
-                activity: widget.activity,
-                booking: bookingProvider.lastCreatedBooking!,
+          unawaited(
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => BookingSuccessScreen(
+                  activity: widget.activity,
+                  booking: bookingProvider.lastCreatedBooking!,
+                ),
               ),
             ),
           );
         } else {
-          // Show error message
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
                 success
                     ? 'Booking was created but details are unavailable. Please check My Bookings.'
-                    : (bookingProvider.errorMessage ?? 'Booking failed. Please try again.'),
+                    : (bookingProvider.errorMessage ??
+                          'Booking failed. Please try again.'),
               ),
               backgroundColor: success ? Colors.orange : Colors.red,
               behavior: SnackBarBehavior.floating,

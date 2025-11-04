@@ -2,26 +2,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Types of notifications
 enum NotificationType {
-  bookingReminder,      // Reminder X hours before booking
-  bookingCancellation;  // Booking was cancelled
+  bookingReminder, // Reminder X hours before booking
+  bookingCancellation; // Booking was cancelled
 
   String toJson() => name;
-  static NotificationType fromJson(String json) => 
-    NotificationType.values.firstWhere((e) => e.name == json);
+  static NotificationType fromJson(String json) =>
+      NotificationType.values.firstWhere((e) => e.name == json);
 }
 
 /// Notification model
 class AppNotification {
-  final String id;
-  final String userId;
-  final NotificationType type;
-  final String title;
-  final String body;
-  final DateTime timestamp;
-  final bool isRead;
-  final String? bookingId;
-  final String? activityName;
-
   AppNotification({
     required this.id,
     required this.userId,
@@ -48,6 +38,15 @@ class AppNotification {
       activityName: json['activityName'],
     );
   }
+  final String id;
+  final String userId;
+  final NotificationType type;
+  final String title;
+  final String body;
+  final DateTime timestamp;
+  final bool isRead;
+  final String? bookingId;
+  final String? activityName;
 
   /// To Firestore
   Map<String, dynamic> toJson() {

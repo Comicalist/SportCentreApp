@@ -3,52 +3,57 @@ import 'package:intl/intl.dart';
 import '../../../services/activity_service.dart';
 import '../../../utils/constants.dart';
 
-/// Widget for advanced filtering options with club and facility selection
+/// Advanced filtering system for activity discovery and booking optimization
+/// Provides hierarchical filtering with club-facility dependencies and availability constraints
 class AdvancedFilters extends StatelessWidget {
-  final bool isExpanded;
-  final String? selectedClub;
-  final DateTime? selectedDate;
-  final String? selectedTimeCategory;
-  final String? selectedFacility;  // ✅ Changed from selectedLocation
-  final bool onlyAvailable;
-  final Function(String?) onClubChanged;
-  final Function(DateTime?) onDateChanged;
-  final Function(String?) onTimeCategoryChanged;
-  final Function(String?) onFacilityChanged;  // ✅ Changed from onLocationChanged
-  final Function(bool) onAvailabilityChanged;
-  final VoidCallback onClearFilters;
-
   const AdvancedFilters({
     super.key,
     required this.isExpanded,
     required this.selectedClub,
     required this.selectedDate,
     required this.selectedTimeCategory,
-    required this.selectedFacility,  // ✅ Changed from selectedLocation
+    required this.selectedFacility,
     required this.onlyAvailable,
     required this.onClubChanged,
     required this.onDateChanged,
     required this.onTimeCategoryChanged,
-    required this.onFacilityChanged,  // ✅ Changed from onLocationChanged
+    required this.onFacilityChanged,
     required this.onAvailabilityChanged,
     required this.onClearFilters,
   });
+  
+  final bool isExpanded;
+  final String? selectedClub;
+  final DateTime? selectedDate;
+  final String? selectedTimeCategory;
+  final String? selectedFacility;
+  final bool onlyAvailable;
+  final Function(String?) onClubChanged;
+  final Function(DateTime?) onDateChanged;
+  final Function(String?) onTimeCategoryChanged;
+  final Function(String?) onFacilityChanged;
+  final Function(bool) onAvailabilityChanged;
+  final VoidCallback onClearFilters;
 
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       height: isExpanded ? null : 0,
-      child: isExpanded ? _buildFilterContent(context) : const SizedBox.shrink(),
+      child: isExpanded
+          ? _buildFilterContent(context)
+          : const SizedBox.shrink(),
     );
   }
 
+  /// Main filter content with hierarchical organization
+  /// Arranges filters in logical groups for optimal user workflow
   Widget _buildFilterContent(BuildContext context) {
     return Column(
       children: [
         const SizedBox(height: 16),
-        
-        // Row 1: Club and Date
+
+        // Primary location and timing filters
         Row(
           children: [
             Expanded(
@@ -60,15 +65,13 @@ class AdvancedFilters extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            Expanded(
-              child: _buildDatePicker(context),
-            ),
+            Expanded(child: _buildDatePicker(context)),
           ],
         ),
-        
+
         const SizedBox(height: 12),
-        
-        // Row 2: Time and Facility
+
+        // Secondary filters with facility dependency
         Row(
           children: [
             Expanded(
@@ -85,7 +88,10 @@ class AdvancedFilters extends StatelessWidget {
                   ? _buildStreamDropdown(
                       label: 'Facility',
                       value: selectedFacility,
-                      stream: ActivityService.getAvailableFacilitiesStreamByClub(selectedClub!),
+                      stream:
+                          ActivityService.getAvailableFacilitiesStreamByClub(
+                            selectedClub!,
+                          ),
                       onChanged: onFacilityChanged,
                     )
                   : _buildDisabledDropdown(
@@ -95,10 +101,10 @@ class AdvancedFilters extends StatelessWidget {
             ),
           ],
         ),
-        
+
         const SizedBox(height: 12),
-        
-        // Row 3: Available checkbox and Clear button
+
+        // Availability constraint and filter management
         Row(
           children: [
             Expanded(
@@ -117,9 +123,7 @@ class AdvancedFilters extends StatelessWidget {
               onPressed: onClearFilters,
               icon: const Icon(Icons.clear, size: 16),
               label: const Text('Clear filters'),
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.grey[600],
-              ),
+              style: TextButton.styleFrom(foregroundColor: Colors.grey[600]),
             ),
           ],
         ),
@@ -127,6 +131,7 @@ class AdvancedFilters extends StatelessWidget {
     );
   }
 
+  /// Static dropdown for predefined categories like time slots
   Widget _buildDropdown({
     required String label,
     required String? value,
@@ -146,15 +151,17 @@ class AdvancedFilters extends StatelessWidget {
           hint: Text(label, style: TextStyle(color: Colors.grey[600])),
           isExpanded: true,
           items: [
+            // Default "All" option for inclusive filtering
             DropdownMenuItem<String>(
-              value: null,
-              child: Text('All ${label == "Time" ? "Times" : "Facilities"}', 
-                style: TextStyle(color: Colors.grey[600])),
+              child: Text(
+                'All ${label == "Time" ? "Times" : "Facilities"}',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
             ),
-            ...items.map((item) => DropdownMenuItem<String>(
-              value: item,
-              child: Text(item),
-            )),
+            ...items.map(
+              (item) =>
+                  DropdownMenuItem<String>(value: item, child: Text(item)),
+            ),
           ],
           onChanged: onChanged,
         ),
@@ -162,6 +169,8 @@ class AdvancedFilters extends StatelessWidget {
     );
   }
 
+  /// Dynamic dropdown with real-time data streaming
+  /// Updates automatically when underlying data changes
   Widget _buildStreamDropdown({
     required String label,
     required String? value,
@@ -171,30 +180,35 @@ class AdvancedFilters extends StatelessWidget {
     return StreamBuilder<List<String>>(
       stream: stream,
       builder: (context, snapshot) {
-        List<String> items = snapshot.data ?? [];
-        
+        final items = snapshot.data ?? [];
+
         return Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(AppConstants.filterBorderRadius),
+            borderRadius: BorderRadius.circular(
+              AppConstants.filterBorderRadius,
+            ),
             border: Border.all(color: Colors.grey.shade300),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
+              // Validate selected value against current data
               value: items.contains(value) ? value : null,
               hint: Text(label, style: TextStyle(color: Colors.grey[600])),
               isExpanded: true,
               items: [
+                // Default "All" option for comprehensive filtering
                 DropdownMenuItem<String>(
-                  value: null,
-                  child: Text('All ${label == "Club" ? "Clubs" : "Facilities"}', 
-                    style: TextStyle(color: Colors.grey[600])),
+                  child: Text(
+                    'All ${label == "Club" ? "Clubs" : "Facilities"}',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
                 ),
-                ...items.map((item) => DropdownMenuItem<String>(
-                  value: item,
-                  child: Text(item),
-                )),
+                ...items.map(
+                  (item) =>
+                      DropdownMenuItem<String>(value: item, child: Text(item)),
+                ),
               ],
               onChanged: onChanged,
             ),
@@ -204,8 +218,9 @@ class AdvancedFilters extends StatelessWidget {
     );
   }
 
+  /// Date selection with booking-appropriate range constraints
   Widget _buildDatePicker(BuildContext context) {
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(AppConstants.filterBorderRadius),
@@ -226,11 +241,14 @@ class AdvancedFilters extends StatelessWidget {
                       ? DateFormat('MMM dd, yyyy').format(selectedDate!)
                       : 'Select date',
                   style: TextStyle(
-                    color: selectedDate != null ? Colors.black87 : Colors.grey[600],
+                    color: selectedDate != null
+                        ? Colors.black87
+                        : Colors.grey[600],
                     fontSize: 14,
                   ),
                 ),
               ),
+              // Clear date selection option
               if (selectedDate != null)
                 InkWell(
                   onTap: () => onDateChanged(null),
@@ -243,18 +261,20 @@ class AdvancedFilters extends StatelessWidget {
     );
   }
 
+  /// Date picker with business-appropriate constraints
+  /// Restricts selection to future dates within booking window
   Future<void> _showDatePicker(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
+    final picked = await showDatePicker(
       context: context,
       initialDate: selectedDate ?? DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      firstDate: DateTime.now(), // No past bookings
+      lastDate: DateTime.now().add(const Duration(days: 365)), // 1-year horizon
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: Colors.teal,
-            ),
+            colorScheme: Theme.of(
+              context,
+            ).colorScheme.copyWith(primary: Colors.teal),
           ),
           child: child!,
         );
@@ -265,11 +285,9 @@ class AdvancedFilters extends StatelessWidget {
     }
   }
 
-  /// Build a disabled dropdown when no club is selected
-  Widget _buildDisabledDropdown({
-    required String label,
-    required String hint,
-  }) {
+  /// Disabled facility dropdown when no club is selected
+  /// Enforces hierarchical filter dependency for data integrity
+  Widget _buildDisabledDropdown({required String label, required String hint}) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey[200],
@@ -281,10 +299,7 @@ class AdvancedFilters extends StatelessWidget {
         children: [
           Icon(Icons.location_city, size: 16, color: Colors.grey[400]),
           const SizedBox(width: 8),
-          Text(
-            hint,
-            style: TextStyle(color: Colors.grey[500], fontSize: 14),
-          ),
+          Text(hint, style: TextStyle(color: Colors.grey[500], fontSize: 14)),
         ],
       ),
     );

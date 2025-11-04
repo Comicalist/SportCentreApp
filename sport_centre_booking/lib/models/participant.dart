@@ -1,27 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'booking.dart';
 
-/// Participant model for admin management
-/// Combines booking and user information for event participant management
+/// Admin view model combining booking and user data for participant management
+/// 
+/// Aggregates booking information with user details to provide club owners
+/// and admins with comprehensive participant lists for activities. Enables
+/// efficient management of attendees, contact information, and booking status.
 class Participant {
-  final String id; // Booking ID
-  final String userId;
-  final String userName;
-  final String userEmail;
-  final String activityId;
-  final String activityTitle;
-  final DateTime activityDate;
-  final String activityTime;
-  final DateTime bookingDate;
-  final BookingStatus status;
-  final int participantCount;
-  final double amountPaid;
-  final int pointsEarned;
-  final bool isMemberBooking;
-  final String confirmationNumber;
-  final String? phoneNumber;
-  final String? notes;
-
   Participant({
     required this.id,
     required this.userId,
@@ -42,13 +27,14 @@ class Participant {
     this.notes,
   });
 
-  /// Create from Firestore booking document with user data
+  /// Create participant from booking document and user profile data
+  /// Merges Firestore booking with user information for admin views
   factory Participant.fromFirestore(
     DocumentSnapshot bookingDoc,
     Map<String, dynamic> userData,
   ) {
-    final bookingData = bookingDoc.data() as Map<String, dynamic>;
-    
+    final bookingData = bookingDoc.data()! as Map<String, dynamic>;
+
     return Participant(
       id: bookingDoc.id,
       userId: bookingData['userId'] ?? '',
@@ -59,7 +45,9 @@ class Participant {
       activityDate: _parseDateTime(bookingData['activityDate']),
       activityTime: bookingData['activityTime'] ?? '',
       bookingDate: _parseDateTime(bookingData['bookingDate']),
-      status: BookingStatusExtension.fromString(bookingData['status'] ?? 'pending'),
+      status: BookingStatusExtension.fromString(
+        bookingData['status'] ?? 'pending',
+      ),
       participantCount: bookingData['participantCount'] ?? 1,
       amountPaid: (bookingData['amountPaid'] ?? 0).toDouble(),
       pointsEarned: bookingData['pointsEarned'] ?? 0,
@@ -70,10 +58,39 @@ class Participant {
     );
   }
 
-  /// Helper method to parse DateTime from various Firestore formats
+  // Booking reference
+  final String id; // Booking ID for updates
+  final String activityId;
+  final String confirmationNumber; // Customer reference
+
+  // User identification and contact
+  final String userId;
+  final String userName; // Display name for participant lists
+  final String userEmail; // Primary contact method
+  final String? phoneNumber; // Secondary contact (optional)
+
+  // Activity details (denormalized for admin convenience)
+  final String activityTitle;
+  final DateTime activityDate; // When activity occurs
+  final String activityTime; // Time slot
+
+  // Booking details
+  final DateTime bookingDate; // When reservation was made
+  final BookingStatus status; // Current booking state
+  final int participantCount; // Number of people in this booking
+  final bool isMemberBooking; // Member vs guest pricing applied
+
+  // Financial tracking
+  final double amountPaid; // Revenue from this booking
+  final int pointsEarned; // Loyalty points awarded
+
+  // Additional information
+  final String? notes; // Special requirements or admin notes
+
+  /// Safely parse DateTime from various Firestore data formats
   static DateTime _parseDateTime(dynamic dateField) {
     if (dateField == null) return DateTime.now();
-    
+
     if (dateField is Timestamp) {
       return dateField.toDate();
     } else if (dateField is String) {
@@ -81,11 +98,11 @@ class Participant {
     } else if (dateField is DateTime) {
       return dateField;
     }
-    
+
     return DateTime.now();
   }
 
-  /// Convert to JSON for Firestore updates
+  /// Convert to Firestore format for booking updates
   Map<String, dynamic> toJson() {
     return {
       'userId': userId,
@@ -104,7 +121,7 @@ class Participant {
     };
   }
 
-  /// Create a copy with updated fields
+  /// Create updated participant with modified fields
   Participant copyWith({
     String? userName,
     String? userEmail,
@@ -140,7 +157,7 @@ class Participant {
     );
   }
 
-  /// Get status display text
+  /// Get human-readable booking status for admin displays
   String get statusDisplay {
     switch (status) {
       case BookingStatus.pending:
@@ -156,15 +173,15 @@ class Participant {
     }
   }
 
-  /// Get member type display
+  /// Get member classification for pricing context
   String get memberType => isMemberBooking ? 'Member' : 'Guest';
 
-  /// Format activity date for display
+  /// Format activity date for participant lists (DD/MM/YYYY)
   String get formattedActivityDate {
     return '${activityDate.day}/${activityDate.month}/${activityDate.year}';
   }
 
-  /// Format booking date for display
+  /// Format booking timestamp for admin tracking (DD/MM/YYYY HH:MM)
   String get formattedBookingDate {
     return '${bookingDate.day}/${bookingDate.month}/${bookingDate.year} ${bookingDate.hour}:${bookingDate.minute.toString().padLeft(2, '0')}';
   }

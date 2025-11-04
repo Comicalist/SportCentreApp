@@ -1,12 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Voucher type enumeration
-enum VoucherType {
-  fitness,
-  stuff
+/// Voucher categories determining usage and redemption rules
+enum VoucherType { 
+  fitness, // Can be used for activity bookings
+  stuff    // For merchandise/food purchases
 }
 
-/// Extension to convert VoucherType to/from string
 extension VoucherTypeExtension on VoucherType {
   String get value {
     switch (this) {
@@ -29,41 +28,13 @@ extension VoucherTypeExtension on VoucherType {
   }
 }
 
-/// Voucher model for managing club vouchers
+/// Points-based voucher system for discounts and rewards
+/// 
+/// Vouchers follow a complete lifecycle: created → purchased → used/expired
+/// Users purchase vouchers with accumulated points and can apply them to bookings
+/// for discounts. Includes anti-spam protection and expiration management.
 class Voucher {
-  // === IDENTIFIERS & RELATIONSHIPS ===
-  final String id;
-  final String clubId;              // Reference to club that created this voucher
-  final String createdBy;           // Admin user who created this voucher
-  
-  // === VOUCHER INFORMATION ===
-  final String title;               // e.g., "5 CHF off Fitness Classes"
-  final String description;         // Detailed description
-  final VoucherType type;           // fitness or stuff
-  final double amount;              // CHF value (e.g., 5.0)
-  final int pointsCost;             // Points required to purchase (e.g., 500)
-  final bool isActive;              // Can be purchased/used
-  
-  // === DENORMALIZED DATA ===
-  final String clubName;            // Club name for display
-  
-  // === TIMESTAMPS ===
-  final DateTime createdAt;
-  final DateTime updatedAt;
-  
-  // === PURCHASE & USAGE INFO (null until purchased) ===
-  final String? purchasedBy;        // User ID who bought this voucher
-  final DateTime? purchasedAt;      // When it was purchased
-  final DateTime? expiresAt;        // Expiration date (1 year from purchase)
-  
-  // === USAGE INFO (null until used) ===
-  final DateTime? usedAt;           // When it was used
-  final String? usedForBooking;     // Booking ID where this voucher was used
-  
-  // === VOUCHER CODE (generated on purchase) ===
-  final String? code;               // e.g., "SC-V-2024-1234"
-
-  Voucher({
+  const Voucher({
     required this.id,
     required this.clubId,
     required this.createdBy,
@@ -84,48 +55,9 @@ class Voucher {
     this.code,
   });
 
-  /// Check if voucher is available for purchase
-  bool get isAvailableForPurchase => isActive && purchasedBy == null;
-
-  /// Check if voucher is purchased but not used
-  bool get isPurchasedAndUnused => purchasedBy != null && usedAt == null && !isExpired;
-
-  /// Check if voucher is expired
-  bool get isExpired {
-    if (expiresAt == null) return false;
-    return DateTime.now().isAfter(expiresAt!);
-  }
-
-  /// Check if voucher is used
-  bool get isUsed => usedAt != null;
-
-  /// Check if voucher can be used for bookings
-  bool get canBeUsedForBookings => type == VoucherType.fitness && isPurchasedAndUnused;
-
-  /// Get status display text
-  String get statusDisplayText {
-    if (isUsed) return 'Used';
-    if (isExpired) return 'Expired';
-    if (isPurchasedAndUnused) return 'Available';
-    if (isAvailableForPurchase) return 'For Sale';
-    return 'Inactive';
-  }
-
-  /// Generate voucher code (SC-V-YYYY-XXXX format)
-  static String generateVoucherCode() {
-    final year = DateTime.now().year;
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final random = (timestamp % 10000).toString().padLeft(4, '0');
-    return 'SC-V-$year-$random';
-  }
-
-  /// Calculate expiration date (1 year from now)
-  static DateTime calculateExpirationDate() {
-    return DateTime.now().add(const Duration(days: 365));
-  }
-
+  /// Create Voucher from Firestore document with Timestamp conversion
   factory Voucher.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    final data = doc.data()! as Map<String, dynamic>;
     return Voucher(
       id: doc.id,
       clubId: data['clubId'] ?? '',
@@ -137,7 +69,7 @@ class Voucher {
       pointsCost: data['pointsCost'] ?? 0,
       isActive: data['isActive'] ?? true,
       clubName: data['clubName'] ?? '',
-      createdAt: data['createdAt'] != null 
+      createdAt: data['createdAt'] != null
           ? (data['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
       updatedAt: data['updatedAt'] != null
@@ -158,6 +90,7 @@ class Voucher {
     );
   }
 
+  /// Create Voucher from JSON with flexible date parsing (ISO strings or Timestamps)
   factory Voucher.fromJson(Map<String, dynamic> json) {
     return Voucher(
       id: json['id'] ?? '',
@@ -170,27 +103,126 @@ class Voucher {
       pointsCost: json['pointsCost'] ?? 0,
       isActive: json['isActive'] ?? true,
       clubName: json['clubName'] ?? '',
-      createdAt: json['createdAt'] != null
+      createdAt: json['createdAt'] is String
           ? DateTime.parse(json['createdAt'])
-          : DateTime.now(),
-      updatedAt: json['updatedAt'] != null
+          : (json['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      updatedAt: json['updatedAt'] is String
           ? DateTime.parse(json['updatedAt'])
-          : DateTime.now(),
+          : (json['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       purchasedBy: json['purchasedBy'],
-      purchasedAt: json['purchasedAt'] != null
+      purchasedAt: json['purchasedAt'] is String
           ? DateTime.parse(json['purchasedAt'])
-          : null,
-      expiresAt: json['expiresAt'] != null
+          : (json['purchasedAt'] as Timestamp?)?.toDate(),
+      expiresAt: json['expiresAt'] is String
           ? DateTime.parse(json['expiresAt'])
-          : null,
-      usedAt: json['usedAt'] != null
+          : (json['expiresAt'] as Timestamp?)?.toDate(),
+      usedAt: json['usedAt'] is String
           ? DateTime.parse(json['usedAt'])
-          : null,
+          : (json['usedAt'] as Timestamp?)?.toDate(),
       usedForBooking: json['usedForBooking'],
       code: json['code'],
     );
   }
 
+  // Core identifiers
+  final String id;
+  final String clubId; // Club that created this voucher
+  final String createdBy; // Club owner/admin who created it
+
+  // Voucher configuration
+  final String title; // Display name (e.g., "5 CHF Fitness Voucher")
+  final String description; // Terms and conditions
+  final VoucherType type; // Determines where it can be used
+  final double amount; // Discount value in CHF
+  final int pointsCost; // Points required to purchase (100 points = 1 CHF)
+  final bool isActive; // Can be disabled by club owner
+
+  // Denormalized display data
+  final String clubName; // For UI without additional queries
+
+  // Lifecycle tracking
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  // Purchase lifecycle (null until purchased)
+  final String? purchasedBy; // User who bought the voucher
+  final DateTime? purchasedAt; // When purchase occurred
+  final DateTime? expiresAt; // 1 year from purchase date
+
+  // Usage lifecycle (null until used)
+  final DateTime? usedAt; // When voucher was redeemed
+  final String? usedForBooking; // Booking ID where it was applied
+
+  // Security features
+  final String? code; // Unique voucher code (generated on purchase)
+
+  /// Check if voucher is available in marketplace
+  bool get isAvailableForPurchase => isActive && purchasedBy == null;
+
+  /// Check if voucher is owned but not yet redeemed
+  bool get isPurchasedAndUnused =>
+      purchasedBy != null && usedAt == null && !isExpired;
+
+  /// Check if voucher has passed expiration date
+  bool get isExpired {
+    if (expiresAt == null) return false;
+    return DateTime.now().isAfter(expiresAt!);
+  }
+
+  /// Check if voucher has been redeemed
+  bool get isUsed => usedAt != null;
+
+  /// Check if voucher can be applied to activity bookings
+  bool get canBeUsedForBookings =>
+      type == VoucherType.fitness && isPurchasedAndUnused;
+
+  /// Get user-friendly status for display
+  String get statusDisplayText {
+    if (isUsed) return 'Used';
+    if (isExpired) return 'Expired';
+    if (isPurchasedAndUnused) return 'Available';
+    if (isAvailableForPurchase) return 'For Sale';
+    return 'Inactive';
+  }
+
+  /// Generate unique voucher code with year and timestamp (SC-V-YYYY-XXXX)
+  static String generateVoucherCode() {
+    final year = DateTime.now().year;
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final random = (timestamp % 10000).toString().padLeft(4, '0');
+    return 'SC-V-$year-$random';
+  }
+
+  /// Calculate voucher expiration date (1 year from purchase)
+  static DateTime calculateExpirationDate() {
+    return DateTime.now().add(const Duration(days: 365));
+  }
+
+  /// Anti-spam protection: Check if user can purchase same voucher type
+  /// Enforces 3-month cooldown period per voucher type per club
+  static Future<bool> canUserPurchaseVoucherType({
+    required String userId,
+    required String clubId,
+    required VoucherType type,
+  }) async {
+    try {
+      final cutoffDate = DateTime.now().subtract(const Duration(days: 90));
+
+      final recentPurchases = await FirebaseFirestore.instance
+          .collection('vouchers')
+          .where('purchasedBy', isEqualTo: userId)
+          .where('clubId', isEqualTo: clubId)
+          .where('type', isEqualTo: type.value)
+          .where('purchasedAt', isGreaterThan: Timestamp.fromDate(cutoffDate))
+          .get();
+
+      return recentPurchases.docs.isEmpty;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Convert to Firestore format with Timestamp objects
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -214,7 +246,7 @@ class Voucher {
     };
   }
 
-  /// CopyWith method for creating modified copies
+  /// Create updated copy with modified fields (auto-updates timestamp)
   Voucher copyWith({
     String? id,
     String? clubId,
@@ -255,29 +287,5 @@ class Voucher {
       usedForBooking: usedForBooking ?? this.usedForBooking,
       code: code ?? this.code,
     );
-  }
-
-  /// Helper to check if user can purchase this voucher again
-  /// Users can't buy same voucher type for 3 months after last purchase
-  static Future<bool> canUserPurchaseVoucherType({
-    required String userId,
-    required String clubId,
-    required VoucherType type,
-  }) async {
-    try {
-      final cutoffDate = DateTime.now().subtract(const Duration(days: 90)); // 3 months
-      
-      final recentPurchases = await FirebaseFirestore.instance
-          .collection('vouchers')
-          .where('purchasedBy', isEqualTo: userId)
-          .where('clubId', isEqualTo: clubId)
-          .where('type', isEqualTo: type.value)
-          .where('purchasedAt', isGreaterThan: Timestamp.fromDate(cutoffDate))
-          .get();
-      
-      return recentPurchases.docs.isEmpty;
-    } catch (e) {
-      return false;
-    }
   }
 }

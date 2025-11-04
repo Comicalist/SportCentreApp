@@ -1,29 +1,31 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/facility.dart';
 
+/// Facility management service for club infrastructure and resource allocation
+/// Handles facility CRUD operations, booking conflict validation, and capacity management
 class FacilityService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Get all facilities for a specific club
+  /// Retrieve all facilities owned by a specific club for management interface
+  /// Provides robust error handling for individual facility parsing failures
   Future<List<Facility>> getClubFacilities({required String clubId}) async {
     try {
-
       final querySnapshot = await _firestore
           .collection('facilities')
           .where('clubId', isEqualTo: clubId)
           .get();
 
       final facilities = <Facility>[];
-      for (var doc in querySnapshot.docs) {
+      for (final doc in querySnapshot.docs) {
         try {
           final facility = Facility.fromJson(doc.data(), doc.id);
           facilities.add(facility);
         } catch (e) {
-          // Continue with other facilities instead of failing completely
+          /// Continue processing other facilities if individual parsing fails
         }
       }
 
-      // Sort manually to avoid needing composite index
+      /// Manual sorting to avoid composite index requirements during development
       facilities.sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
       return facilities;
@@ -32,7 +34,7 @@ class FacilityService {
     }
   }
 
-  /// Get count of facilities for a club (for dashboard stats)
+  /// Club dashboard metrics: count total facilities for capacity planning
   Future<int> getClubFacilityCount({required String clubId}) async {
     try {
       final querySnapshot = await _firestore
@@ -46,21 +48,21 @@ class FacilityService {
     }
   }
 
-  /// Add a new facility to a club
+  /// Create new facility for club infrastructure expansion
+  /// Returns facility with generated ID for immediate UI updates
   Future<Facility> addFacility({required Facility facility}) async {
     try {
       final docRef = await _firestore
           .collection('facilities')
           .add(facility.toJson());
 
-      // Return the facility with the generated ID
       return facility.copyWith(id: docRef.id);
     } catch (e) {
       throw Exception('Failed to add facility: $e');
     }
   }
 
-  /// Update an existing facility
+  /// Update existing facility configuration with automatic timestamp tracking
   Future<void> updateFacility({required Facility facility}) async {
     try {
       await _firestore
@@ -72,26 +74,26 @@ class FacilityService {
     }
   }
 
-  /// Delete a facility and all its activities (with validation)
+  /// Comprehensive facility deletion with booking conflict prevention
+  /// Validates no active future bookings exist before allowing removal
   Future<void> deleteFacility({required String facilityId}) async {
     try {
-      // 1️⃣ Check for active future bookings in facility's activities
+      /// Check for active future bookings to prevent data integrity issues
       final activitiesSnapshot = await _firestore
           .collection('activities')
           .where('facilityId', isEqualTo: facilityId)
           .get();
 
       final now = DateTime.now();
-      
-      for (var activityDoc in activitiesSnapshot.docs) {
+
+      for (final activityDoc in activitiesSnapshot.docs) {
         final activityData = activityDoc.data();
         final activityDate = activityData['date'] is String
             ? DateTime.parse(activityData['date'])
             : (activityData['date'] as Timestamp).toDate();
 
-        // Check if activity is in the future
+        /// Only validate future activities for active booking conflicts
         if (activityDate.isAfter(now)) {
-          // Check for active bookings
           final bookingsSnapshot = await _firestore
               .collection('bookings')
               .where('activityId', isEqualTo: activityDoc.id)
@@ -101,31 +103,31 @@ class FacilityService {
           if (bookingsSnapshot.docs.isNotEmpty) {
             throw Exception(
               'Cannot delete facility: Activity "${activityData['name']}" has ${bookingsSnapshot.docs.length} active booking(s). '
-              'Please cancel all future bookings first.'
+              'Please cancel all future bookings first.',
             );
           }
         }
       }
 
-      // 2️⃣ Delete all activities (no active future bookings at this point)
+      /// Cascade deletion: remove all facility-related activities atomically
       final batch = _firestore.batch();
-      
-      for (var activityDoc in activitiesSnapshot.docs) {
+
+      /// Remove all activities hosted in this facility
+      for (final activityDoc in activitiesSnapshot.docs) {
         batch.delete(activityDoc.reference);
       }
 
-      // 3️⃣ Delete the facility itself
+      /// Remove the facility record itself
       batch.delete(_firestore.collection('facilities').doc(facilityId));
 
-      // Commit all deletions
+      /// Execute all deletions as atomic transaction
       await batch.commit();
-      
     } catch (e) {
       throw Exception('Failed to delete facility: $e');
     }
   }
 
-  /// Get single facility by ID
+  /// Retrieve specific facility details for editing and activity management
   Future<Facility?> getFacility({required String facilityId}) async {
     try {
       final doc = await _firestore
@@ -142,7 +144,7 @@ class FacilityService {
     }
   }
 
-  /// Check if club has any facilities (for validation)
+  /// Business validation: ensure club has infrastructure before activity creation
   Future<bool> clubHasFacilities({required String clubId}) async {
     try {
       final querySnapshot = await _firestore

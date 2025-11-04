@@ -1,532 +1,782 @@
 # Sport Centre Booking App - Technical Documentation
 
-## Table of Contents
-1. [Architecture Overview](#architecture-overview)
-2. [Project Structure](#project-structure)
-3. [Authentication System](#authentication-system)
-4. [Data Models](#data-models)
-5. [State Management](#state-management)
-6. [Firebase Integration](#firebase-integration)
-7. [UI Components](#ui-components)
-8. [Validation System](#validation-system)
-9. [Navigation Flow](#navigation-flow)
-10. [Setup and Installation](#setup-and-installation)
-11. [Build and Deployment](#build-and-deployment)
+## 1. Overview
 
-## Architecture Overview
+### Purpose
+The Sport Centre Booking App is a comprehensive Flutter application designed for public access to sport centre facilities and activities. It enables users to browse, book, and manage sports activities while providing club owners and administrators with powerful management tools.
 
-### Technology Stack
-- **Framework**: Flutter 3.24+ (Dart)
-- **Backend**: Firebase (Authentication, Firestore, Storage)
-- **State Management**: Provider Pattern
-- **UI**: Material Design 3
-- **Architecture Pattern**: MVC with Provider
+### Main Features
+- **Public Activity Browsing**: View available activities without authentication
+- **User Authentication**: Email/password registration and login with email verification
+- **Activity Booking System**: Real-time booking with capacity management and waitlist functionality
+- **Points & Rewards System**: Earn points from activities, redeem for vouchers and discounts
+- **Multi-Role Access Control**: Regular users, club owners, and administrators with different permissions
+- **Club Management**: Club owners can create and manage activities for their facilities
+- **Admin Panel**: System administrators can manage users, approve clubs, and oversee participant data
+- **Real-time Notifications**: Email notifications for bookings, confirmations, and updates
+- **Calendar Integration**: View bookings in calendar format with filtering options
 
-### Core Components
+### Target Users
+- **Public Users**: Anyone wanting to book sports activities at local centres
+- **Club Owners**: Businesses managing sport facilities and offering activities
+- **System Administrators**: Platform managers overseeing the entire system
+
+### Technology Stack Summary
+- **Frontend**: Flutter 3.9.2+ with Material Design 3
+- **Backend**: Firebase (Firestore, Authentication, Storage, Functions)
+- **State Management**: Provider pattern with ChangeNotifier
+- **Real-time Features**: Firestore snapshots for live updates
+- **Notifications**: Firebase Cloud Functions with NodeMailer
+- **Image Handling**: Firebase Storage with local image picker
+- **Calendar**: table_calendar package for booking visualization
+
+## 2. Architecture & Design
+
+### System Overview
+The application follows a layered architecture pattern with clear separation of concerns:
+
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Presentation  │    │    Business     │    │      Data       │
-│     Layer       │◄──►│     Logic       │◄──►│     Layer       │
-│                 │    │                 │    │                 │
-│ • Screens       │    │ • Providers     │    │ • Services      │
-│ • Widgets       │    │ • Models        │    │ • Firebase      │
-│ • Validation    │    │ • Utils         │    │ • Local Storage │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-```
-
-## Project Structure
-
-```
-lib/
-├── main.dart                 # App entry point
-├── firebase_options.dart     # Firebase configuration
-│
-├── models/                   # Data models
-│   ├── activity.dart        # Activity entity
-│   ├── app_user.dart        # User profile model
-│   ├── booking.dart         # Booking entity
-│   └── user_profile.dart    # Extended user data
-│
-├── providers/                # State management
-│   ├── auth_provider.dart   # Authentication state
-│   └── booking_provider.dart # Booking state
-│
-├── services/                 # Business logic & API calls
-│   ├── auth_service.dart    # Firebase Auth operations
-│   ├── activity_service.dart # Activity CRUD
-│   ├── booking_service.dart  # Booking operations
-│   └── user_service.dart    # User profile management
-│
-├── screens/                  # UI screens
-│   ├── auth/                # Authentication screens
-│   │   ├── login_screen.dart
-│   │   └── email_verification_screen.dart
-│   ├── home/                # Main app screens
-│   ├── booking/             # Booking flow
-│   ├── profile/             # User profile
-│   └── admin/               # Admin panel
-│
-├── widgets/                  # Reusable UI components
-│   ├── auth/                # Auth-related widgets
-│   ├── navigation/          # Navigation components
-│   └── activity/            # Activity widgets
-│
-└── utils/                    # Utilities & helpers
-    ├── colors.dart          # App color scheme
-    ├── constants.dart       # App constants
-    ├── validation_utils.dart # Form validation
-    └── activity_helpers.dart # Activity utilities
+┌─────────────────────────────────────────────────────────────┐
+│                    Presentation Layer                       │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐│
+│  │   User Screens  │ │ Club Owner UI   │ │   Admin Panel   ││
+│  │  (Flutter UI)   │ │  (Management)   │ │  (Dashboard)    ││
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+                               │
+┌─────────────────────────────────────────────────────────────┐
+│                   Business Logic Layer                     │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐│
+│  │   Providers     │ │    Services     │ │     Models      ││
+│  │ (State Mgmt)    │ │ (API Calls)     │ │ (Data Entities) ││
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+                               │
+┌─────────────────────────────────────────────────────────────┐
+│                     Data Layer                             │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐│
+│  │   Firestore     │ │ Firebase Auth   │ │Firebase Storage ││
+│  │  (Database)     │ │ (Authentication)│ │    (Images)     ││
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+                               │
+┌─────────────────────────────────────────────────────────────┐
+│                  Cloud Functions Layer                     │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐│
+│  │ Email Services  │ │  Notifications  │ │   Migrations    ││
+│  │   (NodeJS)      │ │   (Triggers)    │ │   (Scripts)     ││
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘│
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## Authentication System
+### Main Components
+1. **Authentication Wrapper**: Manages user authentication state and routing
+2. **Main Navigation**: Bottom navigation with role-based screen access
+3. **Provider Layer**: State management for authentication, bookings, and user data
+4. **Service Layer**: Business logic and Firebase integration
+5. **Model Layer**: Data structures and serialization logic
+6. **Cloud Functions**: Server-side logic for notifications and automated tasks
 
-### Features
-- **Email/Password Authentication** with Firebase Auth
-- **Email Verification** (automatic on signup)
-- **Password Reset** via email
-- **Strong Password Requirements** (8+ chars, mixed case, numbers, symbols)
-- **Role-Based Access Control** (User, Admin, Club Owner)
-- **Session Management** with automatic token refresh
+### Design Patterns
+- **Provider Pattern**: For state management and dependency injection
+- **Repository Pattern**: Services abstract Firebase operations
+- **Factory Pattern**: Model constructors for Firestore data conversion
+- **Observer Pattern**: StreamBuilder widgets for real-time UI updates
+- **Strategy Pattern**: Different pricing strategies for members vs guests
 
-### Authentication Flow
-```mermaid
-graph TD
-    A[App Launch] --> B{User Logged In?}
-    B -->|No| C[Login Screen]
-    B -->|Yes| D{Email Verified?}
-    D -->|No| E[Email Verification Banner]
-    D -->|Yes| F[Main App]
-    C --> G[Sign Up/Sign In]
-    G --> H[Email Verification Screen]
-    H --> I[Check Email & Verify]
-    I --> F
+## 3. Data Model
+
+### Core Entities and Relationships
+```
+User (1) ────────── (*) Booking (*) ────────── (1) Activity
+  │                                               │
+  │                                               │
+  └─── (*) Notification                          │
+                                                  │
+Club (1) ────────── (*) Facility (1) ───────────┘
+  │
+  └─── (1) ClubOwner (User)
+
+Voucher (*) ────────── (1) User
+  │
+  └─── Redemption History
+
+BlockBooking (*) ────── (1) Facility
 ```
 
-### Implementation Details
+### Firestore Collections Schema
 
-#### AuthService (`lib/services/auth_service.dart`)
-- Handles all Firebase Authentication operations
-- Automatic email verification on registration
-- User document creation in Firestore
-- Error handling with user-friendly messages
+#### Users Collection (`/users/{userId}`)
+```javascript
+{
+  "uid": "firebase-user-id",
+  "email": "user@example.com",
+  "displayName": "John Doe",
+  "role": "user", // "user" | "admin" | "clubOwner"
+  "isActive": true,
+  "isClubOwner": false,
+  "isMember": false,
+  "membershipType": null,
+  "totalPoints": 150,
+  "availablePoints": 75,
+  "lifetimePointsEarned": 500,
+  "bookingHistory": ["booking1", "booking2"],
+  "upcomingBookings": ["booking3"],
+  "profileImageUrl": "",
+  "notificationPreferences": {
+    "bookingReminders": true,
+    "newActivities": true,
+    "pointsUpdates": false
+  },
+  "createdAt": Timestamp,
+  "lastLoginAt": Timestamp
+}
+```
 
-#### AuthProvider (`lib/providers/auth_provider.dart`)
-- Manages authentication state across the app
-- Provides reactive UI updates
-- Handles user profile loading
-- Role-based permission checking
+#### Activities Collection (`/activities/{activityId}`)
+```javascript
+{
+  "id": "activity-unique-id",
+  "title": "Morning Yoga Class",
+  "description": "Beginner-friendly yoga session...",
+  "category": "wellness", // "fitness" | "wellness" | "kids" | "workshops"
+  "clubId": "club-reference-id",
+  "clubName": "Downtown Fitness Center",
+  "facilityId": "facility-reference-id",
+  "facilityName": "Studio A",
+  "price": 15.00,
+  "memberPrice": 12.00,
+  "guestPrice": 18.00,
+  "duration": 60,
+  "capacity": 12,
+  "bookedCount": 8,
+  "startTime": Timestamp,
+  "endTime": Timestamp,
+  "timeCategory": "Morning", // "Morning" | "Afternoon" | "Evening"
+  "isActive": true,
+  "createdBy": "club-owner-uid",
+  "pointsReward": 25,
+  "equipmentRequired": ["yoga mat", "water bottle"],
+  "skillLevel": "beginner",
+  "instructor": "Sarah Johnson",
+  "imageUrl": "https://storage.googleapis.com/...",
+  "createdAt": Timestamp,
+  "updatedAt": Timestamp
+}
+```
 
-### Code Example
+#### Bookings Collection (`/bookings/{bookingId}`)
+```javascript
+{
+  "id": "booking-unique-id",
+  "activityId": "activity-reference-id",
+  "userId": "user-reference-id",
+  "activityTitle": "Morning Yoga Class",
+  "userName": "John Doe",
+  "userEmail": "john@example.com",
+  "clubId": "club-reference-id",
+  "clubName": "Downtown Fitness Center",
+  "facilityId": "facility-reference-id",
+  "facilityName": "Studio A",
+  "status": "confirmed", // "confirmed" | "cancelled" | "completed" | "waitlist"
+  "bookingDate": Timestamp,
+  "activityStartTime": Timestamp,
+  "activityEndTime": Timestamp,
+  "originalPrice": 15.00,
+  "pointsUsed": 50,
+  "pointsDiscount": 5.00,
+  "totalPrice": 10.00,
+  "pointsEarned": 25,
+  "participantCount": 1,
+  "isMember": false,
+  "confirmationNumber": "ABC123DEF",
+  "cancellationReason": null,
+  "notes": null,
+  "createdAt": Timestamp,
+  "updatedAt": Timestamp
+}
+```
+
+#### Clubs Collection (`/clubs/{clubId}`)
+```javascript
+{
+  "id": "club-unique-id",
+  "name": "Downtown Fitness Center",
+  "description": "Modern fitness facility...",
+  "address": "123 Main St, City, State",
+  "phone": "+1234567890",
+  "email": "info@downtownfitness.com",
+  "website": "https://downtownfitness.com",
+  "ownerId": "club-owner-uid",
+  "isApproved": true,
+  "isActive": true,
+  "imageUrl": "https://storage.googleapis.com/...",
+  "openingHours": {
+    "monday": {"open": "06:00", "close": "22:00"},
+    "tuesday": {"open": "06:00", "close": "22:00"}
+  },
+  "amenities": ["parking", "locker rooms", "wifi"],
+  "createdAt": Timestamp,
+  "updatedAt": Timestamp
+}
+```
+
+### Data Flow
+1. **User Registration**: Creates user document with default points and preferences
+2. **Activity Creation**: Club owners create activities linked to approved clubs and facilities
+3. **Booking Process**: Creates booking, updates activity capacity, awards points to user
+4. **Real-time Updates**: Firestore snapshots update UI automatically across all connected clients
+
+## 4. Installation & Setup
+
+### Prerequisites
+- Flutter SDK 3.9.2 or higher
+- Dart SDK (included with Flutter)
+- Firebase CLI tools
+- Node.js 18+ (for Cloud Functions)
+- Android Studio / Xcode for mobile development
+- Chrome browser for web development
+
+### Step-by-Step Setup
+
+#### 1. Clone and Install Dependencies
+```bash
+git clone <repository-url>
+cd sport_centre_booking
+flutter pub get
+```
+
+#### 2. Firebase Project Setup
+```bash
+# Install Firebase CLI
+npm install -g firebase-tools
+
+# Login to Firebase
+firebase login
+
+# Initialize Firebase (if not already done)
+firebase init
+
+# Configure FlutterFire
+dart pub global activate flutterfire_cli
+flutterfire configure
+```
+
+#### 3. Environment Configuration
+Create `.env` file in project root:
+```env
+# Firebase Configuration
+FIREBASE_PROJECT_ID=sport-centre-booking-b96ce
+FIREBASE_API_KEY=AIzaSyDXo9zB1VQ239vCgzWpwhwcuwEfV5YwNMU
+FIREBASE_AUTH_DOMAIN=sportcentreapp.firebaseapp.com
+FIREBASE_STORAGE_BUCKET=sportcentreapp.firebasestorage.app
+
+# Email Service (for Cloud Functions)
+EMAIL_USER=your-gmail@gmail.com
+EMAIL_PASSWORD=your-app-password
+
+# Development Settings
+DEBUG_MODE=true
+LOG_LEVEL=debug
+```
+
+#### 4. Firebase Rules Configuration
+```bash
+# Deploy Firestore rules
+firebase deploy --only firestore:rules
+
+# Deploy Cloud Functions
+cd functions
+npm install
+cd ..
+firebase deploy --only functions
+```
+
+#### 5. Run the Application
+```bash
+# Web development
+flutter run -d chrome
+
+# Android development
+flutter run -d android
+
+# iOS development
+flutter run -d ios
+
+# Release build
+flutter build apk --release
+```
+
+### Initial Data Setup
+```bash
+# Access admin panel in app and run seeding tools
+# Or manually create test data in Firebase Console
+```
+
+## 5. API Documentation
+
+### Firebase Authentication Endpoints
+
+#### User Registration
 ```dart
-// Register new user with automatic email verification
-static Future<UserCredential?> registerWithEmail(
+// AuthService.registerWithEmail()
+Future<UserCredential?> registerWithEmail(
   String email,
   String password,
   String displayName, {
   bool isClubOwner = false,
-}) async {
-  final result = await _auth.createUserWithEmailAndPassword(
-    email: email.trim(),
-    password: password,
-  );
-  
-  // Create user profile and send verification
-  if (result.user != null) {
-    await _createUserDocument(result.user!, displayName, isClubOwner: isClubOwner);
-    await result.user!.sendEmailVerification();
-  }
-  
-  return result;
-}
+})
 ```
 
-## Data Models
-
-### AppUser Model
+#### User Login
 ```dart
-class AppUser {
-  final String uid;
-  final String email;
-  final String displayName;
-  final DateTime createdAt;
-  final DateTime lastLoginAt;
-  final String role;
-  final bool isActive;
-  
-  // Points and rewards
-  final int totalPoints;
-  final int availablePoints;
-  final int lifetimePointsEarned;
-  
-  // Membership
-  final bool isMember;
-  final String? membershipType;
-  final DateTime? membershipExpiry;
-  
-  // Permissions
-  final bool isClubOwner;
-  
-  // Profile data
-  final List<String> bookingHistory;
-  final List<String> upcomingBookings;
-  final String profileImageUrl;
-}
-```
-
-### Activity Model
-```dart
-class Activity {
-  final String id;
-  final String name;
-  final String description;
-  final String category;
-  final double price;
-  final int duration; // minutes
-  final int maxParticipants;
-  final int currentParticipants;
-  final String location;
-  final String imageUrl;
-  final DateTime startTime;
-  final DateTime endTime;
-  final bool isActive;
-  final String createdBy; // Club owner ID
-  final int pointsReward;
-}
-```
-
-### Booking Model
-```dart
-class Booking {
-  final String id;
-  final String activityId;
-  final String userId;
-  final DateTime bookingDate;
-  final BookingStatus status;
-  final double totalPrice;
-  final int pointsUsed;
-  final int pointsEarned;
-  final DateTime createdAt;
-  final String? notes;
-}
-
-enum BookingStatus {
-  confirmed,
-  cancelled,
-  completed,
-  waitlist
-}
-```
-
-## State Management
-
-### Provider Pattern Implementation
-The app uses the Provider pattern for state management, providing:
-- **Reactive UI updates** when state changes
-- **Centralized business logic** in provider classes
-- **Easy testing** and mocking capabilities
-- **Memory efficient** state handling
-
-### Key Providers
-
-#### AuthProvider
-- Manages user authentication state
-- Handles user profile data
-- Provides role-based access control
-- Notifies UI of authentication changes
-
-#### BookingProvider
-- Manages booking flow state
-- Handles booking operations
-- Calculates pricing and points
-- Tracks booking history
-
-### Usage Example
-```dart
-// In main.dart
-MultiProvider(
-  providers: [
-    ChangeNotifierProvider(create: (_) => AuthProvider()),
-    ChangeNotifierProvider(create: (_) => BookingProvider()),
-  ],
-  child: MaterialApp(...)
-)
-
-// In UI components
-Consumer<AuthProvider>(
-  builder: (context, authProvider, child) {
-    return authProvider.isLoggedIn 
-        ? MainNavigation() 
-        : LoginScreen();
-  },
+// AuthService.signInWithEmail()
+Future<UserCredential?> signInWithEmail(
+  String email,
+  String password,
 )
 ```
 
-## Firebase Integration
+### Firestore API Operations
 
-### Services Used
-1. **Firebase Authentication**
-   - Email/password authentication
-   - Email verification
-   - Password reset
+#### Activity Management
+```dart
+// Get all activities
+Stream<List<Activity>> getActivities({
+  String? category,
+  DateTime? startDate,
+  bool? availableOnly,
+})
 
-2. **Cloud Firestore**
-   - User profiles
-   - Activity data
-   - Booking records
-   - Real-time updates
+// Create activity (club owners only)
+Future<String> createActivity(Activity activity, String currentUserId)
 
-3. **Firebase Storage** (planned)
-   - User profile images
-   - Activity images
+// Update activity
+Future<void> updateActivity(Activity activity, String currentUserId)
 
-### Security Rules
+// Delete activity
+Future<void> deleteActivity(String activityId, String clubId, String currentUserId)
+```
+
+#### Booking Management
+```dart
+// Create booking
+Future<String> createBooking({
+  required String activityId,
+  required String userId,
+  int pointsToUse = 0,
+  int participantCount = 1,
+  String? notes,
+})
+
+// Get user bookings
+Stream<List<Booking>> getUserBookings(String userId)
+
+// Cancel booking
+Future<void> cancelBooking(String bookingId, String userId)
+
+// Update booking status
+Future<void> updateBookingStatus(String bookingId, BookingStatus status)
+```
+
+### Example API Responses
+
+#### Activity List Response
+```json
+{
+  "activities": [
+    {
+      "id": "activity-123",
+      "title": "Morning Yoga",
+      "category": "wellness",
+      "price": 15.00,
+      "startTime": "2024-01-15T09:00:00Z",
+      "capacity": 12,
+      "bookedCount": 8,
+      "isAvailable": true
+    }
+  ]
+}
+```
+
+#### Booking Creation Response
+```json
+{
+  "bookingId": "booking-456",
+  "confirmationNumber": "ABC123DEF",
+  "status": "confirmed",
+  "totalPrice": 10.00,
+  "pointsEarned": 25,
+  "pointsUsed": 50
+}
+```
+
+## 6. Configuration & Deployment
+
+### Environment Structure
+- **Development**: Local Flutter development with Firebase emulators
+- **Staging**: Firebase project with test data for QA testing
+- **Production**: Live Firebase project with production data
+
+### Build Commands
+```bash
+# Development build
+flutter run --debug
+
+# Release builds
+flutter build apk --release
+flutter build ios --release
+flutter build web --release
+
+# Firebase deployment
+firebase deploy --only hosting
+firebase deploy --only functions
+firebase deploy --only firestore:rules
+```
+
+### CI/CD Pipeline (GitHub Actions)
+```yaml
+name: Deploy to Firebase
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: subosito/flutter-action@v2
+      - run: flutter pub get
+      - run: flutter test
+      - run: flutter build web
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+```
+
+### Secrets Management
+- Firebase configuration keys stored in environment variables
+- Email service credentials in Firebase Functions environment
+- API keys managed through Firebase project settings
+- Sensitive data encrypted in Firebase security rules
+
+## 7. Codebase Structure
+
+### Folder Layout
+```
+lib/
+├── main.dart                           # App entry point & configuration
+├── firebase_options.dart               # Firebase configuration
+├── models/                             # Data models
+│   ├── activity.dart                   # Activity entity
+│   ├── booking.dart                    # Booking entity  
+│   ├── user_profile.dart               # User profile entity
+│   ├── club.dart                       # Club entity
+│   ├── facility.dart                   # Facility entity
+│   ├── participant.dart                # Participant view model
+│   └── voucher.dart                    # Voucher/rewards entity
+├── services/                           # Business logic & Firebase integration
+│   ├── auth_service.dart               # Authentication operations
+│   ├── activity_service.dart           # Activity CRUD operations
+│   ├── booking_service.dart            # Booking management
+│   ├── club_service.dart               # Club management
+│   ├── participant_service.dart        # Admin participant management
+│   ├── user_service.dart               # User profile operations
+│   └── image_upload_service.dart       # File upload handling
+├── providers/                          # State management
+│   ├── auth_provider.dart              # Authentication state
+│   └── booking_provider.dart           # Booking state & flow
+├── screens/                            # UI screens
+│   ├── home/                           # Public activity browsing
+│   ├── auth/                           # Login/register/verification
+│   ├── booking/                        # Booking management
+│   ├── profile/                        # User profile
+│   ├── rewards/                        # Points and vouchers
+│   ├── admin/                          # Admin panel
+│   ├── club_owner/                     # Club management
+│   └── facilities/                     # Facility management
+├── widgets/                            # Reusable UI components
+│   ├── auth/                           # Authentication widgets
+│   ├── activity/                       # Activity display components
+│   ├── navigation/                     # Navigation components
+│   └── notifications/                  # Notification widgets
+└── utils/                              # Helper functions & constants
+    ├── constants.dart                  # App-wide constants
+    ├── colors.dart                     # Color scheme
+    ├── activity_seeder.dart            # Data seeding utilities
+    └── debug_clubs.dart                # Development debugging tools
+
+functions/                              # Firebase Cloud Functions
+├── index.js                           # Main functions file
+├── package.json                       # Node.js dependencies
+└── migrate_user_preferences.js        # Database migration script
+
+firestore.rules                        # Database security rules
+firestore.indexes.json                 # Database indexes
+firebase.json                          # Firebase project configuration
+```
+
+### Naming Conventions
+- **Files**: snake_case (e.g., `activity_service.dart`)
+- **Classes**: PascalCase (e.g., `ActivityService`)
+- **Variables**: camelCase (e.g., `activityList`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `MAX_CAPACITY`)
+- **Private members**: Leading underscore (e.g., `_firestore`)
+
+### Key Scripts
+```bash
+# Development
+flutter run -d chrome
+flutter test
+flutter analyze
+
+# Data management
+firebase firestore:delete --all-collections  # Clear database
+# Use in-app admin seeding tools for test data
+
+# Deployment
+firebase deploy
+flutter build web --release
+```
+
+## 8. Business Logic & Core Features
+
+### Activity Booking Workflow
+1. **User browses activities**: Public access to activity listings with real-time availability
+2. **Authentication check**: Anonymous users prompted to register/login before booking
+3. **Booking validation**: Check activity capacity, user eligibility, and payment options
+4. **Payment processing**: Calculate pricing with member discounts and points redemption
+5. **Booking confirmation**: Create booking record, update activity capacity, send notifications
+6. **Points award**: Add points to user account based on activity completion
+
+### Points & Rewards System
+```dart
+class PointValues {
+  static const int activityCompletion = 25;
+  static const int firstTimeBonus = 50;
+  static const int weeklyStreak = 15;
+  static const int monthlyStreak = 100;
+  static const double pointsToMoney = 0.01; // £0.01 per point
+}
+```
+
+### Member vs Guest Pricing
+- **Members**: Reduced rates on all activities, enhanced point earning multipliers
+- **Guests**: Standard rates, basic point earning, promotional access to select activities
+- **Dynamic pricing**: Activities can have different member/guest pricing structures
+
+### Real-time Capacity Management
+- Firestore transactions ensure atomic booking operations
+- Activity capacity updated immediately upon booking/cancellation
+- Waitlist functionality for fully booked activities
+- Automatic capacity restoration on booking cancellations
+
+### Club Owner Activity Management
+- Only approved clubs can create activities
+- Activities must be linked to active facilities owned by the club
+- Capacity validation against facility maximum capacity
+- Automatic activity categorization and time-based filtering
+
+### Admin Oversight Features
+- Club approval workflow for new businesses
+- Participant management with real-time status updates
+- System analytics and reporting capabilities
+- Data seeding tools for testing and development
+
+## 9. Security & Privacy
+
+### Authentication & Authorization
+- **Firebase Authentication**: Secure email/password authentication with email verification
+- **Role-based access control**: Users, club owners, and administrators with different permissions
+- **JWT tokens**: Automatic token management through Firebase SDK
+- **Session management**: Secure session handling with automatic token refresh
+
+### Firestore Security Rules
 ```javascript
-// Firestore Security Rules
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // Users can read/write their own data
     match /users/{userId} {
-      allow read, write: if request.auth != null 
-          && request.auth.uid == userId;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && isAdmin(request.auth.uid);
     }
     
-    // Activities are publicly readable
+    // Activities are publicly readable, club owners can create/edit
     match /activities/{activityId} {
       allow read: if true;
-      allow write: if request.auth != null 
-          && isClubOwner(request.auth.uid);
+      allow create, update: if request.auth != null && 
+        (isClubOwner(request.auth.uid) || isAdmin(request.auth.uid));
+      allow delete: if request.auth != null && 
+        (resource.data.createdBy == request.auth.uid || isAdmin(request.auth.uid));
     }
     
-    // Bookings are user-specific
+    // Bookings are user-specific with admin override
     match /bookings/{bookingId} {
-      allow read, write: if request.auth != null 
-          && request.auth.uid == resource.data.userId;
+      allow read, write: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+      allow read, write: if request.auth != null && isAdmin(request.auth.uid);
     }
   }
-  
-  function isClubOwner(userId) {
-    return exists(/databases/$(database)/documents/users/$(userId))
-        && get(/databases/$(database)/documents/users/$(userId)).data.isClubOwner == true;
-  }
 }
 ```
 
-## UI Components
+### Data Protection
+- **PII encryption**: Sensitive user data protected through Firebase security
+- **GDPR compliance**: User data deletion and export capabilities
+- **Audit trails**: All booking and profile changes logged with timestamps
+- **Access logging**: Admin actions tracked for security monitoring
 
-### Screen Hierarchy
-```
-AuthWrapper
-├── LoginScreen (unauthenticated)
-└── MainNavigation (authenticated)
-    ├── HomeScreen
-    ├── BookingsScreen
-    ├── RewardsScreen
-    ├── ProfileScreen
-    ├── AdminPanel (admin only)
-    └── ClubOwnerPanel (club owners only)
-```
+### Secure Coding Practices
+- **Input validation**: All user inputs validated on client and server side
+- **SQL injection prevention**: Firestore NoSQL structure prevents injection attacks
+- **XSS protection**: Flutter framework provides automatic XSS protection
+- **Secure file uploads**: Image uploads validated for file type and size limits
 
-### Key Widgets
+## 10. Testing
 
-#### EmailVerificationBanner
-- Shows persistent notification for unverified users
-- Provides quick access to verification screen
-- Automatically hides when email is verified
+### Test Strategy
+- **Unit Tests**: Model serialization, business logic validation, utility functions
+- **Widget Tests**: UI component behavior, user interaction flows
+- **Integration Tests**: End-to-end booking workflows, Firebase integration
+- **Manual Testing**: Cross-platform compatibility, performance validation
 
-#### PasswordStrengthIndicator
-- Real-time password strength analysis
-- Visual progress bar with color coding
-- Requirements checklist with live updates
-
-#### ActivityCard
-- Displays activity information
-- Handles booking actions
-- Shows availability and pricing
-
-### Design System
-- **Material Design 3** principles
-- **Consistent color scheme** (Teal primary)
-- **Responsive layouts** for different screen sizes
-- **Accessibility support** with semantic widgets
-
-## Validation System
-
-### Password Requirements
-- Minimum 8 characters
-- At least 1 uppercase letter
-- At least 1 lowercase letter  
-- At least 1 number
-- At least 1 special character
-
-### Name Validation
-- 2-40 characters allowed
-- Letters, spaces, hyphens, apostrophes only
-- Real-time character counting
-
-### Implementation
+### Testing Frameworks
 ```dart
-// ValidationUtils class provides all validation logic
-class ValidationUtils {
-  static String? validatePassword(String? password) {
-    if (password == null || password.isEmpty) return 'Required';
-    if (password.length < 8) return 'Minimum 8 characters';
-    if (!password.contains(RegExp(r'[A-Z]'))) return 'Need uppercase';
-    // ... additional checks
-    return null; // Valid
-  }
-  
-  static int getPasswordStrength(String password) {
-    // Returns 0-100 strength score
-  }
-}
+dependencies:
+  flutter_test:
+    sdk: flutter
+  firebase_core: ^3.6.0
+  fake_cloud_firestore: ^2.4.1  # Firestore testing
+  firebase_auth_mocks: ^0.8.0   # Auth testing
 ```
 
-## Navigation Flow
-
-### App Navigation Structure
-```
-Main App
-├── Bottom Navigation
-│   ├── Home (Activities)
-│   ├── My Bookings
-│   ├── Rewards
-│   └── Profile
-├── Admin Panel (conditional)
-└── Club Owner Panel (conditional)
-
-Authentication Flow
-├── Login Screen
-├── Email Verification Screen
-└── Password Reset Dialog
-```
-
-### Route Management
-- Uses Flutter's built-in navigation
-- Modal routes for authentication
-- Bottom navigation for main app sections
-- Conditional routes based on user roles
-
-## Setup and Installation
-
-### Prerequisites
-- Flutter SDK 3.24+
-- Dart SDK 3.0+
-- Android Studio / Xcode (for mobile development)
-- Firebase account and project
-
-### Installation Steps
-
-1. **Clone Repository**
-```bash
-git clone <repository-url>
-cd sport_centre_booking
-```
-
-2. **Install Dependencies**
-```bash
-flutter pub get
-```
-
-3. **Firebase Setup**
-   - Create Firebase project
-   - Enable Authentication (Email/Password)
-   - Setup Firestore Database
-   - Add configuration files:
-     - `android/app/google-services.json`
-     - `ios/Runner/GoogleService-Info.plist`
-
-4. **Run Application**
-```bash
-flutter run
-```
-
-### Environment Configuration
-```dart
-// firebase_options.dart (auto-generated)
-static const FirebaseOptions currentPlatform = FirebaseOptions(
-  apiKey: "your-api-key",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project-id",
-  // ... other config
-);
-```
-
-## Build and Deployment
-
-### Debug Build
-```bash
-flutter run --debug
-```
-
-### Release Build
-```bash
-# Android
-flutter build apk --release
-flutter build appbundle --release
-
-# iOS  
-flutter build ios --release
-```
-
-### Testing
+### Running Tests
 ```bash
 # Unit tests
 flutter test
 
+# Widget tests
+flutter test test/widget_test.dart
+
 # Integration tests
-flutter test integration_test/
+flutter drive --target=test_driver/app.dart
+
+# Test coverage
+flutter test --coverage
+genhtml coverage/lcov.info -o coverage/html
 ```
 
-### Performance Optimization
-- **Lazy loading** of user data
-- **Efficient state management** with Provider
-- **Image caching** for activity images
-- **Pagination** for large data sets
-- **Offline support** with Firestore cache
+### Example Test Case
+```dart
+// test/models/activity_test.dart
+import 'package:flutter_test/flutter_test.dart';
+import 'package:sport_centre_booking/models/activity.dart';
 
-## Security Considerations
+void main() {
+  group('Activity Model Tests', () {
+    test('Activity serialization to/from JSON', () {
+      final activity = Activity(
+        id: 'test-123',
+        title: 'Test Yoga',
+        category: 'wellness',
+        price: 15.00,
+        capacity: 12,
+        bookedCount: 5,
+      );
+      
+      final json = activity.toJson();
+      final recreated = Activity.fromJson(json);
+      
+      expect(recreated.id, equals(activity.id));
+      expect(recreated.title, equals(activity.title));
+      expect(recreated.isAvailable, isTrue);
+      expect(recreated.spotsRemaining, equals(7));
+    });
+  });
+}
+```
 
-1. **Authentication Security**
-   - Strong password requirements enforced
-   - Email verification mandatory
-   - Secure token management
+## 11. Maintenance & Monitoring
 
-2. **Data Protection**
-   - Firestore security rules
-   - User data isolation
-   - Role-based access control
+### Logging & Monitoring
+```dart
+// Application-wide logging
+final logger = Logger(
+  printer: PrettyPrinter(
+    dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart,
+  ),
+);
 
-3. **Input Validation**
-   - Client-side validation for UX
-   - Server-side validation in Firestore rules
-   - SQL injection prevention (NoSQL)
+// Usage throughout app
+logger.i('User successfully logged in');
+logger.w('Activity capacity approaching limit');
+logger.e('Booking creation failed', error: e, stackTrace: stackTrace);
+```
 
-## Troubleshooting
+### Firebase Monitoring
+- **Performance Monitoring**: Automatic performance tracking through Firebase
+- **Crashlytics**: Crash reporting and analytics for production issues
+- **Analytics**: User behavior tracking and conversion funnel analysis
+- **Remote Config**: Feature flags and A/B testing capabilities
 
-### Common Issues
+### Error Tracking
+```dart
+// Custom exception handling
+class BookingException implements Exception {
+  final String message;
+  final String code;
+  BookingException(this.message, this.code);
+}
 
-1. **Firebase Configuration**
-   - Ensure `google-services.json` is in correct location
-   - Verify SHA fingerprints for Android
-   - Check bundle ID for iOS
+// Error boundaries in UI
+Widget build(BuildContext context) {
+  return FutureBuilder<List<Activity>>(
+    future: _loadActivities(),
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        logger.e('Failed to load activities', error: snapshot.error);
+        return ErrorWidget('Unable to load activities. Please try again.');
+      }
+      // ... success handling
+    },
+  );
+}
+```
 
-2. **Authentication Issues**
-   - Verify email/password is enabled in Firebase Console
-   - Check network connectivity
-   - Clear app data if persistent issues
+### Known Issues & Limitations
+1. **Offline functionality**: Limited offline capabilities, requires internet for most operations
+2. **Large dataset performance**: UI pagination needed for clubs with 1000+ activities
+3. **Image optimization**: Large images may impact performance on slower connections
+4. **Concurrent booking conflicts**: Rare edge cases with simultaneous bookings for last available spot
 
-3. **Build Issues**
-   - Run `flutter clean && flutter pub get`
-   - Update Flutter SDK if needed
-   - Check platform-specific requirements
+### Update Process
+1. **Development testing**: Feature development in local environment
+2. **Staging deployment**: Firebase staging project for QA validation
+3. **Production deployment**: Automated deployment through CI/CD pipeline
+4. **Rollback procedure**: Firebase provides instant rollback capabilities for critical issues
 
-### Debug Tools
-- Flutter Inspector for UI debugging
-- Firebase Console for backend monitoring
-- Provider DevTools for state management
-- Performance Profiler for optimization
+## 12. Contributors & Contact
+
+### Main Contributors
+- **Lead Developer**: Primary architect and Flutter development
+- **Firebase Integration**: Backend services and Cloud Functions implementation
+- **UI/UX Design**: Material Design 3 implementation and user experience optimization
+
+### Maintainers
+- **Technical Lead**: Overall architecture decisions and code review
+- **DevOps Engineer**: Firebase configuration and deployment pipeline
+- **Product Manager**: Feature prioritization and business requirements
+
+### Support Contact
+- **Technical Support**: For development and integration questions
+- **Business Inquiries**: For feature requests and commercial licensing
+- **Bug Reports**: GitHub issues or direct email for critical problems
+
+### Documentation Maintenance
+- **Last Updated**: January 2024
+- **Version**: 1.0.5
+- **Review Schedule**: Quarterly updates with major releases
+- **Contribution Guidelines**: Follow Flutter style guide and include comprehensive tests
 
 ---
 
-This technical documentation provides comprehensive coverage of the Sport Centre Booking app's architecture, implementation details, and setup procedures. For user-facing documentation, see the User Guide.
+This technical documentation provides a comprehensive overview of the Sport Centre Booking App architecture, implementation details, and operational procedures. The application successfully combines modern Flutter development practices with Firebase backend services to deliver a scalable, real-time booking platform for sports and fitness activities.

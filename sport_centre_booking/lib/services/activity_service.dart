@@ -2,13 +2,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/activity.dart';
 import 'blocking_service.dart';
 
+/// Activity management service for sport centre booking system
+/// Handles activity CRUD operations, filtering, authorization, and conflict detection
 class ActivityService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static const String _collection = 'activities';
 
   // ========== READ OPERATIONS ==========
 
-  /// Get all activities from Firestore
+  /// Real-time stream of all activities ordered chronologically
   static Stream<List<Activity>> getActivities() {
     return _firestore
         .collection(_collection)
@@ -16,14 +18,14 @@ class ActivityService {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.map((doc) {
-        Map<String, dynamic> data = doc.data();
+        final data = doc.data();
         data['id'] = doc.id; // Use Firestore document ID
         return Activity.fromJson(data);
       }).toList();
     });
   }
 
-  /// Get activities filtered by category
+  /// Activity catalog filtered by category with real-time updates
   static Stream<List<Activity>> getActivitiesByCategory(String category) {
     if (category == 'All') {
       return getActivities();
@@ -36,14 +38,15 @@ class ActivityService {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.map((doc) {
-        Map<String, dynamic> data = doc.data();
+        final data = doc.data();
         data['id'] = doc.id;
         return Activity.fromJson(data);
       }).toList();
     });
   }
 
-  /// Get all activities with advanced filtering
+  /// Advanced activity discovery with multi-criteria filtering
+  /// Supports search, availability, club, facility, date, and time filters
   static Stream<List<Activity>> getFilteredActivities({
     String? category,
     String? clubId,
@@ -56,17 +59,17 @@ class ActivityService {
   }) {
     return getActivities().map((activities) {
       return activities.where((activity) {
-        // Filter out past activities - only show future activities
+        /// Exclude past activities from public booking interface
         if (activity.isPast) {
           return false;
         }
 
-        // Category filter
+        /// Category-based activity filtering
         if (category != null && category != 'All' && activity.category != category) {
           return false;
         }
 
-        // Club filter (by ID or name)
+        /// Club-specific filtering for targeted discovery
         if (clubId != null && clubId.isNotEmpty && activity.clubId != clubId) {
           return false;
         }
@@ -75,12 +78,12 @@ class ActivityService {
           return false;
         }
 
-        // Facility filter (by name since dropdown returns facilityName)
+        /// Facility-based filtering using display name
         if (facilityId != null && facilityId.isNotEmpty && activity.facilityName != facilityId) {
           return false;
         }
 
-        // Date filter (exact date match)
+        /// Exact date matching for calendar-based browsing
         if (date != null) {
           final activityDate = DateTime(activity.date.year, activity.date.month, activity.date.day);
           final filterDate = DateTime(date.year, date.month, date.day);
@@ -89,12 +92,12 @@ class ActivityService {
           }
         }
 
-        // Time category filter
+        /// Time-of-day categorization filtering
         if (timeCategory != null && timeCategory.isNotEmpty && activity.timeCategory != timeCategory) {
           return false;
         }
 
-        // Search query filter (search in name, description, club, facility)
+        /// Full-text search across multiple activity attributes
         if (searchQuery != null && searchQuery.isNotEmpty) {
           final query = searchQuery.toLowerCase();
           if (!activity.name.toLowerCase().contains(query) &&
@@ -106,7 +109,7 @@ class ActivityService {
           }
         }
 
-        // Availability filter
+        /// Booking availability filtering for immediate bookings
         if (onlyAvailable && !activity.hasAvailableSpots) {
           return false;
         }
@@ -116,12 +119,12 @@ class ActivityService {
     });
   }
 
-  /// Get a single activity by ID
+  /// Retrieve single activity with full details for booking
   static Future<Activity?> getActivity(String activityId) async {
     try {
       final doc = await _firestore.collection(_collection).doc(activityId).get();
       if (doc.exists) {
-        Map<String, dynamic> data = doc.data()!;
+        final data = doc.data()!;
         data['id'] = doc.id;
         return Activity.fromJson(data);
       }
@@ -131,14 +134,14 @@ class ActivityService {
     }
   }
 
-  /// Get single activity by ID (alias)
+  /// Activity lookup by ID - convenience method for consistent API
   static Future<Activity?> getActivityById(String activityId) async {
     return getActivity(activityId);
   }
 
   // ========== CLUB OWNER OPERATIONS ==========
 
-  /// Get activities for a specific club (for club owners)
+  /// Club owner's activity management dashboard with chronological ordering
   static Stream<List<Activity>> getActivitiesByClub(String clubId) {
     return _firestore
         .collection(_collection)
@@ -147,14 +150,14 @@ class ActivityService {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.map((doc) {
-        Map<String, dynamic> data = doc.data();
+        final data = doc.data();
         data['id'] = doc.id;
         return Activity.fromJson(data);
       }).toList();
     });
   }
 
-  /// Get activities for a specific facility
+  /// Facility-specific activity schedule for resource management
   static Stream<List<Activity>> getActivitiesByFacility(String facilityId) {
     return _firestore
         .collection(_collection)
@@ -163,14 +166,14 @@ class ActivityService {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.map((doc) {
-        Map<String, dynamic> data = doc.data();
+        final data = doc.data();
         data['id'] = doc.id;
         return Activity.fromJson(data);
       }).toList();
     });
   }
 
-  /// Get count of activities for a club (for dashboard stats)
+  /// Club activity metrics for dashboard statistics
   static Future<int> getClubActivityCount(String clubId) async {
 
       final snapshot = await _firestore
@@ -182,13 +185,14 @@ class ActivityService {
 
   // ========== CREATE / UPDATE / DELETE OPERATIONS ==========
 
-  /// Create a new activity (with club owner authorization check)
+  /// Secure activity creation with comprehensive validation and authorization
+  /// Enforces club ownership, approval status, facility validation, and time slot availability
   static Future<String> createActivity({
     required Activity activity,
     required String currentUserId,
   }) async {
     try {
-      // 🔒 VALIDATION 1: Verify user owns the club
+      /// Verify club ownership and authorization
       final clubDoc = await _firestore
           .collection('clubs')
           .doc(activity.clubId)
@@ -206,12 +210,12 @@ class ActivityService {
         throw Exception('Unauthorized: You do not own this club');
       }
 
-      // 🔒 VALIDATION 2: Verify club is approved
+      /// Prevent activity creation for unapproved clubs
       if (!isApproved) {
         throw Exception('Cannot create activities for unapproved clubs. Please wait for admin approval.');
       }
 
-      // 🔒 VALIDATION 3: Verify facility belongs to club
+      /// Validate facility ownership and operational status
       final facilityDoc = await _firestore
           .collection('facilities')
           .doc(activity.facilityId)
@@ -230,12 +234,12 @@ class ActivityService {
         throw Exception('Invalid: Facility does not belong to this club');
       }
 
-      // 🔒 VALIDATION 4: Verify facility is active
+      /// Ensure facility is available for bookings
       if (!facilityIsActive) {
         throw Exception('Cannot create activities for inactive facilities');
       }
 
-      // 🔒 VALIDATION 4.5: Check if facility/club is blocked during activity time
+      /// Check for facility/club time blocking conflicts
       final blockStatus = await BlockingService.isTimeSlotBlocked(
         facilityId: activity.facilityId,
         activityDate: activity.date,
@@ -253,15 +257,14 @@ class ActivityService {
         );
       }
 
-      // 🔒 VALIDATION 5: Verify capacity doesn't exceed facility maximum
+      /// Validate capacity constraints against facility limits
       if (activity.capacity > facilityMaxCapacity) {
         throw Exception('Capacity (${activity.capacity}) exceeds facility maximum ($facilityMaxCapacity)');
       }
 
-      // ✅ All validations passed - create activity
+      /// Create validated activity in Firestore
       final activityData = activity.toJson();
       
-      // Remove the id field before adding (Firestore will generate one)
       activityData.remove('id');
 
       final docRef = await _firestore.collection(_collection).add(activityData);
@@ -272,14 +275,14 @@ class ActivityService {
     }
   }
 
-  /// Update an existing activity (with authorization check)
+  /// Update existing activity with ownership verification and timestamp tracking
   static Future<void> updateActivity({
     required Activity activity,
     required String currentUserId,
   }) async {
     try {
 
-      // 🔒 VALIDATION: Verify user owns the club
+      /// Verify club ownership for update authorization
       final clubDoc = await _firestore
           .collection('clubs')
           .doc(activity.clubId)
@@ -295,12 +298,11 @@ class ActivityService {
         throw Exception('Unauthorized: You do not own this club');
       }
 
-      // Update with new timestamp
+      /// Apply updates with modification timestamp
       final activityData = activity.copyWith(
         updatedAt: DateTime.now(),
       ).toJson();
 
-      // Remove id field (not stored in document)
       activityData.remove('id');
 
       await _firestore
@@ -313,7 +315,8 @@ class ActivityService {
     }
   }
 
-  /// Delete an activity (with authorization check)
+  /// Secure activity deletion with booking conflict prevention
+  /// Prevents deletion of activities with active future bookings
   static Future<void> deleteActivity({
     required String activityId,
     required String clubId,
@@ -321,7 +324,7 @@ class ActivityService {
   }) async {
     try {
 
-      // Get activity to check date
+      /// Retrieve activity for date validation
       final activityDoc = await _firestore
           .collection('activities')
           .doc(activityId)
@@ -333,12 +336,11 @@ class ActivityService {
 
       final activityData = activityDoc.data()!;
       
-      // Get activity date
       final activityDate = activityData['date'] is String
           ? DateTime.parse(activityData['date'])
           : (activityData['date'] as Timestamp).toDate();
 
-      // 🔒 VALIDATION: Verify user owns the club
+      /// Verify club ownership for deletion authorization
       final clubDoc = await _firestore
           .collection('clubs')
           .doc(clubId)
@@ -354,7 +356,7 @@ class ActivityService {
         throw Exception('Unauthorized: You do not own this club');
       }
 
-      // Check only for FUTURE bookings (if activity is in the future)
+      /// Protect against deletion of activities with active bookings
       if (activityDate.isAfter(DateTime.now())) {
         final bookingsSnapshot = await _firestore
             .collection('bookings')
@@ -376,11 +378,11 @@ class ActivityService {
     }
   }
 
-  /// Add a new activity (simple version without validation - for admin use)
+  /// Administrative activity creation without business validation constraints
   static Future<void> addActivity(Activity activity) async {
     try {
-      Map<String, dynamic> activityData = activity.toJson();
-      activityData.remove('id'); // Don't include the ID in the document data
+      final activityData = activity.toJson();
+      activityData.remove('id');
       
       await _firestore.collection(_collection).add(activityData);
     } catch (e) {
@@ -390,20 +392,20 @@ class ActivityService {
 
   // ========== UTILITY METHODS ==========
 
-  /// Get unique clubs for dropdown (using clubName from activities)
+  /// Extract unique club names for filtering dropdown population
   static Future<List<String>> getAvailableClubs() async {
     try {
-      QuerySnapshot snapshot = await _firestore.collection(_collection).get();
-      Set<String> clubs = {};
+      final QuerySnapshot snapshot = await _firestore.collection(_collection).get();
+      final clubs = <String>{};
       
-      for (QueryDocumentSnapshot doc in snapshot.docs) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+      for (final doc in snapshot.docs) {
+        final data = doc.data()! as Map<String, dynamic>;
         if (data['clubName'] != null) {
           clubs.add(data['clubName']);
         }
       }
       
-      List<String> clubList = clubs.toList();
+      final clubList = clubs.toList();
       clubList.sort();
       return clubList;
     } catch (e) {
@@ -411,38 +413,38 @@ class ActivityService {
     }
   }
 
-  /// Get unique clubs as a real-time stream
+  /// Real-time club discovery for dynamic filter updates
   static Stream<List<String>> getAvailableClubsStream() {
     return _firestore.collection(_collection).snapshots().map((snapshot) {
-      Set<String> clubs = {};
+      final clubs = <String>{};
       
-      for (QueryDocumentSnapshot doc in snapshot.docs) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+      for (final QueryDocumentSnapshot doc in snapshot.docs) {
+        final data = doc.data()! as Map<String, dynamic>;
         if (data['clubName'] != null) {
           clubs.add(data['clubName']);
         }
       }
       
-      List<String> clubList = clubs.toList();
+      final clubList = clubs.toList();
       clubList.sort();
       return clubList;
     });
   }
 
-  /// Get unique facilities for dropdown (using facilityName from activities)
+  /// Extract unique facility names for location-based filtering
   static Future<List<String>> getAvailableFacilities() async {
     try {
-      QuerySnapshot snapshot = await _firestore.collection(_collection).get();
-      Set<String> facilities = {};
+      final QuerySnapshot snapshot = await _firestore.collection(_collection).get();
+      final facilities = <String>{};
       
-      for (QueryDocumentSnapshot doc in snapshot.docs) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+      for (final doc in snapshot.docs) {
+        final data = doc.data()! as Map<String, dynamic>;
         if (data['facilityName'] != null) {
           facilities.add(data['facilityName']);
         }
       }
       
-      List<String> facilityList = facilities.toList();
+      final facilityList = facilities.toList();
       facilityList.sort();
       return facilityList;
     } catch (e) {
@@ -450,76 +452,76 @@ class ActivityService {
     }
   }
 
-  /// Get unique facilities as a real-time stream
+  /// Real-time facility discovery for location-based browsing
   static Stream<List<String>> getAvailableFacilitiesStream() {
     return _firestore.collection(_collection).snapshots().map((snapshot) {
-      Set<String> facilities = {};
+      final facilities = <String>{};
       
-      for (QueryDocumentSnapshot doc in snapshot.docs) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+      for (final QueryDocumentSnapshot doc in snapshot.docs) {
+        final data = doc.data()! as Map<String, dynamic>;
         if (data['facilityName'] != null) {
           facilities.add(data['facilityName']);
         }
       }
       
-      List<String> facilityList = facilities.toList();
+      final facilityList = facilities.toList();
       facilityList.sort();
       return facilityList;
     });
   }
 
-  /// Get unique facilities for a specific club as a real-time stream
-  static Stream<List<String>> getAvailableFacilitiesStreamByClub(String clubName) {
+  /// Club-specific facility discovery for activity creation
+  static Stream<List<String>> getAvailableFacilitiesStreamByClub(String clubId) {
     return _firestore
         .collection(_collection)
-        .where('clubName', isEqualTo: clubName)
+        .where('clubId', isEqualTo: clubId)
         .snapshots()
         .map((snapshot) {
-      Set<String> facilities = {};
+      final facilities = <String>{};
       
-      for (QueryDocumentSnapshot doc in snapshot.docs) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+      for (final QueryDocumentSnapshot doc in snapshot.docs) {
+        final data = doc.data()! as Map<String, dynamic>;
         if (data['facilityName'] != null) {
           facilities.add(data['facilityName']);
         }
       }
       
-      List<String> facilityList = facilities.toList();
+      final facilityList = facilities.toList();
       facilityList.sort();
       return facilityList;
     });
   }
 
-  /// Get unique categories from database
+  /// Extract activity categories for classification and filtering
   static Future<List<String>> getAvailableCategories() async {
     final snapshot = await _firestore.collection(_collection).get();
-    Set<String> categories = {};
+    final categories = <String>{};
     
-    for (QueryDocumentSnapshot doc in snapshot.docs) {
-      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    for (final QueryDocumentSnapshot doc in snapshot.docs) {
+      final data = doc.data()! as Map<String, dynamic>;
       if (data['category'] != null) {
         categories.add(data['category']);
       }
     }
     
-    List<String> categoryList = categories.toList();
+    final categoryList = categories.toList();
     categoryList.sort();
     return categoryList;
   }
 
-  /// Get unique categories as a real-time stream
+  /// Real-time category discovery for dynamic filter population
   static Stream<List<String>> getAvailableCategoriesStream() {
     return _firestore.collection(_collection).snapshots().map((snapshot) {
-      Set<String> categories = {};
+      final categories = <String>{};
       
-      for (QueryDocumentSnapshot doc in snapshot.docs) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+      for (final QueryDocumentSnapshot doc in snapshot.docs) {
+        final data = doc.data()! as Map<String, dynamic>;
         if (data['category'] != null) {
           categories.add(data['category']);
         }
       }
       
-      List<String> categoryList = categories.toList();
+      final categoryList = categories.toList();
       categoryList.sort();
       return categoryList;
     });

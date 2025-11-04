@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
-import '../../models/facility.dart';
+
 import '../../models/club.dart';
+import '../../models/facility.dart';
 import '../../services/facility_service.dart';
-import '../../services/imageUpload_service.dart'; // Add this import
+import '../../services/image_upload_service.dart';
 
+/// Facility creation interface for approved clubs
+/// Handles facility registration with custom image upload and capacity management
 class AddFacilityScreen extends StatefulWidget {
-  final Club club;
-
   const AddFacilityScreen({super.key, required this.club});
+  final Club club;
 
   @override
   State<AddFacilityScreen> createState() => _AddFacilityScreenState();
@@ -21,8 +23,8 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
 
   bool _isActive = true;
   bool _isLoading = false;
-  
-  // Add image upload state
+
+  // Custom image management for facility branding
   String? _uploadedImageUrl;
   bool _isUploadingImage = false;
 
@@ -58,7 +60,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
                     const SizedBox(height: 24),
                     _buildFacilityForm(),
                     const SizedBox(height: 24),
-                    _buildImageSection(), // Updated method
+                    _buildImageSection(),
                     const SizedBox(height: 32),
                     _buildSubmitButton(),
                   ],
@@ -68,15 +70,16 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
     );
   }
 
+  /// Display parent club information for context
   Widget _buildClubInfoCard() {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Row(
           children: [
-            CircleAvatar(
+            const CircleAvatar(
               backgroundColor: Colors.teal,
-              child: const Icon(Icons.business, color: Colors.white),
+              child: Icon(Icons.business, color: Colors.white),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -109,6 +112,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
     );
   }
 
+  /// Core facility information form with validation
   Widget _buildFacilityForm() {
     return Card(
       child: Padding(
@@ -122,7 +126,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Facility Title
+            // Facility identification and branding
             TextFormField(
               controller: _titleController,
               decoration: const InputDecoration(
@@ -142,7 +146,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Description
+            // Marketing and user information
             TextFormField(
               controller: _descriptionController,
               maxLines: 3,
@@ -164,7 +168,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Max Capacity
+            // Booking capacity management
             TextFormField(
               controller: _capacityController,
               keyboardType: TextInputType.number,
@@ -190,7 +194,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Active Status
+            // Operational availability control
             SwitchListTile(
               title: const Text('Active Status'),
               subtitle: const Text('Facility is available for bookings'),
@@ -204,7 +208,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
     );
   }
 
-  // NEW: Updated image section with upload functionality
+  /// Custom image upload with fallback to type-based defaults
   Widget _buildImageSection() {
     return Card(
       child: Padding(
@@ -217,8 +221,8 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            
-            // Requirements info box
+
+            // Technical requirements for image uploads
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -233,19 +237,16 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
                   Expanded(
                     child: Text(
                       'Image requirements: Max 5MB, JPG/PNG/WebP format, Max 1200x800px. If no image is uploaded, a default image will be used.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.blue[700],
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.blue[700]),
                     ),
                   ),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 12),
-            
-            // Image preview
+
+            // Image preview with custom or default display
             Container(
               width: double.infinity,
               height: 200,
@@ -265,9 +266,10 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
                             color: Colors.grey[100],
                             child: Center(
                               child: CircularProgressIndicator(
-                                value: loadingProgress.expectedTotalBytes != null
+                                value:
+                                    loadingProgress.expectedTotalBytes != null
                                     ? loadingProgress.cumulativeBytesLoaded /
-                                        loadingProgress.expectedTotalBytes!
+                                          loadingProgress.expectedTotalBytes!
                                     : null,
                                 color: Colors.teal,
                               ),
@@ -280,16 +282,23 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.image_not_supported, size: 48, color: Colors.grey[400]),
+                                Icon(
+                                  Icons.image_not_supported,
+                                  size: 48,
+                                  color: Colors.grey[400],
+                                ),
                                 const SizedBox(height: 8),
-                                Text('Image not available', style: TextStyle(color: Colors.grey[600])),
+                                Text(
+                                  'Image not available',
+                                  style: TextStyle(color: Colors.grey[600]),
+                                ),
                               ],
                             ),
                           );
                         },
                       ),
                     )
-                  : Container(
+                  : DecoratedBox(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
                         image: DecorationImage(
@@ -297,7 +306,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
                           fit: BoxFit.cover,
                         ),
                       ),
-                      child: Container(
+                      child: DecoratedBox(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
                           gradient: LinearGradient(
@@ -326,23 +335,27 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
                       ),
                     ),
             ),
-            
+
             const SizedBox(height: 12),
-            
-            // Upload and remove buttons
+
+            // Image management controls
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: _isUploadingImage ? null : _uploadImage,
-                    icon: _isUploadingImage 
+                    icon: _isUploadingImage
                         ? const SizedBox(
                             width: 16,
                             height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.upload),
-                    label: Text(_isUploadingImage ? 'Uploading...' : 'Upload Custom Image'),
+                    label: Text(
+                      _isUploadingImage
+                          ? 'Uploading...'
+                          : 'Upload Custom Image',
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.teal,
                       foregroundColor: Colors.white,
@@ -369,16 +382,16 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
     );
   }
 
-  // NEW: Upload image method
+  /// Handle custom image upload with progress feedback
   Future<void> _uploadImage() async {
     setState(() {
       _isUploadingImage = true;
     });
 
     try {
-      // Generate temporary ID for upload path
+      // Generate unique identifier for storage path
       final tempId = DateTime.now().millisecondsSinceEpoch.toString();
-      
+
       final imageUrl = await ImageUploadService.pickAndUploadImage(
         type: 'facilities',
         id: tempId,
@@ -389,7 +402,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
         setState(() {
           _uploadedImageUrl = imageUrl;
         });
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -406,15 +419,15 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
     }
   }
 
-  // NEW: Remove image method
+  /// Remove custom image and revert to default
   void _removeImage() {
     if (_uploadedImageUrl != null) {
-      // Optionally delete from storage
+      // Clean up storage to prevent orphaned files
       ImageUploadService.deleteImage(_uploadedImageUrl!);
       setState(() {
         _uploadedImageUrl = null;
       });
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Image removed'),
@@ -424,6 +437,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
     }
   }
 
+  /// Select appropriate default image based on facility type
   String _getDefaultImagePreview() {
     final title = _titleController.text.toLowerCase();
     if (title.contains('gym') || title.contains('weight')) {
@@ -444,6 +458,7 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
     return Facility.defaultImages['default']!;
   }
 
+  /// Submit button with loading state
   Widget _buildSubmitButton() {
     return SizedBox(
       width: double.infinity,
@@ -474,12 +489,13 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
     );
   }
 
+  /// Create facility with approval requirement validation
   Future<void> _submitFacility() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    // Validate club is approved
+    // Enforce club approval requirement for facility creation
     if (!widget.club.isApproved) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -495,12 +511,12 @@ class _AddFacilityScreenState extends State<AddFacilityScreen> {
     try {
       final now = DateTime.now();
       final facility = Facility(
-        id: '', // Will be set by Firestore
+        id: '', // Firestore will generate unique identifier
         clubId: widget.club.id,
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         maxCapacity: int.parse(_capacityController.text.trim()),
-        imageUrl: _uploadedImageUrl, // Use uploaded image or null for default
+        imageUrl: _uploadedImageUrl, // Custom image or null for default
         isActive: _isActive,
         createdAt: now,
         updatedAt: now,

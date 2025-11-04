@@ -1,16 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-/// Booking status enumeration
-enum BookingStatus {
-  pending,
-  confirmed,
-  cancelled,
-  completed,
-  waitlist
-}
+/// Booking lifecycle states for activity reservations
+enum BookingStatus { pending, confirmed, cancelled, completed, waitlist }
 
-/// Extension to convert BookingStatus to/from string
+/// Extension for BookingStatus serialization and display
 extension BookingStatusExtension on BookingStatus {
   String get value {
     switch (this) {
@@ -60,15 +54,11 @@ extension BookingStatusExtension on BookingStatus {
   }
 }
 
-/// Time slot model for activity scheduling
+/// Time slot configuration for activities with capacity management
+/// 
+/// Represents specific time windows when activities can be booked,
+/// tracking capacity limits and current booking counts for availability
 class TimeSlot {
-  final String id;
-  final DateTime startTime;
-  final DateTime endTime;
-  final int capacity;
-  final int bookedCount;
-  final bool isAvailable;
-
   TimeSlot({
     required this.id,
     required this.startTime,
@@ -89,6 +79,13 @@ class TimeSlot {
     );
   }
 
+  final String id;
+  final DateTime startTime;
+  final DateTime endTime;
+  final int capacity; // Maximum participants allowed
+  final int bookedCount; // Current bookings
+  final bool isAvailable; // Admin can disable slots
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -100,54 +97,27 @@ class TimeSlot {
     };
   }
 
-  /// Check if time slot has available spots
+  /// Check if new bookings can be accepted
   bool get hasAvailableSpots => isAvailable && bookedCount < capacity;
 
-  /// Get remaining spots
+  /// Calculate remaining capacity
   int get remainingSpots => capacity - bookedCount;
 
-  /// Get formatted time range
+  /// Format time range for display (e.g., "09:00 - 10:30")
   String get timeRange {
-    final start = '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}';
-    final end = '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}';
+    final start =
+        '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}';
+    final end =
+        '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}';
     return '$start - $end';
   }
 }
 
-/// Enhanced booking model
+/// Activity booking with financial tracking and voucher support
+/// 
+/// Represents a user's reservation for an activity, including payment details,
+/// points earned, voucher usage, and lifecycle management from creation to completion
 class Booking {
-  final String id;
-  final String userId;
-  final String activityId;
-  final String? timeSlotId;
-  final DateTime bookingDate;
-  final DateTime createdAt;
-  final BookingStatus status;
-  final double amountPaid;
-  final int pointsEarned;
-  final int participantCount;
-  final bool isMemberBooking;
-  final String? cancellationReason;
-  final DateTime? cancelledAt;
-  final String confirmationNumber;
-  final Map<String, dynamic>? metadata;
-  
-  // Voucher information
-  final String? voucherId;          // ID of voucher used
-  final double? voucherDiscount;    // Amount discounted by voucher
-  
-  // Activity details for display
-  final String activityTitle;
-  final DateTime activityDate;
-  final String activityTime;
-  final double totalPrice;
-  
-  // Denormalized club/facility data (NEW - for display without extra queries)
-  final String clubId;              // For filtering by club
-  final String clubName;            // For display
-  final String facilityId;          // For statistics
-  final String facilityName;        // For display
-
   Booking({
     required this.id,
     required this.userId,
@@ -176,8 +146,9 @@ class Booking {
     required this.facilityName,
   });
 
+  /// Create Booking from Firestore document with type conversions
   factory Booking.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    final data = doc.data()! as Map<String, dynamic>;
     return Booking(
       id: doc.id,
       userId: data['userId'] ?? '',
@@ -191,15 +162,15 @@ class Booking {
       participantCount: data['participantCount'] ?? 1,
       isMemberBooking: data['isMemberBooking'] ?? false,
       cancellationReason: data['cancellationReason'],
-      cancelledAt: data['cancelledAt'] != null 
-          ? (data['cancelledAt'] as Timestamp).toDate() 
+      cancelledAt: data['cancelledAt'] != null
+          ? (data['cancelledAt'] as Timestamp).toDate()
           : null,
       confirmationNumber: data['confirmationNumber'] ?? '',
       metadata: data['metadata'],
       voucherId: data['voucherId'],
       voucherDiscount: data['voucherDiscount']?.toDouble(),
       activityTitle: data['activityTitle'] ?? 'Unknown Activity',
-      activityDate: data['activityDate'] != null 
+      activityDate: data['activityDate'] != null
           ? (data['activityDate'] as Timestamp).toDate()
           : (data['bookingDate'] as Timestamp).toDate(),
       activityTime: data['activityTime'] ?? '00:00',
@@ -211,6 +182,7 @@ class Booking {
     );
   }
 
+  /// Create Booking from JSON with date parsing
   factory Booking.fromJson(Map<String, dynamic> json) {
     return Booking(
       id: json['id'] ?? '',
@@ -225,15 +197,15 @@ class Booking {
       participantCount: json['participantCount'] ?? 1,
       isMemberBooking: json['isMemberBooking'] ?? false,
       cancellationReason: json['cancellationReason'],
-      cancelledAt: json['cancelledAt'] != null 
-          ? DateTime.parse(json['cancelledAt']) 
+      cancelledAt: json['cancelledAt'] != null
+          ? DateTime.parse(json['cancelledAt'])
           : null,
       confirmationNumber: json['confirmationNumber'] ?? '',
       metadata: json['metadata'],
       voucherId: json['voucherId'],
       voucherDiscount: json['voucherDiscount']?.toDouble(),
       activityTitle: json['activityTitle'] ?? 'Unknown Activity',
-      activityDate: json['activityDate'] != null 
+      activityDate: json['activityDate'] != null
           ? DateTime.parse(json['activityDate'])
           : DateTime.parse(json['bookingDate']),
       activityTime: json['activityTime'] ?? '00:00',
@@ -245,6 +217,44 @@ class Booking {
     );
   }
 
+  // Core booking identifiers
+  final String id;
+  final String userId;
+  final String activityId;
+  final String? timeSlotId;
+
+  // Booking lifecycle
+  final DateTime bookingDate; // When booking was made
+  final DateTime createdAt;
+  final BookingStatus status;
+  final String? cancellationReason;
+  final DateTime? cancelledAt;
+  final String confirmationNumber; // For customer reference
+
+  // Financial details
+  final double amountPaid; // Actual amount charged (after voucher discount)
+  final double totalPrice; // Original price before discounts
+  final int pointsEarned; // Reward points (only credited on completion)
+
+  // Booking configuration
+  final int participantCount;
+  final bool isMemberBooking; // Affects pricing and points
+  final Map<String, dynamic>? metadata; // Additional booking data
+
+  // Voucher integration
+  final String? voucherId; // Voucher used for discount
+  final double? voucherDiscount; // Amount discounted
+
+  // Denormalized activity data (for display without additional queries)
+  final String activityTitle;
+  final DateTime activityDate; // When activity takes place
+  final String activityTime;
+  final String clubId;
+  final String clubName;
+  final String facilityId;
+  final String facilityName;
+
+  /// Convert to Firestore format with Timestamps
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -259,7 +269,9 @@ class Booking {
       'participantCount': participantCount,
       'isMemberBooking': isMemberBooking,
       'cancellationReason': cancellationReason,
-      'cancelledAt': cancelledAt != null ? Timestamp.fromDate(cancelledAt!) : null,
+      'cancelledAt': cancelledAt != null
+          ? Timestamp.fromDate(cancelledAt!)
+          : null,
       'confirmationNumber': confirmationNumber,
       'metadata': metadata,
       'voucherId': voucherId,
@@ -275,17 +287,17 @@ class Booking {
     };
   }
 
-  /// Check if booking can be cancelled
+  /// Check if booking can be cancelled (confirmed/pending only)
   bool get canBeCancelled {
     return status == BookingStatus.confirmed || status == BookingStatus.pending;
   }
 
-  /// Check if booking is active
+  /// Check if booking is in active state
   bool get isActive {
     return status == BookingStatus.confirmed || status == BookingStatus.pending;
   }
 
-  /// Get status display text
+  /// Get user-friendly status text
   String get statusDisplayText {
     switch (status) {
       case BookingStatus.pending:
@@ -301,7 +313,7 @@ class Booking {
     }
   }
 
-  /// Get status color for UI
+  /// Get status color for UI badges
   Color get statusColor {
     switch (status) {
       case BookingStatus.pending:
@@ -318,21 +330,11 @@ class Booking {
   }
 }
 
-/// Booking details model for the booking flow
+/// Booking flow data model for UI state management
+/// 
+/// Temporary model used during the booking process to collect user choices
+/// before creating the final Booking entity
 class BookingDetails {
-  final String activityId;
-  final String? timeSlotId;
-  final DateTime bookingDate;
-  final int participantCount;
-  final bool isMemberBooking;
-  final double totalPrice;
-  final int expectedPoints;
-  final Map<String, dynamic>? additionalInfo;
-  
-  // Voucher information
-  final String? voucherId;
-  final double? voucherDiscount;
-
   BookingDetails({
     required this.activityId,
     this.timeSlotId,
@@ -346,6 +348,20 @@ class BookingDetails {
     this.voucherDiscount,
   });
 
+  final String activityId;
+  final String? timeSlotId;
+  final DateTime bookingDate;
+  final int participantCount;
+  final bool isMemberBooking;
+  final double totalPrice; // Before voucher discount
+  final int expectedPoints; // Estimated points to earn
+  final Map<String, dynamic>? additionalInfo;
+
+  // Voucher selection
+  final String? voucherId;
+  final double? voucherDiscount;
+
+  /// Create updated copy with new values
   BookingDetails copyWith({
     String? activityId,
     String? timeSlotId,
