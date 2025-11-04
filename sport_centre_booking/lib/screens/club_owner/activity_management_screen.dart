@@ -7,6 +7,7 @@ import '../../services/club_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'add_activity_screen.dart';
 import 'edit_activity_screen.dart';
+import 'activity_participants_screen.dart';
 
 class ActivityManagementScreen extends StatefulWidget {
   const ActivityManagementScreen({super.key});
@@ -450,6 +451,9 @@ class _ActivityCard extends StatelessWidget {
                     PopupMenuButton<String>(
                       onSelected: (String value) {
                         switch (value) {
+                          case 'participants':
+                            _viewParticipants(context);
+                            break;
                           case 'edit':
                             _editActivity(context);
                             break;
@@ -459,6 +463,18 @@ class _ActivityCard extends StatelessWidget {
                         }
                       },
                       itemBuilder: (BuildContext context) => [
+                        // View Participants option
+                        const PopupMenuItem<String>(
+                          value: 'participants',
+                          child: Row(
+                            children: [
+                              Icon(Icons.people, color: Colors.blue, size: 16),
+                              SizedBox(width: 8),
+                              Text('View Participants'),
+                            ],
+                          ),
+                        ),
+                        
                         // Edit option (only if not past activity)
                         if (!isPast)
                           const PopupMenuItem<String>(
@@ -605,6 +621,16 @@ class _ActivityCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // View participants method
+  void _viewParticipants(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ActivityParticipantsScreen(activity: activity),
       ),
     );
   }

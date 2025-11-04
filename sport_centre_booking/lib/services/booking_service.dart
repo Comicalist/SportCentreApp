@@ -127,10 +127,18 @@ class BookingService {
         final bookingRef = _firestore.collection('bookings').doc();
         final confirmationNumber = _generateConfirmationNumber();
 
+        // Get user info for denormalization
+        final userDoc = await transaction.get(_firestore.collection('users').doc(user.uid));
+        final userData = userDoc.data();
+        final userName = userData?['displayName'] ?? user.displayName ?? user.email?.split('@')[0] ?? 'User';
+        final userEmail = userData?['email'] ?? user.email ?? '';
+
         // Create booking data
         final bookingData = {
           'id': bookingRef.id,
           'userId': user.uid,
+          'userName': userName,  // Store user display name
+          'userEmail': userEmail,  // Store user email
           'activityId': activityId,
           'timeSlotId': timeSlotId,
           'bookingDate': Timestamp.fromDate(bookingDate),
