@@ -204,8 +204,8 @@ class BookingService {
         final bookingData = {
           'id': bookingRef.id,
           'userId': user.uid,
-          'userName': userName,  // Store user display name
-          'userEmail': userEmail,  // Store user email
+          //'userName': userName,  // Store user display name
+          //'userEmail': userEmail,  // Store user email
           'activityId': activityId,
           'timeSlotId': timeSlotId,
           'bookingDate': Timestamp.fromDate(bookingDate),

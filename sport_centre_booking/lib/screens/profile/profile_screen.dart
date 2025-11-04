@@ -1,13 +1,15 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'package:provider/provider.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+// Hide firebase's AuthProvider to avoid name collision with your app's AuthProvider
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+ 
+import '../../providers/auth_provider.dart' as app_auth; // Alias your own AuthProvider
+import '../../utils/colors.dart';
 import '../../models/app_user.dart';
 import '../../models/voucher.dart';
-import '../../providers/auth_provider.dart';
 import '../../services/voucher_service.dart';
-import '../../utils/colors.dart';
 import '../../widgets/profile/testing_panel.dart';
 import 'notification_settings_screen.dart';
 
@@ -153,67 +155,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 24),
                     ],
 
-                    // ===== Points section: EXACTLY the same pattern as RewardsScreen =====
-                    FutureBuilder<Map<String, dynamic>?>(
-                      future: _getUserData(),
-                      builder: (context, pointsSnap) {
-                        if (pointsSnap.connectionState == ConnectionState.waiting) {
-                          return const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(32),
-                              child: CircularProgressIndicator(),
-                            ),
-                          );
-                        }
-
-                        if (!pointsSnap.hasData || pointsSnap.data == null) {
-                          return Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(32),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
-                                  const SizedBox(height: 16),
-                                  const Text(
-                                    'Failed to load your rewards.',
-                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Please try again later.',
-                                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }
-
-                        final data = pointsSnap.data!;
-                        final availablePoints = (data['availablePoints'] ?? 0) as int;
-                        final lifetimePoints = (data['lifetimePointsEarned'] ?? 0) as int;
-
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Your Reward Points',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            _buildPointsCard('Available Points', availablePoints, Colors.green),
-                            const SizedBox(height: 12),
-                            _buildPointsCard('Lifetime Points Earned', lifetimePoints, Colors.orange),
-                          ],
-                        );
-                      },
+                    // ===== Rich Points Dashboard =====
+                    const Text(
+                      'Your Reward Points',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
                     ),
-                    // =======================================================================
+                    const SizedBox(height: 16),
+                    _buildPointsCard(user),
+                    // =================================
 
                     const SizedBox(height: 24),
                     _buildVouchersSection(user.uid),
@@ -362,11 +315,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// Reward points dashboard with member bonus indicator and balance breakdown
   Widget _buildPointsCard(AppUser user) {
     return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
-        child: Row(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Colors.orange[600]!, Colors.orange[400]!],
+          ),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
@@ -403,20 +365,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
             const SizedBox(height: 16),
+            const Text(
+              'Available Points',
+              style: TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+            const SizedBox(height: 8),
             Text(
               '${user.availablePoints}',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 36,
                 fontWeight: FontWeight.bold,
-              ),
-              child: Icon(Icons.star, color: color, size: 22),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
               ),
             ),
             const SizedBox(height: 16),
@@ -460,7 +419,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                 ),
-                
+                ElevatedButton(
+                  onPressed: user.availablePoints > 0
+                      ? () {
+                          // Navigate to rewards screen
+                          Navigator.of(
+                            context,
+                          ).popUntil((route) => route.isFirst);
+                          DefaultTabController.of(
+                            context,
+                          ).animateTo(2); // Rewards tab
+                        }
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.orange[600],
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  child: const Text(
+                    'Redeem',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
               ],
             ),
           ],
