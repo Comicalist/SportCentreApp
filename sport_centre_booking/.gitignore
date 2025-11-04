@@ -62,3 +62,8 @@ yarn.lock
 dist/
 build/
 
+# Environment variables and Firebase config (NEVER COMMIT!)
+.env
+.env.local
+.env.production
+lib/config/firebase_config.dart
