@@ -21,6 +21,21 @@ extension BookingStatusExtension on BookingStatus {
     }
   }
 
+  String get displayName {
+    switch (this) {
+      case BookingStatus.pending:
+        return 'Pending';
+      case BookingStatus.confirmed:
+        return 'Confirmed';
+      case BookingStatus.cancelled:
+        return 'Cancelled';
+      case BookingStatus.completed:
+        return 'Completed';
+      case BookingStatus.waitlist:
+        return 'Waitlist';
+    }
+  }
+
   static BookingStatus fromString(String status) {
     switch (status.toLowerCase()) {
       case 'pending':

@@ -138,9 +138,19 @@ service cloud.firestore {
         isAdmin()
       );
       
-      // Update: User who made the booking OR admin (for cancellations, etc.)
+      // Update: User who made the booking OR club owner OR admin
       allow update: if request.auth != null && (
+        // Booking owner can update
         request.auth.uid == resource.data.userId ||
+        // Club owner can update if clubId is present and owned
+        (resource.data.clubId != null && ownsClub(resource.data.clubId)) ||
+        // Fallback: allow club owner if they own the club of the related activity
+        (
+          resource.data.activityId != null &&
+          get(/databases/$(database)/documents/activities/$(resource.data.activityId)).data.clubId != null &&
+          ownsClub(get(/databases/$(database)/documents/activities/$(resource.data.activityId)).data.clubId)
+        ) ||
+        // Admins
         isAdmin()
       );
       

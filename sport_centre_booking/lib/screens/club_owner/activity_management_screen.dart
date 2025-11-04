@@ -8,6 +8,7 @@ import '../../services/activity_service.dart';
 import '../../services/club_service.dart';
 import 'add_activity_screen.dart';
 import 'edit_activity_screen.dart';
+import 'activity_participants_screen.dart';
 
 /// Club owner activity management interface with real-time activity tracking,
 /// booking oversight, and comprehensive activity lifecycle management
@@ -496,6 +497,9 @@ class _ActivityCard extends StatelessWidget {
                     PopupMenuButton<String>(
                       onSelected: (String value) {
                         switch (value) {
+                          case 'participants':
+                            _viewParticipants(context);
+                            break;
                           case 'edit':
                             _editActivity(context);
                             break;
@@ -505,7 +509,19 @@ class _ActivityCard extends StatelessWidget {
                         }
                       },
                       itemBuilder: (BuildContext context) => [
-                        /// Edit option restricted for past activities
+                        // View Participants option
+                        const PopupMenuItem<String>(
+                          value: 'participants',
+                          child: Row(
+                            children: [
+                              Icon(Icons.people, color: Colors.blue, size: 16),
+                              SizedBox(width: 8),
+                              Text('View Participants'),
+                            ],
+                          ),
+                        ),
+                        
+                        // Edit option (only if not past activity)
                         if (!isPast)
                           const PopupMenuItem<String>(
                             value: 'edit',
@@ -677,7 +693,17 @@ class _ActivityCard extends StatelessWidget {
     );
   }
 
-  /// Navigates to activity editing interface for current activity
+  // View participants method
+  void _viewParticipants(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ActivityParticipantsScreen(activity: activity),
+      ),
+    );
+  }
+
+  // Edit activity method
   void _editActivity(BuildContext context) async {
     final result = await Navigator.push<bool>(
       context,

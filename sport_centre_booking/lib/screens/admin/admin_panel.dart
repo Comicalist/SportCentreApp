@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/club_service.dart';
+import '../../utils/update_bookings_with_user_info.dart';
 import 'club_approval_screen.dart';
 import 'participants_management_screen.dart';
 
@@ -83,6 +84,16 @@ class AdminPanel extends StatelessWidget {
                     onTap: () => _navigateToParticipants(context),
                     color: Colors.green,
                   ),
+                  
+                  _AdminTile(
+                    icon: Icons.sync,
+                    title: 'Update Booking User Info',
+                    subtitle: 'One-time: Add user names to existing bookings',
+                    onTap: () => _runUpdateBookingsScript(context),
+                    color: Colors.purple,
+                  ),
+                  
+                  // Add more admin tiles as needed
                 ],
               ),
             ),
@@ -91,8 +102,72 @@ class AdminPanel extends StatelessWidget {
       ),
     );
   }
-
-  /// Navigate to club approval workflow
+  
+  Future<void> _runUpdateBookingsScript(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Update Existing Bookings?'),
+        content: const Text(
+          'This will update all existing bookings to include user names and emails.\n\n'
+          'This is a one-time operation and may take a few moments.'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirmed == true && context.mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 20),
+              Text('Updating bookings...'),
+            ],
+          ),
+        ),
+      );
+      
+      try {
+        await UpdateBookingsWithUserInfo.updateAllBookings();
+        
+        if (context.mounted) {
+          Navigator.pop(context); // Close loading dialog
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Bookings updated successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          Navigator.pop(context); // Close loading dialog
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ Error: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+  
   void _navigateToClubApprovals(BuildContext context) {
     Navigator.push(
       context,
