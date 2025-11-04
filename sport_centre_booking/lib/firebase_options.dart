@@ -4,16 +4,11 @@ import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
-/// Default [FirebaseOptions] for use with your Firebase apps.
-///
-/// Example:
-/// ```dart
-/// import 'firebase_options.dart';
-/// // ...
-/// await Firebase.initializeApp(
-///   options: DefaultFirebaseOptions.currentPlatform,
-/// );
-/// ```
+// Import the secure config
+import 'config/firebase_config.dart';
+
+/// Firebase configuration for sport centre booking app across platforms
+/// Uses secure configuration from separate file
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
@@ -49,20 +44,22 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDXo9zB1VQ239vCgzWpwhwcuwEfV5YwNMU',
-    appId: '1:853313490143:android:6ef26bedb8e6803ac1ad6a',
-    messagingSenderId: '853313490143',
-    projectId: 'sportcentreapp',
-    storageBucket: 'sportcentreapp.firebasestorage.app',
-  );
+  /// Android configuration using secure config
+  static FirebaseOptions get android => FirebaseOptions(
+        apiKey: FirebaseConfig.androidApiKey,
+        appId: FirebaseConfig.androidAppId,
+        messagingSenderId: FirebaseConfig.messagingSenderId,
+        projectId: FirebaseConfig.projectId,
+        storageBucket: FirebaseConfig.storageBucket,
+      );
 
-  static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDXo9zB1VQ239vCgzWpwhwcuwEfV5YwNMU',
-    appId: '1:853313490143:web:YOUR_WEB_APP_ID_HERE',
-    messagingSenderId: '853313490143',
-    projectId: 'sportcentreapp',
-    storageBucket: 'sportcentreapp.firebasestorage.app',
-    authDomain: 'sportcentreapp.firebaseapp.com',
-  );
+  /// Web configuration using secure config
+  static FirebaseOptions get web => FirebaseOptions(
+        apiKey: FirebaseConfig.webApiKey,
+        appId: FirebaseConfig.webAppId,
+        messagingSenderId: FirebaseConfig.messagingSenderId,
+        projectId: FirebaseConfig.projectId,
+        storageBucket: FirebaseConfig.storageBucket,
+        authDomain: FirebaseConfig.authDomain,
+      );
 }
