@@ -49,17 +49,35 @@ class VoucherService {
     String clubId,
   ) async {
     try {
+      // Fetch all user vouchers for the club and filter in memory
+      // This avoids Firestore composite index limitations
       final querySnapshot = await _firestore
           .collection('users')
           .doc(userId)
           .collection('user_vouchers')
           .where('clubId', isEqualTo: clubId)
           .where('type', isEqualTo: VoucherType.fitness.value)
-          .where('usedAt', isEqualTo: null)
-          .where('expiresAt', isGreaterThan: Timestamp.fromDate(DateTime.now()))
           .get();
 
-      return querySnapshot.docs.map(Voucher.fromFirestore).toList();
+      final now = DateTime.now();
+      
+      // Filter vouchers in memory to ensure accuracy
+      final usableVouchers = querySnapshot.docs
+          .map(Voucher.fromFirestore)
+          .where((voucher) {
+            // Must not be used
+            if (voucher.usedAt != null) return false;
+            
+            // Must not be expired
+            if (voucher.expiresAt != null && voucher.expiresAt!.isBefore(now)) {
+              return false;
+            }
+            
+            return true;
+          })
+          .toList();
+
+      return usableVouchers;
     } catch (e) {
       throw Exception('Failed to load usable vouchers: $e');
     }
