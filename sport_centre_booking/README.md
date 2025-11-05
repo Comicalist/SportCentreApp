@@ -1,16 +1,61 @@
-# sport_centre_booking
+# Sport Centre Booking App
 
-A new Flutter project.
+A comprehensive Flutter application for booking sports activities and managing fitness facilities. Built with Firebase backend for real-time booking management, points rewards system, and multi-role access control.
 
-## Getting Started
+## Features
 
-This project is a starting point for a Flutter application.
+- **Activity Booking**: Browse and book sports activities with real-time availability
+- **Points & Rewards**: Earn points from activities, redeem for vouchers and discounts
+- **Multi-Role System**: Support for users, club owners, and administrators
+- **Cross-Platform**: Runs on Android, iOS, and Web
+- **Real-Time Updates**: Live booking status and capacity management
+- **Notifications**: Email confirmations and booking updates
 
-A few resources to get you started if this is your first Flutter project:
+## Tech Stack
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- **Frontend**: Flutter 3.9.2+ with Material Design 3
+- **Backend**: Firebase (Firestore, Authentication, Cloud Functions)
+- **State Management**: Provider pattern
+- **Platform**: Android, iOS, Web
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Quick Start
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/Comicalist/SportCentreApp.git
+   cd sport_centre_booking
+   ```
+
+2. **Install dependencies**
+   ```bash
+   flutter pub get
+   ```
+
+3. **Configure Firebase**
+   ```bash
+   flutterfire configure
+   ```
+
+4. **Run the app**
+   ```bash
+   flutter run
+   ```
+
+## Documentation
+
+- [Technical Documentation](TECHNICAL_DOCUMENTATION.md) - Architecture, Service methods, data models and implementation details
+- [User Guide](USER_GUIDE.md) - End-user instructions
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+
+---
+
+**Built with ❤️ using Flutter and Firebase**
+by Léon Ehrwein, Yohann Charbonnet, Jehu Enberg, Tu Nguyen and Nadja Lötscher

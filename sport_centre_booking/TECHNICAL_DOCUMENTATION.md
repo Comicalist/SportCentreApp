@@ -3,25 +3,32 @@
 ## 1. Overview
 
 ### Purpose
+
 The Sport Centre Booking App is a comprehensive Flutter application designed for public access to sport centre facilities and activities. It enables users to browse, book, and manage sports activities while providing club owners and administrators with powerful management tools.
 
+### Links
+- 
+
 ### Main Features
+
 - **Public Activity Browsing**: View available activities without authentication
 - **User Authentication**: Email/password registration and login with email verification
-- **Activity Booking System**: Real-time booking with capacity management and waitlist functionality
+- **Activity Booking System**: Real-time booking with capacity management
 - **Points & Rewards System**: Earn points from activities, redeem for vouchers and discounts
 - **Multi-Role Access Control**: Regular users, club owners, and administrators with different permissions
 - **Club Management**: Club owners can create and manage activities for their facilities
-- **Admin Panel**: System administrators can manage users, approve clubs, and oversee participant data
-- **Real-time Notifications**: Email notifications for bookings, confirmations, and updates
-- **Calendar Integration**: View bookings in calendar format with filtering options
+- **Admin Panel**: System administrators can manage users and approve clubs
+- **Real-time Notifications**: Email or in-app notifications
+- **Calendar Integration**: View bookings in calendar format
 
 ### Target Users
+
 - **Public Users**: Anyone wanting to book sports activities at local centres
 - **Club Owners**: Businesses managing sport facilities and offering activities
 - **System Administrators**: Platform managers overseeing the entire system
 
 ### Technology Stack Summary
+
 - **Frontend**: Flutter 3.9.2+ with Material Design 3
 - **Backend**: Firebase (Firestore, Authentication, Storage, Functions)
 - **State Management**: Provider pattern with ChangeNotifier
@@ -33,6 +40,7 @@ The Sport Centre Booking App is a comprehensive Flutter application designed for
 ## 2. Architecture & Design
 
 ### System Overview
+
 The application follows a layered architecture pattern with clear separation of concerns:
 
 ```
@@ -70,6 +78,7 @@ The application follows a layered architecture pattern with clear separation of 
 ```
 
 ### Main Components
+
 1. **Authentication Wrapper**: Manages user authentication state and routing
 2. **Main Navigation**: Bottom navigation with role-based screen access
 3. **Provider Layer**: State management for authentication, bookings, and user data
@@ -78,22 +87,23 @@ The application follows a layered architecture pattern with clear separation of 
 6. **Cloud Functions**: Server-side logic for notifications and automated tasks
 
 ### Design Patterns
+
 - **Provider Pattern**: For state management and dependency injection
 - **Repository Pattern**: Services abstract Firebase operations
 - **Factory Pattern**: Model constructors for Firestore data conversion
 - **Observer Pattern**: StreamBuilder widgets for real-time UI updates
-- **Strategy Pattern**: Different pricing strategies for members vs guests
 
 ## 3. Data Model
 
 ### Core Entities and Relationships
+
 ```
 User (1) ────────── (*) Booking (*) ────────── (1) Activity
   │                                               │
   │                                               │
-  └─── (*) Notification                          │
+  └─── (*) Notification                           │
                                                   │
-Club (1) ────────── (*) Facility (1) ───────────┘
+Club (1) ────────── (*) Facility (1) ─────────────┘
   │
   └─── (1) ClubOwner (User)
 
@@ -106,98 +116,133 @@ BlockBooking (*) ────── (1) Facility
 
 ### Firestore Collections Schema
 
-#### Users Collection (`/users/{userId}`)
+### Users Collection (`/users/{userId}`)
+
 ```javascript
 {
   "uid": "firebase-user-id",
-  "email": "user@example.com",
-  "displayName": "John Doe",
-  "role": "user", // "user" | "admin" | "clubOwner"
-  "isActive": true,
-  "isClubOwner": false,
-  "isMember": false,
-  "membershipType": null,
-  "totalPoints": 150,
-  "availablePoints": 75,
-  "lifetimePointsEarned": 500,
-  "bookingHistory": ["booking1", "booking2"],
-  "upcomingBookings": ["booking3"],
-  "profileImageUrl": "",
-  "notificationPreferences": {
-    "bookingReminders": true,
-    "newActivities": true,
-    "pointsUpdates": false
-  },
+  "email": "nina.huber@protonmail.ch",
+  "displayName": "Nina Huber",
+  
+  // Account lifecycle
   "createdAt": Timestamp,
-  "lastLoginAt": Timestamp
+  "lastLoginAt": Timestamp,
+  "isActive": true,
+  
+  // Role-based access control
+  "role": "user",                       // "user" | "admin"
+  "isClubOwner": false,                
+  
+  // Points and rewards system
+  "totalPoints": 0,                     
+  "availablePoints": 3525,              // Current spendable points
+  "lifetimePointsEarned": 0,         
+  
+  // Membership system
+  "isMember": false,                 
+  "membershipType": null,          
+  "membershipExpiry": null           
+}
+```
+
+#### Bookings Subcollection of User (`/users/{userId}/bookings/{bookingId}`)
+```javascript
+{
+  "activityId": "R5wfYrqrc5ywEyscbJE4",      // Reference to the activity
+  "bookingDate": Timestamp,                
+  "bookingId": "3KnjEK2NnhEpRbcIrg3h",   
+  "createdAt": Timestamp,                   
+  "status": "confirmed",                     // "confirmed" | "cancelled" | "completed" | "waitlist"
+  
+  // Additional fields (inferred from main bookings collection)
+  "activityTitle": "CrossFit Bootcamp",     // Activity name for display
+  "participantCount": 1,               
+  "totalPrice": 25.00,                  
+  "pointsEarned": 45,                 
+  "pointsUsed": 0,                       
+  "isMemberBooking": false,                
+  "confirmationNumber": "ABC123DEF"         // Booking reference number
+}
+```
+
+#### Rewards Ledger Subcollection of User (`/users/{userId}/rewards_ledger/{ledgerId}`)
+
+```javascript
+{
+  "activityId": "R5wfYrqrc5ywEyscbJE4",     // Source activity reference
+  "activityTitle": "CrossFit Bootcamp",    
+  "amount": 45,                    
+  "awardedBy": "Xb7TUTqcxuQHagyhFm5ZtQlMaK42", 
+  "bookingId": "3KnjEK2NnhEpRbcIrg3h",  
+  "createdAt": Timestamp,             
+  "type": "earn"                          // "earn" | "redeem"
 }
 ```
 
 #### Activities Collection (`/activities/{activityId}`)
+
 ```javascript
 {
   "id": "activity-unique-id",
-  "title": "Morning Yoga Class",
-  "description": "Beginner-friendly yoga session...",
-  "category": "wellness", // "fitness" | "wellness" | "kids" | "workshops"
-  "clubId": "club-reference-id",
-  "clubName": "Downtown Fitness Center",
-  "facilityId": "facility-reference-id",
-  "facilityName": "Studio A",
-  "price": 15.00,
-  "memberPrice": 12.00,
-  "guestPrice": 18.00,
-  "duration": 60,
-  "capacity": 12,
-  "bookedCount": 8,
-  "startTime": Timestamp,
-  "endTime": Timestamp,
-  "timeCategory": "Morning", // "Morning" | "Afternoon" | "Evening"
-  "isActive": true,
-  "createdBy": "club-owner-uid",
-  "pointsReward": 25,
-  "equipmentRequired": ["yoga mat", "water bottle"],
-  "skillLevel": "beginner",
-  "instructor": "Sarah Johnson",
-  "imageUrl": "https://storage.googleapis.com/...",
-  "createdAt": Timestamp,
-  "updatedAt": Timestamp
+  "name": "Aqua Aerobic",
+  "description": "Low-impact water aerobics for fitness and rehabilitation",
+  "category": "Wellness",
+  "clubId": "vdEABmPpX4UwzBLKNIG",
+  "clubName": "Aquatica Basel",
+  "facilityId": "6Eb7TGVALSOVpZ4zrGGE",
+  "facilityName": "Olympisches Schwimmbecken",
+  "date": "2025-12-22T18:27:43.855Z",
+  "time": "08:00",
+  "duration": 45,
+  "timeCategory": "morning",
+  "capacity": 30,
+  "bookedCount": 15,
+  "guestPrice": 30,
+  "memberPrice": 22,
+  "pointsReward": 30,
+  "allowVouchers": true,
+  "requirements": ["Swimwear", "Water shoes (optional)"],
+  "imageUrl": "https://images.unsplash.com/photo-1560659925966421...",
+  "createdAt": "2025-10-19T18:27:43.855Z",
+  "updatedAt": "2025-11-05T18:27:43.855Z",
+  "createdBy": "ZbWDTepVuxMyCckUxnE3qUp13"
 }
 ```
 
 #### Bookings Collection (`/bookings/{bookingId}`)
+
 ```javascript
 {
   "id": "booking-unique-id",
-  "activityId": "activity-reference-id",
-  "userId": "user-reference-id",
-  "activityTitle": "Morning Yoga Class",
-  "userName": "John Doe",
-  "userEmail": "john@example.com",
-  "clubId": "club-reference-id",
-  "clubName": "Downtown Fitness Center",
-  "facilityId": "facility-reference-id",
-  "facilityName": "Studio A",
-  "status": "confirmed", // "confirmed" | "cancelled" | "completed" | "waitlist"
+  "activityId": "4SoxMRquvVgMDSKJEuw",
+  "userId": "PnqMPxxngN7uzR6vgklMEqg4xY2",
+  "activityTitle": "HIIT Power Session",
+  "activityDate": Timestamp,
+  "activityTime": "08:15",
   "bookingDate": Timestamp,
-  "activityStartTime": Timestamp,
-  "activityEndTime": Timestamp,
-  "originalPrice": 15.00,
-  "pointsUsed": 50,
-  "pointsDiscount": 5.00,
-  "totalPrice": 10.00,
-  "pointsEarned": 25,
+  "status": "confirmed", // "pending" | "confirmed" | "cancelled" | "completed" | "waitlist"
+  "clubId": "dZHkonWHIBwOzvJLrG",
+  "clubName": "FitnessPlius Zürich",
+  "facilityId": "NyS5RuLWKnznGfZehTS",
+  "facilityName": "Hauptfitness Studio",
   "participantCount": 1,
-  "isMember": false,
-  "confirmationNumber": "ABC123DEF",
-  "cancellationReason": null,
-  "notes": null,
+  "totalPrice": 30,
+  "amountPaid": 30,
+  "pointsEarned": 0,
+  "isMemberBooking": true,
+  "confirmationNumber": "SC7Z14",
   "createdAt": Timestamp,
-  "updatedAt": Timestamp
+  "timeSlotId": null,
+  "cancellationReason": null,
+  "cancelledAt": null,
+  "metadata": null,
+  "voucherId": null,
+  "voucherDiscount": null
 }
 ```
 
 #### Clubs Collection (`/clubs/{clubId}`)
+
 ```javascript
 {
   "id": "club-unique-id",
@@ -222,6 +267,7 @@ BlockBooking (*) ────── (1) Facility
 ```
 
 ### Data Flow
+
 1. **User Registration**: Creates user document with default points and preferences
 2. **Activity Creation**: Club owners create activities linked to approved clubs and facilities
 3. **Booking Process**: Creates booking, updates activity capacity, awards points to user
@@ -230,6 +276,7 @@ BlockBooking (*) ────── (1) Facility
 ## 4. Installation & Setup
 
 ### Prerequisites
+
 - Flutter SDK 3.9.2 or higher
 - Dart SDK (included with Flutter)
 - Firebase CLI tools
@@ -240,6 +287,7 @@ BlockBooking (*) ────── (1) Facility
 ### Step-by-Step Setup
 
 #### 1. Clone and Install Dependencies
+
 ```bash
 git clone <repository-url>
 cd sport_centre_booking
@@ -247,6 +295,7 @@ flutter pub get
 ```
 
 #### 2. Firebase Project Setup
+
 ```bash
 # Install Firebase CLI
 npm install -g firebase-tools
@@ -263,7 +312,9 @@ flutterfire configure
 ```
 
 #### 3. Environment Configuration
+
 Create `.env` file in project root:
+
 ```env
 # Firebase Configuration
 FIREBASE_PROJECT_ID=sport-centre-booking-b96ce
@@ -281,6 +332,7 @@ LOG_LEVEL=debug
 ```
 
 #### 4. Firebase Rules Configuration
+
 ```bash
 # Deploy Firestore rules
 firebase deploy --only firestore:rules
@@ -293,6 +345,7 @@ firebase deploy --only functions
 ```
 
 #### 5. Run the Application
+
 ```bash
 # Web development
 flutter run -d chrome
@@ -308,6 +361,7 @@ flutter build apk --release
 ```
 
 ### Initial Data Setup
+
 ```bash
 # Access admin panel in app and run seeding tools
 # Or manually create test data in Firebase Console
@@ -318,6 +372,7 @@ flutter build apk --release
 ### Firebase Authentication Endpoints
 
 #### User Registration
+
 ```dart
 // AuthService.registerWithEmail()
 Future<UserCredential?> registerWithEmail(
@@ -329,6 +384,7 @@ Future<UserCredential?> registerWithEmail(
 ```
 
 #### User Login
+
 ```dart
 // AuthService.signInWithEmail()
 Future<UserCredential?> signInWithEmail(
@@ -340,6 +396,7 @@ Future<UserCredential?> signInWithEmail(
 ### Firestore API Operations
 
 #### Activity Management
+
 ```dart
 // Get all activities
 Stream<List<Activity>> getActivities({
@@ -359,6 +416,7 @@ Future<void> deleteActivity(String activityId, String clubId, String currentUser
 ```
 
 #### Booking Management
+
 ```dart
 // Create booking
 Future<String> createBooking({
@@ -377,11 +435,21 @@ Future<void> cancelBooking(String bookingId, String userId)
 
 // Update booking status
 Future<void> updateBookingStatus(String bookingId, BookingStatus status)
+
+// Club owner completion method
+Future<bool> markUserBookingCompleted(String bookingId)
+
+// Enhanced authorization checking
+Future<bool> hasClubOwnerAccess(String activityId, String userId)
+
+// Participant management
+Stream<List<Participant>> getActivityParticipants(String activityId)
 ```
 
 ### Example API Responses
 
 #### Activity List Response
+
 ```json
 {
   "activities": [
@@ -389,7 +457,7 @@ Future<void> updateBookingStatus(String bookingId, BookingStatus status)
       "id": "activity-123",
       "title": "Morning Yoga",
       "category": "wellness",
-      "price": 15.00,
+      "price": 15.0,
       "startTime": "2024-01-15T09:00:00Z",
       "capacity": 12,
       "bookedCount": 8,
@@ -400,12 +468,13 @@ Future<void> updateBookingStatus(String bookingId, BookingStatus status)
 ```
 
 #### Booking Creation Response
+
 ```json
 {
   "bookingId": "booking-456",
   "confirmationNumber": "ABC123DEF",
   "status": "confirmed",
-  "totalPrice": 10.00,
+  "totalPrice": 10.0,
   "pointsEarned": 25,
   "pointsUsed": 50
 }
@@ -414,11 +483,13 @@ Future<void> updateBookingStatus(String bookingId, BookingStatus status)
 ## 6. Configuration & Deployment
 
 ### Environment Structure
+
 - **Development**: Local Flutter development with Firebase emulators
 - **Staging**: Firebase project with test data for QA testing
 - **Production**: Live Firebase project with production data
 
 ### Build Commands
+
 ```bash
 # Development build
 flutter run --debug
@@ -435,6 +506,7 @@ firebase deploy --only firestore:rules
 ```
 
 ### CI/CD Pipeline (GitHub Actions)
+
 ```yaml
 name: Deploy to Firebase
 on:
@@ -453,6 +525,7 @@ jobs:
 ```
 
 ### Secrets Management
+
 - Firebase configuration keys stored in environment variables
 - Email service credentials in Firebase Functions environment
 - API keys managed through Firebase project settings
@@ -461,13 +534,14 @@ jobs:
 ## 7. Codebase Structure
 
 ### Folder Layout
+
 ```
 lib/
 ├── main.dart                           # App entry point & configuration
 ├── firebase_options.dart               # Firebase configuration
 ├── models/                             # Data models
 │   ├── activity.dart                   # Activity entity
-│   ├── booking.dart                    # Booking entity  
+│   ├── booking.dart                    # Booking entity
 │   ├── user_profile.dart               # User profile entity
 │   ├── club.dart                       # Club entity
 │   ├── facility.dart                   # Facility entity
@@ -515,6 +589,7 @@ firebase.json                          # Firebase project configuration
 ```
 
 ### Naming Conventions
+
 - **Files**: snake_case (e.g., `activity_service.dart`)
 - **Classes**: PascalCase (e.g., `ActivityService`)
 - **Variables**: camelCase (e.g., `activityList`)
@@ -522,6 +597,7 @@ firebase.json                          # Firebase project configuration
 - **Private members**: Leading underscore (e.g., `_firestore`)
 
 ### Key Scripts
+
 ```bash
 # Development
 flutter run -d chrome
@@ -540,6 +616,7 @@ flutter build web --release
 ## 8. Business Logic & Core Features
 
 ### Activity Booking Workflow
+
 1. **User browses activities**: Public access to activity listings with real-time availability
 2. **Authentication check**: Anonymous users prompted to register/login before booking
 3. **Booking validation**: Check activity capacity, user eligibility, and payment options
@@ -548,34 +625,49 @@ flutter build web --release
 6. **Points award**: Add points to user account based on activity completion
 
 ### Points & Rewards System
+
 ```dart
 class PointValues {
   static const int activityCompletion = 25;
   static const int firstTimeBonus = 50;
   static const int weeklyStreak = 15;
   static const int monthlyStreak = 100;
-  static const double pointsToMoney = 0.01; // £0.01 per point
+  static const double pointsToMoney = 0.01; // CHF 0.01 per point
 }
 ```
 
 ### Member vs Guest Pricing
+
 - **Members**: Reduced rates on all activities, enhanced point earning multipliers
 - **Guests**: Standard rates, basic point earning, promotional access to select activities
 - **Dynamic pricing**: Activities can have different member/guest pricing structures
 
 ### Real-time Capacity Management
+
 - Firestore transactions ensure atomic booking operations
 - Activity capacity updated immediately upon booking/cancellation
 - Waitlist functionality for fully booked activities
 - Automatic capacity restoration on booking cancellations
 
 ### Club Owner Activity Management
+
 - Only approved clubs can create activities
 - Activities must be linked to active facilities owned by the club
 - Capacity validation against facility maximum capacity
 - Automatic activity categorization and time-based filtering
 
+### Club Owner Booking Management
+
+- **Participant Management**: Club owners can view all participants for their activities through `ActivityParticipantsScreen`
+- **Status Management**: Real-time filtering and status updates (confirmed, pending, cancelled, completed, waitlist)
+- **Points Award Authorization**: Club owners can mark bookings as completed using `BookingService.markUserBookingCompleted()` which:
+  - Validates club ownership authorization
+  - Awards points to participants automatically
+  - Creates audit trail with `awardedBy` field
+  - Updates user's `availablePoints` and `lifetimePointsEarned`
+
 ### Admin Oversight Features
+
 - Club approval workflow for new businesses
 - Participant management with real-time status updates
 - System analytics and reporting capabilities
@@ -584,12 +676,14 @@ class PointValues {
 ## 9. Security & Privacy
 
 ### Authentication & Authorization
+
 - **Firebase Authentication**: Secure email/password authentication with email verification
 - **Role-based access control**: Users, club owners, and administrators with different permissions
 - **JWT tokens**: Automatic token management through Firebase SDK
 - **Session management**: Secure session handling with automatic token refresh
 
-### Firestore Security Rules
+### Firestore Security Rules - link file?
+
 ```javascript
 rules_version = '2';
 service cloud.firestore {
@@ -599,19 +693,19 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
       allow read: if request.auth != null && isAdmin(request.auth.uid);
     }
-    
+
     // Activities are publicly readable, club owners can create/edit
     match /activities/{activityId} {
       allow read: if true;
-      allow create, update: if request.auth != null && 
+      allow create, update: if request.auth != null &&
         (isClubOwner(request.auth.uid) || isAdmin(request.auth.uid));
-      allow delete: if request.auth != null && 
+      allow delete: if request.auth != null &&
         (resource.data.createdBy == request.auth.uid || isAdmin(request.auth.uid));
     }
-    
+
     // Bookings are user-specific with admin override
     match /bookings/{bookingId} {
-      allow read, write: if request.auth != null && 
+      allow read, write: if request.auth != null &&
         request.auth.uid == resource.data.userId;
       allow read, write: if request.auth != null && isAdmin(request.auth.uid);
     }
@@ -620,12 +714,14 @@ service cloud.firestore {
 ```
 
 ### Data Protection
+
 - **PII encryption**: Sensitive user data protected through Firebase security
 - **GDPR compliance**: User data deletion and export capabilities
 - **Audit trails**: All booking and profile changes logged with timestamps
 - **Access logging**: Admin actions tracked for security monitoring
 
 ### Secure Coding Practices
+
 - **Input validation**: All user inputs validated on client and server side
 - **SQL injection prevention**: Firestore NoSQL structure prevents injection attacks
 - **XSS protection**: Flutter framework provides automatic XSS protection
@@ -634,12 +730,14 @@ service cloud.firestore {
 ## 10. Testing
 
 ### Test Strategy
+
 - **Unit Tests**: Model serialization, business logic validation, utility functions
 - **Widget Tests**: UI component behavior, user interaction flows
 - **Integration Tests**: End-to-end booking workflows, Firebase integration
 - **Manual Testing**: Cross-platform compatibility, performance validation
 
 ### Testing Frameworks
+
 ```dart
 dependencies:
   flutter_test:
@@ -650,6 +748,7 @@ dependencies:
 ```
 
 ### Running Tests
+
 ```bash
 # Unit tests
 flutter test
@@ -666,6 +765,7 @@ genhtml coverage/lcov.info -o coverage/html
 ```
 
 ### Example Test Case
+
 ```dart
 // test/models/activity_test.dart
 import 'package:flutter_test/flutter_test.dart';
@@ -682,10 +782,10 @@ void main() {
         capacity: 12,
         bookedCount: 5,
       );
-      
+
       final json = activity.toJson();
       final recreated = Activity.fromJson(json);
-      
+
       expect(recreated.id, equals(activity.id));
       expect(recreated.title, equals(activity.title));
       expect(recreated.isAvailable, isTrue);
@@ -698,6 +798,7 @@ void main() {
 ## 11. Maintenance & Monitoring
 
 ### Logging & Monitoring
+
 ```dart
 // Application-wide logging
 final logger = Logger(
@@ -713,12 +814,14 @@ logger.e('Booking creation failed', error: e, stackTrace: stackTrace);
 ```
 
 ### Firebase Monitoring
+
 - **Performance Monitoring**: Automatic performance tracking through Firebase
 - **Crashlytics**: Crash reporting and analytics for production issues
 - **Analytics**: User behavior tracking and conversion funnel analysis
 - **Remote Config**: Feature flags and A/B testing capabilities
 
 ### Error Tracking
+
 ```dart
 // Custom exception handling
 class BookingException implements Exception {
@@ -743,12 +846,14 @@ Widget build(BuildContext context) {
 ```
 
 ### Known Issues & Limitations
+
 1. **Offline functionality**: Limited offline capabilities, requires internet for most operations
 2. **Large dataset performance**: UI pagination needed for clubs with 1000+ activities
 3. **Image optimization**: Large images may impact performance on slower connections
 4. **Concurrent booking conflicts**: Rare edge cases with simultaneous bookings for last available spot
 
 ### Update Process
+
 1. **Development testing**: Feature development in local environment
 2. **Staging deployment**: Firebase staging project for QA validation
 3. **Production deployment**: Automated deployment through CI/CD pipeline
@@ -757,21 +862,25 @@ Widget build(BuildContext context) {
 ## 12. Contributors & Contact
 
 ### Main Contributors
+
 - **Lead Developer**: Primary architect and Flutter development
 - **Firebase Integration**: Backend services and Cloud Functions implementation
 - **UI/UX Design**: Material Design 3 implementation and user experience optimization
 
 ### Maintainers
+
 - **Technical Lead**: Overall architecture decisions and code review
 - **DevOps Engineer**: Firebase configuration and deployment pipeline
 - **Product Manager**: Feature prioritization and business requirements
 
 ### Support Contact
+
 - **Technical Support**: For development and integration questions
 - **Business Inquiries**: For feature requests and commercial licensing
 - **Bug Reports**: GitHub issues or direct email for critical problems
 
 ### Documentation Maintenance
+
 - **Last Updated**: January 2024
 - **Version**: 1.0.5
 - **Review Schedule**: Quarterly updates with major releases

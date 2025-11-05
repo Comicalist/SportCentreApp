@@ -379,6 +379,104 @@ class BookingService {
     }
   }
 
+  /// Mark user booking as completed by club owner and award points
+  /// This method allows club owners to complete bookings for their activities
+  /// while properly crediting points to participants
+  static Future<bool> markUserBookingCompleted(String bookingId) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) throw Exception('User must be authenticated');
+
+    try {
+      // Get booking document first
+      final bookingDoc = await _firestore
+          .collection('bookings')
+          .doc(bookingId)
+          .get();
+
+      if (!bookingDoc.exists) {
+        throw Exception('Booking not found');
+      }
+
+      final booking = Booking.fromFirestore(bookingDoc);
+
+      // Verify club owner authorization
+      // Get the activity to check club ownership
+      final activityDoc = await _firestore
+          .collection('activities')
+          .doc(booking.activityId)
+          .get();
+
+      if (!activityDoc.exists) {
+        throw Exception('Activity not found');
+      }
+
+      final activityData = activityDoc.data()!;
+      final clubId = activityData['clubId'] as String?;
+
+      if (clubId == null) {
+        throw Exception('Activity not associated with a club');
+      }
+
+      // Verify current user owns the club
+      final clubDoc = await _firestore
+          .collection('clubs')
+          .doc(clubId)
+          .get();
+
+      if (!clubDoc.exists) {
+        throw Exception('Club not found');
+      }
+
+      final clubData = clubDoc.data()!;
+      final clubOwnerId = clubData['ownerId'] as String?;
+
+      if (clubOwnerId != currentUser.uid) {
+        throw Exception('Unauthorized: You do not own this club');
+      }
+
+      // Business rule: only confirmed bookings can be completed
+      if (booking.status != BookingStatus.confirmed) {
+        throw Exception(
+          'Only confirmed bookings can be completed (current status: ${booking.status})',
+        );
+      }
+
+      // Update booking status to completed
+      await _firestore.collection('bookings').doc(bookingId).update({
+        'status': BookingStatus.completed.value,
+        'completedAt': Timestamp.fromDate(DateTime.now()),
+        'completedBy': currentUser.uid, // Track who marked it as completed
+      });
+
+      // Credit earned points to user's account
+      if (booking.pointsEarned > 0) {
+        final userRef = _firestore.collection('users').doc(booking.userId);
+
+        await userRef.set({
+          'availablePoints': FieldValue.increment(booking.pointsEarned),
+          'lifetimePointsEarned': FieldValue.increment(booking.pointsEarned),
+          'lastRewardUpdateAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        // Create audit trail for points transactions
+        await userRef.collection('rewards_ledger').doc().set({
+          'type': 'earn',
+          'amount': booking.pointsEarned,
+          'bookingId': booking.id,
+          'activityId': booking.activityId,
+          'activityTitle': booking.activityTitle,
+          'awardedBy': currentUser.uid, // Track club owner who awarded points
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      return true;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Original method for user self-completion (kept for backward compatibility)
   /// Mark booking as completed and credit reward points to user account
   /// Called after activity participation to activate points reward system
   static Future<bool> completeBooking(String bookingId) async {
@@ -411,7 +509,7 @@ class BookingService {
 
       /// Update booking status to trigger points crediting
       await _firestore.collection('bookings').doc(bookingId).update({
-        'status': 'completed',
+        'status': BookingStatus.completed.value,
         'completedAt': Timestamp.fromDate(DateTime.now()),
       });
 
