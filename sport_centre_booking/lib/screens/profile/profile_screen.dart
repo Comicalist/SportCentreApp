@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// Hide firebase's AuthProvider to avoid name collision with your app's AuthProvider
-import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
- 
+
 import '../../providers/auth_provider.dart' as app_auth; // Alias your own AuthProvider
 import '../../utils/colors.dart';
 import '../../models/app_user.dart';
 import '../../models/voucher.dart';
 import '../../services/voucher_service.dart';
-import '../../widgets/profile/testing_panel.dart';
 import 'notification_settings_screen.dart';
 
 /// User profile dashboard with real-time points tracking and voucher management
@@ -23,16 +19,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  /// Same user data fetch as in RewardsScreen:
-  /// reads users/{uid} once to get availablePoints and lifetimePointsEarned.
-  Future<Map<String, dynamic>?> _getUserData() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return null;
-    final doc =
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-    return doc.data();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Consumer<app_auth.AuthProvider>(
@@ -172,12 +158,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _buildVouchersSection(user.uid),
                     const SizedBox(height: 24),
                     _buildSettingsSection(context),
-
-                    /// Testing tools for development environment
-                    if (kDebugMode) ...[
-                      const SizedBox(height: 24),
-                      TestingPanel(userId: uid),
-                    ],
                   ],
                 ),
               ),
@@ -205,40 +185,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          child: Column(
-            children: [
-              ListTile(
-                leading: const Icon(
-                  Icons.notifications_outlined,
-                  color: AppColors.primary,
+          child: ListTile(
+            leading: const Icon(
+              Icons.notifications_outlined,
+              color: AppColors.primary,
+            ),
+            title: const Text('Notifications'),
+            subtitle: const Text('Email or in-app preferences'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NotificationSettingsScreen(),
                 ),
-                title: const Text('Notifications'),
-                subtitle: const Text('Email or in-app preferences'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const NotificationSettingsScreen(),
-                    ),
-                  );
-                },
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.history, color: AppColors.primary),
-                title: const Text('Booking History'),
-                subtitle: const Text('View past activities'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Booking history coming soon!'),
-                    ),
-                  );
-                },
-              ),
-            ],
+              );
+            },
           ),
         ),
       ],
@@ -378,73 +340,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${user.totalPoints}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const Text(
-                        'Current Balance',
-                        style: TextStyle(color: Colors.white70, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${user.lifetimePointsEarned}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const Text(
-                        'Lifetime Earned',
-                        style: TextStyle(color: Colors.white70, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: user.availablePoints > 0
-                      ? () {
-                          // Navigate to rewards screen
-                          Navigator.of(
-                            context,
-                          ).popUntil((route) => route.isFirst);
-                          DefaultTabController.of(
-                            context,
-                          ).animateTo(2); // Rewards tab
-                        }
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.orange[600],
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  child: const Text(
-                    'Redeem',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
+
           ],
         ),
       ),
