@@ -327,6 +327,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
             const SizedBox(height: 16),
+            
+            // Available Points Section
             const Text(
               'Available Points',
               style: TextStyle(color: Colors.white70, fontSize: 14),
@@ -340,7 +342,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-
+            
+            const SizedBox(height: 20),
+            
+            // Lifetime Points Section
+            const Text(
+              'Lifetime Points Earned',
+              style: TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${user.lifetimePointsEarned}',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ),
@@ -446,18 +464,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
-                TextButton(
-                  onPressed: () {
-                    /// Navigate to rewards tab for voucher purchases
-                    DefaultTabController.of(
-                      context,
-                    ).animateTo(2);
-                  },
-                  child: const Text(
-                    'Get More',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                ),
               ],
             ),
             const SizedBox(height: 16),

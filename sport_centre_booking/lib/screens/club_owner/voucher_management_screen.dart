@@ -182,7 +182,7 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    voucher.type == VoucherType.fitness ? 'FITNESS' : 'STUFF',
+                    voucher.type == VoucherType.fitness ? 'FITNESS' : 'ITEM',
                     style: TextStyle(
                       color: voucher.type == VoucherType.fitness
                           ? Colors.teal.shade700

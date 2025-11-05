@@ -149,17 +149,44 @@ class RewardsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                /// Points balance cards with visual hierarchy
-                _buildPointsCard(
-                  'Available Points',
-                  availablePoints,
-                  Colors.green,
-                ),
-                const SizedBox(height: 12),
-                _buildPointsCard(
-                  'Lifetime Points Earned',
-                  lifetimePoints,
-                  Colors.orange,
+                /// Single orange-style points card showing only available points
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Colors.orange[600]!, Colors.orange[400]!],
+                      ),
+                    ),
+                    padding: const EdgeInsets.all(20),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.star, color: Colors.white, size: 28),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'Available Points:',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '$availablePoints',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
 
                 const SizedBox(height: 32),

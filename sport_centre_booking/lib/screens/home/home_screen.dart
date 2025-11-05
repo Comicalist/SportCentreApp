@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -155,12 +156,37 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              authProvider.isLoggedIn
-                  ? 'Welcome back, ${authProvider.userFirstName}!'
-                  : 'Discover amazing activities',
-              style: const TextStyle(fontSize: 16, color: Colors.grey),
-            ),
+            // Use StreamBuilder to get real-time displayName from Firestore
+            authProvider.isLoggedIn
+                ? StreamBuilder<DocumentSnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(authProvider.firebaseUser!.uid)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData && snapshot.data!.exists) {
+                        final userData = snapshot.data!.data() as Map<String, dynamic>;
+                        final displayName = userData['displayName'] as String? ?? '';
+                        
+                        return Text(
+                          displayName.isNotEmpty 
+                              ? 'Welcome back, $displayName!'
+                              : 'Welcome back, ${authProvider.userDisplayName}!',
+                          style: const TextStyle(fontSize: 16, color: Colors.grey),
+                        );
+                      }
+                      
+                      // Fallback while loading
+                      return Text(
+                        'Welcome back, ${authProvider.userDisplayName}!',
+                        style: const TextStyle(fontSize: 16, color: Colors.grey),
+                      );
+                    },
+                  )
+                : const Text(
+                    'Discover amazing activities',
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
           ],
         );
       },
