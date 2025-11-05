@@ -113,6 +113,21 @@ service cloud.firestore {
         // Allow users to write their own reward ledger entries during booking
         allow write: if request.auth != null && request.auth.uid == userId;
       }
+      
+      // User's purchased voucher instances
+      match /user_vouchers/{voucherId} {
+        // Users can read their own purchased vouchers
+        allow read: if request.auth != null && request.auth.uid == userId;
+        
+        // Allow creation during purchase transaction
+        allow create: if request.auth != null && request.auth.uid == userId;
+        
+        // Allow updates when using voucher for booking
+        allow update: if request.auth != null && request.auth.uid == userId;
+        
+        // Users cannot delete vouchers
+        allow delete: if false;
+      }
     }
     
     // ========== BOOKINGS ==========
@@ -170,16 +185,29 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
+    // ========== VOUCHERS ==========
+    // Voucher templates that can be purchased multiple times
     match /vouchers/{voucherId} {
-      // Users can read their own vouchers
-      allow read: if request.auth != null && 
-        request.auth.uid == resource.data.userId;
+      // Everyone can read voucher templates (marketplace)
+      allow read: if true;
       
-      // Only system/admin can create vouchers
-      allow create, update: if isAdmin();
+      // Only club owners can create vouchers for their clubs OR admins
+      allow create: if request.auth != null && (
+        isAdmin() ||
+        ownsClub(request.resource.data.clubId)
+      );
       
-      // Users can't delete vouchers
-      allow delete: if false;
+      // Only club owners can update their vouchers OR admins
+      allow update: if request.auth != null && (
+        isAdmin() ||
+        ownsClub(resource.data.clubId)
+      );
+      
+      // Only club owners can delete their vouchers OR admins
+      allow delete: if request.auth != null && (
+        isAdmin() ||
+        ownsClub(resource.data.clubId)
+      );
     }
     
     // ========== NOTIFICATIONS ==========

@@ -86,10 +86,15 @@ class BookingService {
 
         final activityData = activityDoc.data()!;
 
-        /// Voucher validation and discount calculation
+        /// Voucher validation and discount calculation from user's purchased vouchers
         var voucherDiscount = 0.0;
         if (voucherId != null) {
-          final voucherRef = _firestore.collection('vouchers').doc(voucherId);
+          // Read from user's purchased vouchers subcollection
+          final voucherRef = _firestore
+              .collection('users')
+              .doc(user.uid)
+              .collection('user_vouchers')
+              .doc(voucherId);
           final voucherDoc = await transaction.get(voucherRef);
 
           if (!voucherDoc.exists) {
@@ -120,7 +125,7 @@ class BookingService {
 
           voucherDiscount = voucher.amount;
 
-          /// Mark voucher as consumed in the transaction
+          /// Mark voucher instance as consumed in the transaction
           transaction.update(voucherRef, {
             'usedAt': Timestamp.fromDate(DateTime.now()),
             'usedForBooking': activityId,
@@ -236,9 +241,13 @@ class BookingService {
 
         transaction.set(bookingRef, bookingData);
 
-        /// Link voucher to specific booking ID for audit trail
+        /// Link voucher instance to specific booking ID for audit trail
         if (voucherId != null) {
-          final voucherRef = _firestore.collection('vouchers').doc(voucherId);
+          final voucherRef = _firestore
+              .collection('users')
+              .doc(user.uid)
+              .collection('user_vouchers')
+              .doc(voucherId);
           transaction.update(voucherRef, {'usedForBooking': bookingRef.id});
         }
 

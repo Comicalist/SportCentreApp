@@ -53,7 +53,20 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     });
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh vouchers when screen becomes active again
+    final uid = Provider.of<AuthProvider>(context, listen: false)
+        .firebaseUser
+        ?.uid;
+    if (uid != null && widget.activity.allowVouchers) {
+      _loadAvailableVouchers(uid);
+    }
+  }
+
   /// Loads user's available vouchers for this club and activity type
+  /// Filters out used vouchers by querying fresh data from Firestore
   Future<void> _loadAvailableVouchers(String userId) async {
     if (!widget.activity.allowVouchers) return;
 
@@ -65,6 +78,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       if (mounted) {
         setState(() {
           _availableVouchers = vouchers;
+          // Reset selected voucher if it's no longer available (was used)
+          if (_selectedVoucher != null &&
+              !vouchers.any((v) => v.id == _selectedVoucher!.id)) {
+            _selectedVoucher = null;
+          }
         });
       }
     } catch (e) {

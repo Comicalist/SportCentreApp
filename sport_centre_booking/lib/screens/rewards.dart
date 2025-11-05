@@ -12,16 +12,16 @@ import '../widgets/notifications/notifications_drawer.dart';
 class RewardsScreen extends StatelessWidget {
   const RewardsScreen({super.key});
 
-  /// Fetch current user points data for purchase validation
-  Future<Map<String, dynamic>?> _getUserData() async {
+  /// Stream current user points data for real-time balance updates
+  Stream<Map<String, dynamic>?> _getUserDataStream() {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return null;
+    if (user == null) return Stream.value(null);
 
-    final doc = await FirebaseFirestore.instance
+    return FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
-        .get();
-    return doc.data();
+        .snapshots()
+        .map((snapshot) => snapshot.data());
   }
 
   @override
@@ -86,8 +86,8 @@ class RewardsScreen extends StatelessWidget {
             ),
         ],
       ),
-      body: FutureBuilder<Map<String, dynamic>?>(
-        future: _getUserData(),
+      body: StreamBuilder<Map<String, dynamic>?>(
+        stream: _getUserDataStream(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
@@ -555,7 +555,11 @@ class RewardsScreen extends StatelessWidget {
                   'Expires: ',
                   style: TextStyle(fontWeight: FontWeight.w500),
                 ),
-                Text(_formatDate(voucher.expiresAt!)),
+                Text(
+                  voucher.expiresAt != null
+                      ? _formatDate(voucher.expiresAt!)
+                      : '1 year from purchase',
+                ),
               ],
             ),
             const SizedBox(height: 8),

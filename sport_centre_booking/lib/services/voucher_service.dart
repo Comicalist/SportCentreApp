@@ -8,13 +8,13 @@ class VoucherService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  /// Retrieves active vouchers available for purchase by club
+  /// Retrieves active voucher templates available for purchase by club
+  /// These are reusable templates - users can purchase them multiple times
   static Future<List<Voucher>> getAvailableVouchers() async {
     try {
       final querySnapshot = await _firestore
           .collection('vouchers')
           .where('isActive', isEqualTo: true)
-          .where('purchasedBy', isEqualTo: null)
           .orderBy('clubName')
           .orderBy('amount')
           .get();
@@ -25,12 +25,14 @@ class VoucherService {
     }
   }
 
-  /// Retrieves user's purchased vouchers ordered by purchase date
+  /// Retrieves user's purchased voucher instances ordered by purchase date
+  /// These are in the user's subcollection, not the main vouchers collection
   static Future<List<Voucher>> getUserVouchers(String userId) async {
     try {
       final querySnapshot = await _firestore
-          .collection('vouchers')
-          .where('purchasedBy', isEqualTo: userId)
+          .collection('users')
+          .doc(userId)
+          .collection('user_vouchers')
           .orderBy('purchasedAt', descending: true)
           .get();
 
@@ -40,15 +42,17 @@ class VoucherService {
     }
   }
 
-  /// Finds valid vouchers for booking discounts at specific club
+  /// Finds valid voucher instances for booking discounts at specific club
+  /// Searches user's purchased vouchers that are unused and not expired
   static Future<List<Voucher>> getUsableVouchers(
     String userId,
     String clubId,
   ) async {
     try {
       final querySnapshot = await _firestore
-          .collection('vouchers')
-          .where('purchasedBy', isEqualTo: userId)
+          .collection('users')
+          .doc(userId)
+          .collection('user_vouchers')
           .where('clubId', isEqualTo: clubId)
           .where('type', isEqualTo: VoucherType.fitness.value)
           .where('usedAt', isEqualTo: null)
@@ -76,12 +80,12 @@ class VoucherService {
     }
   }
 
-  /// Real-time stream of available vouchers for marketplace updates
+  /// Real-time stream of available voucher templates for marketplace updates
+  /// Shows reusable templates - users can purchase same voucher multiple times
   static Stream<List<Voucher>> streamAvailableVouchers() {
     return _firestore
         .collection('vouchers')
         .where('isActive', isEqualTo: true)
-        .where('purchasedBy', isEqualTo: null)
         .snapshots()
         .map((snapshot) {
           final vouchers = snapshot.docs.map(Voucher.fromFirestore).toList();
@@ -96,11 +100,13 @@ class VoucherService {
         });
   }
 
-  /// Real-time stream of user's voucher collection for profile updates
+  /// Real-time stream of user's purchased voucher instances for profile updates
+  /// Streams from user's subcollection of purchased vouchers
   static Stream<List<Voucher>> streamUserVouchers(String userId) {
     return _firestore
-        .collection('vouchers')
-        .where('purchasedBy', isEqualTo: userId)
+        .collection('users')
+        .doc(userId)
+        .collection('user_vouchers')
         .snapshots()
         .map((snapshot) {
           final vouchers = snapshot.docs.map(Voucher.fromFirestore).toList();
@@ -115,6 +121,7 @@ class VoucherService {
   }
 
   /// Executes voucher purchase transaction with points validation
+  /// Creates a new voucher instance in user's subcollection - templates remain unchanged
   static Future<void> purchaseVoucher(String voucherId, String userId) async {
     try {
       await _firestore.runTransaction((transaction) async {
@@ -123,6 +130,7 @@ class VoucherService {
           throw Exception('User not authenticated');
         }
 
+        // Get the voucher template (not modified)
         final voucherRef = _firestore.collection('vouchers').doc(voucherId);
         final voucherDoc = await transaction.get(voucherRef);
 
@@ -132,14 +140,11 @@ class VoucherService {
 
         final voucher = Voucher.fromFirestore(voucherDoc);
 
-        if (voucher.purchasedBy != null) {
-          throw Exception('This voucher has already been purchased');
-        }
-
         if (!voucher.isActive) {
           throw Exception('This voucher is no longer available');
         }
 
+        // Check user points
         final userRef = _firestore.collection('users').doc(user.uid);
         final userDoc = await transaction.get(userRef);
 
@@ -156,17 +161,39 @@ class VoucherService {
           );
         }
 
+        // Create a new voucher instance in user's subcollection
         final voucherCode = Voucher.generateVoucherCode();
         final expirationDate = Voucher.calculateExpirationDate();
+        final now = Timestamp.fromDate(DateTime.now());
 
-        transaction.update(voucherRef, {
+        final userVoucherRef = _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('user_vouchers')
+            .doc(); // Generate new ID
+
+        transaction.set(userVoucherRef, {
+          'voucherTemplateId': voucherId, // Link to original template
+          'clubId': voucher.clubId,
+          'clubName': voucher.clubName,
+          'title': voucher.title,
+          'description': voucher.description,
+          'type': voucher.type.value,
+          'amount': voucher.amount,
+          'pointsCost': voucher.pointsCost,
           'purchasedBy': user.uid,
-          'purchasedAt': FieldValue.serverTimestamp(),
+          'purchasedAt': now,
           'expiresAt': Timestamp.fromDate(expirationDate),
           'code': voucherCode,
-          'updatedAt': FieldValue.serverTimestamp(),
+          'createdAt': now,
+          'updatedAt': now,
+          'isActive': true,
+          'usedAt': null,
+          'usedForBooking': null,
+          'createdBy': voucher.createdBy,
         });
 
+        // Deduct points from user
         final newAvailablePoints = availablePoints - voucher.pointsCost;
         transaction.update(userRef, {'availablePoints': newAvailablePoints});
       });
@@ -175,8 +202,13 @@ class VoucherService {
     }
   }
 
-  /// Marks voucher as used for booking discount application
-  static Future<void> useVoucher(String voucherId, String bookingId) async {
+  /// Marks voucher instance as used for booking discount application
+  /// Operates on user's purchased voucher subcollection
+  static Future<void> useVoucher(
+    String userId,
+    String voucherId,
+    String bookingId,
+  ) async {
     final user = _auth.currentUser;
     if (user == null) {
       throw Exception('User must be authenticated to use vouchers');
@@ -184,7 +216,11 @@ class VoucherService {
 
     try {
       await _firestore.runTransaction((transaction) async {
-        final voucherRef = _firestore.collection('vouchers').doc(voucherId);
+        final voucherRef = _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('user_vouchers')
+            .doc(voucherId);
         final voucherDoc = await transaction.get(voucherRef);
 
         if (!voucherDoc.exists) {
@@ -220,7 +256,8 @@ class VoucherService {
     }
   }
 
-  /// Creates new voucher offering with automatic points cost calculation
+  /// Creates new voucher template with automatic points cost calculation
+  /// Templates do NOT include purchaser-related fields - those are added when purchased
   static Future<Voucher> createVoucher({
     required String clubId,
     required String clubName,
@@ -238,6 +275,7 @@ class VoucherService {
       final pointsCost = (amount * 100).round();
       final now = DateTime.now();
 
+      // Template data - NO purchaser-related fields
       final voucherData = {
         'clubId': clubId,
         'createdBy': user.uid,
@@ -250,16 +288,10 @@ class VoucherService {
         'clubName': clubName,
         'createdAt': Timestamp.fromDate(now),
         'updatedAt': Timestamp.fromDate(now),
-        'purchasedBy': null,
-        'purchasedAt': null,
-        'expiresAt': null,
-        'usedAt': null,
-        'usedForBooking': null,
-        'code': null,
+        // Do NOT include: purchasedBy, purchasedAt, expiresAt, usedAt, usedForBooking, code
       };
 
       final docRef = await _firestore.collection('vouchers').add(voucherData);
-      voucherData['id'] = docRef.id;
 
       return Voucher.fromJson({
         'id': docRef.id,
