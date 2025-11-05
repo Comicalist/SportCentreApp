@@ -630,7 +630,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 ),
                 const Spacer(),
                 Text(
-                  '\$${booking.totalPrice.toStringAsFixed(2)}',
+                  '${booking.totalPrice.toStringAsFixed(2)} CHF',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -787,7 +787,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
             Text('Date: $startLabel'),
             Text('Time: $timeLabel'),
             Text('Participants: ${booking.participantCount}'),
-            Text('Total Price: \$${booking.totalPrice.toStringAsFixed(2)}'),
+            Text('Total Price: ${booking.totalPrice.toStringAsFixed(2)} CHF'),
             if (booking.pointsEarned > 0)
               Text('Points Earned: ${booking.pointsEarned}'),
             const SizedBox(height: 8),

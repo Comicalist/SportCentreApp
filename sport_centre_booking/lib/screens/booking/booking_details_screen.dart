@@ -1115,7 +1115,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 style: TextStyle(fontSize: 16, color: Colors.grey[600]),
               ),
               Text(
-                '\$${currentPrice.toStringAsFixed(2)}',
+                '${currentPrice.toStringAsFixed(2)} CHF',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -1153,7 +1153,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                   style: TextStyle(fontSize: 14, color: Colors.orange[600]),
                 ),
                 Text(
-                  '-\$${((widget.activity.guestPrice - widget.activity.memberPrice) * _participantCount).toStringAsFixed(2)}',
+                  '-${((widget.activity.guestPrice - widget.activity.memberPrice) * _participantCount).toStringAsFixed(2)} CHF',
                   style: TextStyle(fontSize: 14, color: Colors.orange[600]),
                 ),
               ],

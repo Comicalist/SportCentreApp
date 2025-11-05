@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../services/club_service.dart';
 import '../../utils/update_bookings_with_user_info.dart';
 import 'club_approval_screen.dart';
-import 'participants_management_screen.dart';
 
 /// Central administration dashboard for sport centre management
 ///
@@ -75,14 +74,6 @@ class AdminPanel extends StatelessWidget {
                     subtitle: 'Generate sample activities for testing',
                     onTap: () => _showSeedDialog(context),
                     color: Colors.teal,
-                  ),
-
-                  _AdminTile(
-                    icon: Icons.people,
-                    title: 'Event Participants',
-                    subtitle: 'View, edit, and manage all participants',
-                    onTap: () => _navigateToParticipants(context),
-                    color: Colors.green,
                   ),
                   
                   _AdminTile(
@@ -172,14 +163,6 @@ class AdminPanel extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const ClubApprovalScreen()),
-    );
-  }
-
-  /// Navigate to participant management system
-  void _navigateToParticipants(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const AdminParticipantsScreen()),
     );
   }
 

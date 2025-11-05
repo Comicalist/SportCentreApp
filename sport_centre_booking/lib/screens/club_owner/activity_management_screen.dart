@@ -642,7 +642,7 @@ class _ActivityCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        '€${activity.guestPrice.toStringAsFixed(0)} (Guest)',
+                        '${activity.guestPrice.toStringAsFixed(0)} CHF (Guest)',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.orange.shade700,
@@ -660,7 +660,7 @@ class _ActivityCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        '€${activity.memberPrice.toStringAsFixed(0)} (Member)',
+                        '${activity.memberPrice.toStringAsFixed(0)} CHF (Member)',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.purple.shade700,

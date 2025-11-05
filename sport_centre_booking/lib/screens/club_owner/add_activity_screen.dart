@@ -855,7 +855,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                             child: TextFormField(
                               controller: _guestPriceController,
                               decoration: const InputDecoration(
-                                labelText: 'Guest Price (€) *',
+                                labelText: 'Guest Price (CHF) *',
                                 border: OutlineInputBorder(),
                                 prefixIcon: Icon(Icons.euro),
                               ),
@@ -877,7 +877,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                             child: TextFormField(
                               controller: _memberPriceController,
                               decoration: const InputDecoration(
-                                labelText: 'Member Price (€) *',
+                                labelText: 'Member Price (CHF) *',
                                 border: OutlineInputBorder(),
                                 prefixIcon: Icon(Icons.card_membership),
                               ),

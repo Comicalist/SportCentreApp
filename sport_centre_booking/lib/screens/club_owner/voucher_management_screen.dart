@@ -518,7 +518,7 @@ class _CreateVoucherDialogState extends State<_CreateVoucherDialog> {
                   ),
                   DropdownMenuItem(
                     value: VoucherType.stuff,
-                    child: Text('Stuff (for physical items)'),
+                    child: Text('Items (for physical items)'),
                   ),
                 ],
                 onChanged: (value) => setState(() => _selectedType = value!),

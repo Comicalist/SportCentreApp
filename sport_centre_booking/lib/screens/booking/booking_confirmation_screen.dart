@@ -218,18 +218,18 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                     if (authProvider.isLoggedIn) ...[
                       _buildSummaryRow(
                         'Member Price (per person)',
-                        '\$${widget.activity.memberPrice.toStringAsFixed(2)}',
+                        '${widget.activity.memberPrice.toStringAsFixed(2)} CHF',
                         isHighlighted: true,
                       ),
                     ] else ...[
                       _buildSummaryRow(
                         'Guest Price (per person)',
-                        '\$${widget.activity.guestPrice.toStringAsFixed(2)}',
+                        '${widget.activity.guestPrice.toStringAsFixed(2)} CHF',
                       ),
                     ],
                     _buildSummaryRow(
                       'Total Amount',
-                      '\$${bookingDetails.totalPrice.toStringAsFixed(2)}',
+                      '${bookingDetails.totalPrice.toStringAsFixed(2)} CHF',
                       isTotal: true,
                     ),
                     const SizedBox(height: 12),

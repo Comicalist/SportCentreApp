@@ -227,7 +227,7 @@ class BookingSuccessScreen extends StatelessWidget {
             _buildDetailRow(
               Icons.attach_money,
               'Total Paid',
-              '\$${booking.amountPaid.toStringAsFixed(2)}',
+              '${booking.amountPaid.toStringAsFixed(2)} CHF',
             ),
 
             const SizedBox(height: 20),

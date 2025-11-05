@@ -293,7 +293,7 @@ class ActivityCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '\$${currentPrice.toStringAsFixed(0)}',
+          '${currentPrice.toStringAsFixed(0)} CHF',
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
