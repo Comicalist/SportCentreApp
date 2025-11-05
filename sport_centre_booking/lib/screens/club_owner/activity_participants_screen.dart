@@ -280,10 +280,55 @@ class _ActivityParticipantsScreenState extends State<ActivityParticipantsScreen>
 
   Future<void> _updateBookingStatus(String bookingId, BookingStatus newStatus) async {
     try {
+      // Get booking data first to handle capacity updates
+      final bookingDoc = await _firestore.collection('bookings').doc(bookingId).get();
+      
+      if (!bookingDoc.exists) {
+        throw Exception('Booking not found');
+      }
+      
+      final bookingData = bookingDoc.data() as Map<String, dynamic>;
+      final oldStatus = bookingData['status'] as String?;
+      final activityId = bookingData['activityId'] as String?;
+      final participantCount = bookingData['participantCount'] as int? ?? 1;
+      
+      // Update booking status
       await _firestore.collection('bookings').doc(bookingId).update({
         'status': newStatus.value,
         'updatedAt': FieldValue.serverTimestamp(),
       });
+      
+      // Handle capacity updates when status changes
+      if (activityId != null && oldStatus != newStatus.value) {
+        final activityRef = _firestore.collection('activities').doc(activityId);
+        final activityDoc = await activityRef.get();
+        
+        if (activityDoc.exists) {
+          final activityData = activityDoc.data() as Map<String, dynamic>;
+          final currentBookedCount = activityData['bookedCount'] as int? ?? 0;
+          final capacity = activityData['capacity'] as int? ?? 0;
+          
+          int newBookedCount = currentBookedCount;
+          
+          // If changing FROM confirmed TO cancelled/other: free up spots
+          if (oldStatus == 'confirmed' && newStatus.value != 'confirmed') {
+            newBookedCount = (currentBookedCount - participantCount).clamp(0, capacity);
+          }
+          // If changing TO confirmed FROM cancelled/other: reduce spots
+          else if (oldStatus != 'confirmed' && newStatus.value == 'confirmed') {
+            newBookedCount = (currentBookedCount + participantCount).clamp(0, capacity);
+          }
+          
+          // Only update if there's a change
+          if (newBookedCount != currentBookedCount) {
+            final newSpotsLeft = capacity - newBookedCount;
+            await activityRef.update({
+              'bookedCount': newBookedCount,
+              'spotsLeft': newSpotsLeft,
+            });
+          }
+        }
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -339,8 +384,9 @@ class _ActivityParticipantsScreenState extends State<ActivityParticipantsScreen>
           // Delete the booking
           await _firestore.collection('bookings').doc(bookingId).delete();
           
-          // If booking was confirmed, restore capacity
-          if (status == 'confirmed' && activityId != null) {
+          // ALWAYS restore capacity when deleting a booking, regardless of status
+          // Only confirmed bookings should have reduced capacity, but we need to handle all cases
+          if (activityId != null) {
             final activityRef = _firestore.collection('activities').doc(activityId);
             final activityDoc = await activityRef.get();
             
@@ -349,7 +395,13 @@ class _ActivityParticipantsScreenState extends State<ActivityParticipantsScreen>
               final currentBookedCount = activityData['bookedCount'] as int? ?? 0;
               final capacity = activityData['capacity'] as int? ?? 0;
               
-              final newBookedCount = (currentBookedCount - participantCount).clamp(0, capacity);
+              // Only reduce bookedCount if the booking was confirmed
+              // (other statuses shouldn't have reduced capacity in the first place)
+              int newBookedCount = currentBookedCount;
+              if (status == 'confirmed') {
+                newBookedCount = (currentBookedCount - participantCount).clamp(0, capacity);
+              }
+              
               final newSpotsLeft = capacity - newBookedCount;
               
               await activityRef.update({

@@ -9,6 +9,7 @@ import '../../models/booking.dart';
 import '../../models/voucher.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/booking_provider.dart';
+import '../../services/activity_service.dart';
 import '../../services/booking_service.dart';
 import '../../services/voucher_service.dart';
 import '../../utils/activity_helpers.dart';
@@ -34,10 +35,14 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   /// Voucher system state for discount application
   Voucher? _selectedVoucher;
   List<Voucher> _availableVouchers = [];
+  
+  /// Current activity data from stream for real-time updates
+  Activity? _currentActivity;
 
   @override
   void initState() {
     super.initState();
+    _currentActivity = widget.activity; // Initialize with passed activity
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final bookingProvider = Provider.of<BookingProvider>(
@@ -92,71 +97,95 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<AuthProvider, BookingProvider>(
-      builder: (context, authProvider, bookingProvider, child) {
-        final isMember = authProvider.isLoggedIn;
-        final currentPrice = isMember
-            ? widget.activity.memberPrice
-            : widget.activity.guestPrice;
-        final totalPrice = currentPrice * _participantCount;
+    return StreamBuilder<Activity?>(
+      stream: ActivityService.getActivityStream(widget.activity.id),
+      initialData: widget.activity,
+      builder: (context, activitySnapshot) {
+        // Use the real-time activity data or fall back to initial activity
+        final currentActivity = activitySnapshot.data ?? widget.activity;
+        
+        // Update state with current activity for use in other methods
+        if (activitySnapshot.hasData && activitySnapshot.data != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _currentActivity?.spotsLeft != currentActivity.spotsLeft) {
+              setState(() {
+                _currentActivity = currentActivity;
+                // Adjust participant count if it exceeds new available spots
+                if (_participantCount > currentActivity.spotsLeft) {
+                  _participantCount = currentActivity.spotsLeft.clamp(1, _participantCount);
+                }
+              });
+            }
+          });
+        }
+        
+        return Consumer2<AuthProvider, BookingProvider>(
+          builder: (context, authProvider, bookingProvider, child) {
+            final isMember = authProvider.isLoggedIn;
+            final currentPrice = isMember
+                ? currentActivity.memberPrice
+                : currentActivity.guestPrice;
+            final totalPrice = currentPrice * _participantCount;
 
-        /// Voucher discount calculation with price floor protection
-        final voucherDiscount = _selectedVoucher?.amount ?? 0.0;
-        final finalPrice = (totalPrice - voucherDiscount).clamp(
-          0.0,
-          totalPrice,
-        );
+            /// Voucher discount calculation with price floor protection
+            final voucherDiscount = _selectedVoucher?.amount ?? 0.0;
+            final finalPrice = (totalPrice - voucherDiscount).clamp(
+              0.0,
+              totalPrice,
+            );
 
-        /// Points calculation using the corrected BookingService method
-        final expectedPoints = BookingService.calculatePointsEarned(
-          widget.activity,
-          finalPrice,
-          isMember,
-        );
+            /// Points calculation using the corrected BookingService method
+            final expectedPoints = BookingService.calculatePointsEarned(
+              currentActivity,
+              finalPrice,
+              isMember,
+            );
 
-        return Scaffold(
-          backgroundColor: Colors.grey[50],
-          appBar: AppBar(
-            title: const Text('Booking Details'),
-            backgroundColor: Colors.teal,
-            foregroundColor: Colors.white,
-            elevation: 0,
-          ),
-          body: _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(AppConstants.defaultPadding),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildActivityCard(),
-                      const SizedBox(height: AppConstants.largeSpacing),
-                      _buildBookingDetails(isMember, currentPrice, totalPrice),
-                      const SizedBox(height: AppConstants.largeSpacing),
-                      _buildParticipantSelector(),
-                      const SizedBox(height: AppConstants.largeSpacing),
-                      if (_availableVouchers.isNotEmpty &&
-                          widget.activity.allowVouchers) ...[
-                        _buildVoucherSection(),
-                        const SizedBox(height: AppConstants.largeSpacing),
-                      ],
-                      _buildPricingBreakdown(
-                        isMember,
-                        currentPrice,
-                        totalPrice,
-                        finalPrice,
-                        voucherDiscount,
-                        expectedPoints,
+            return Scaffold(
+              backgroundColor: Colors.grey[50],
+              appBar: AppBar(
+                title: const Text('Booking Details'),
+                backgroundColor: Colors.teal,
+                foregroundColor: Colors.white,
+                elevation: 0,
+              ),
+              body: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.all(AppConstants.defaultPadding),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildActivityCard(currentActivity),
+                          const SizedBox(height: AppConstants.largeSpacing),
+                          _buildBookingDetails(isMember, currentPrice, totalPrice),
+                          const SizedBox(height: AppConstants.largeSpacing),
+                          _buildParticipantSelector(currentActivity),
+                          const SizedBox(height: AppConstants.largeSpacing),
+                          if (_availableVouchers.isNotEmpty &&
+                              currentActivity.allowVouchers) ...[
+                            _buildVoucherSection(),
+                            const SizedBox(height: AppConstants.largeSpacing),
+                          ],
+                          _buildPricingBreakdown(
+                            isMember,
+                            currentPrice,
+                            totalPrice,
+                            finalPrice,
+                            voucherDiscount,
+                            expectedPoints,
+                          ),
+                          const SizedBox(height: AppConstants.largeSpacing),
+                          _buildCalendarSection(bookingProvider),
+                          const SizedBox(height: AppConstants.largeSpacing),
+                          _buildTermsAndConditions(),
+                          const SizedBox(height: AppConstants.largeSpacing * 2),
+                          _buildBookingButton(bookingProvider, finalPrice, currentActivity),
+                        ],
                       ),
-                      const SizedBox(height: AppConstants.largeSpacing),
-                      _buildCalendarSection(bookingProvider),
-                      const SizedBox(height: AppConstants.largeSpacing),
-                      _buildTermsAndConditions(),
-                      const SizedBox(height: AppConstants.largeSpacing * 2),
-                      _buildBookingButton(bookingProvider, finalPrice),
-                    ],
-                  ),
-                ),
+                    ),
+            );
+          },
         );
       },
     );
@@ -443,7 +472,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   }
 
   /// Displays activity details with gradient header and comprehensive information
-  Widget _buildActivityCard() {
+  Widget _buildActivityCard(Activity activity) {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -471,10 +500,10 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 end: Alignment.bottomRight,
                 colors: [
                   ActivityHelpers.getCategoryColor(
-                    widget.activity.category,
+                    activity.category,
                   ).withValues(alpha: 0.8),
                   ActivityHelpers.getCategoryColor(
-                    widget.activity.category,
+                    activity.category,
                   ).withValues(alpha: 0.6),
                 ],
               ),
@@ -491,14 +520,14 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     ),
                     decoration: BoxDecoration(
                       color: ActivityHelpers.getCategoryColor(
-                        widget.activity.category,
+                        activity.category,
                       ),
                       borderRadius: BorderRadius.circular(
                         AppConstants.categoryBadgeRadius,
                       ),
                     ),
                     child: Text(
-                      widget.activity.category.toUpperCase(),
+                      activity.category.toUpperCase(),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 12,
@@ -509,7 +538,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 ),
                 Center(
                   child: Icon(
-                    ActivityHelpers.getCategoryIcon(widget.activity.category),
+                    ActivityHelpers.getCategoryIcon(activity.category),
                     size: 48,
                     color: Colors.white,
                   ),
@@ -523,7 +552,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.activity.name,
+                  activity.name,
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -532,7 +561,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 ),
                 const SizedBox(height: AppConstants.mediumSpacing),
                 Text(
-                  widget.activity.description,
+                  activity.description,
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.grey[600],
@@ -540,7 +569,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                   ),
                 ),
                 const SizedBox(height: AppConstants.largeSpacing),
-                _buildActivityInfo(),
+                _buildActivityInfo(activity),
               ],
             ),
           ),
@@ -550,35 +579,35 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   }
 
   /// Displays essential activity information in structured rows
-  Widget _buildActivityInfo() {
+  Widget _buildActivityInfo(Activity activity) {
     return Column(
       children: [
         _buildInfoRow(
           Icons.calendar_today,
           'Date',
-          DateFormat('EEEE, MMMM dd, yyyy').format(widget.activity.date),
+          DateFormat('EEEE, MMMM dd, yyyy').format(activity.date),
         ),
         const SizedBox(height: AppConstants.mediumSpacing),
         _buildInfoRow(
           Icons.access_time,
           'Time',
-          '${widget.activity.time} - ${widget.activity.endTimeFormatted} (${widget.activity.duration} min)',
+          '${activity.time} - ${activity.endTimeFormatted} (${activity.duration} min)',
         ),
         const SizedBox(height: AppConstants.mediumSpacing),
         _buildInfoRow(
           Icons.location_on,
           'Location',
-          widget.activity.facilityName,
+          activity.facilityName,
         ),
         const SizedBox(height: AppConstants.mediumSpacing),
-        _buildInfoRow(Icons.groups, 'Organized by', widget.activity.clubName),
+        _buildInfoRow(Icons.groups, 'Organized by', activity.clubName),
         const SizedBox(height: AppConstants.mediumSpacing),
         _buildInfoRow(
           Icons.people,
           'Available spots',
-          '${widget.activity.spotsLeft} of ${widget.activity.capacity}',
+          '${activity.spotsLeft} of ${activity.capacity}',
         ),
-        if (widget.activity.requirements.isNotEmpty) ...[
+        if (activity.requirements.isNotEmpty) ...[
           const SizedBox(height: AppConstants.mediumSpacing),
           _buildRequirementsSection(),
         ],
@@ -757,7 +786,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   }
 
   /// Interactive participant count selector with capacity limits
-  Widget _buildParticipantSelector() {
+  Widget _buildParticipantSelector(Activity activity) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -821,7 +850,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       ),
                     ),
                     IconButton(
-                      onPressed: _participantCount < widget.activity.spotsLeft
+                      onPressed: _participantCount < activity.spotsLeft
                           ? _incrementParticipants
                           : null,
                       icon: const Icon(Icons.add),
@@ -832,10 +861,10 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               ),
             ],
           ),
-          if (_participantCount >= widget.activity.spotsLeft) ...[
+          if (_participantCount >= activity.spotsLeft) ...[
             const SizedBox(height: AppConstants.mediumSpacing),
             Text(
-              'Maximum ${widget.activity.spotsLeft} spots available',
+              'Maximum ${activity.spotsLeft} spots available',
               style: TextStyle(fontSize: 14, color: Colors.orange[700]),
             ),
           ],
@@ -1337,6 +1366,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   Widget _buildBookingButton(
     BookingProvider bookingProvider,
     double totalPrice,
+    Activity activity,
   ) {
     return SizedBox(
       width: double.infinity,
@@ -1377,7 +1407,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
   /// Increases participant count within capacity limits
   void _incrementParticipants() {
-    if (_participantCount < widget.activity.spotsLeft) {
+    final spotsLeft = _currentActivity?.spotsLeft ?? widget.activity.spotsLeft;
+    if (_participantCount < spotsLeft) {
       setState(() {
         _participantCount++;
       });

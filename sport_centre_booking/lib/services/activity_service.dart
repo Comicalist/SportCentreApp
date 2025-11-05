@@ -134,6 +134,22 @@ class ActivityService {
     }
   }
 
+  /// Stream a single activity for real-time updates (e.g., capacity changes)
+  static Stream<Activity?> getActivityStream(String activityId) {
+    return _firestore
+        .collection(_collection)
+        .doc(activityId)
+        .snapshots()
+        .map((doc) {
+      if (doc.exists) {
+        final data = doc.data()!;
+        data['id'] = doc.id;
+        return Activity.fromJson(data);
+      }
+      return null;
+    });
+  }
+
   /// Activity lookup by ID - convenience method for consistent API
   static Future<Activity?> getActivityById(String activityId) async {
     return getActivity(activityId);
