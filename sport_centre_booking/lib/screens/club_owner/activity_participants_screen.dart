@@ -67,6 +67,11 @@ class _ActivityParticipantsScreenState extends State<ActivityParticipantsScreen>
           final completed = allBookings.where((b) => b['status'] == 'completed').length;
           final waitlist = allBookings.where((b) => b['status'] == 'waitlist').length;
 
+          // Calculate total participants (not just bookings) for confirmed bookings
+          final totalConfirmedParticipants = allBookings
+              .where((b) => b['status'] == 'confirmed')
+              .fold<int>(0, (sum, booking) => sum + (booking['participantCount'] as int? ?? 1));
+
           // Apply filters
           var filteredBookings = allBookings;
           if (_filterStatus != null) {
@@ -75,7 +80,7 @@ class _ActivityParticipantsScreenState extends State<ActivityParticipantsScreen>
 
           return Column(
             children: [
-              _buildStatsAndFiltersCard(total, confirmed, pending, cancelled, completed, waitlist),
+              _buildStatsAndFiltersCard(total, confirmed, pending, cancelled, completed, waitlist, totalConfirmedParticipants),
               Expanded(child: _buildParticipantsListContent(filteredBookings)),
             ],
           );
@@ -84,7 +89,7 @@ class _ActivityParticipantsScreenState extends State<ActivityParticipantsScreen>
     );
   }
 
-  Widget _buildStatsAndFiltersCard(int total, int confirmed, int pending, int cancelled, int completed, int waitlist) {
+  Widget _buildStatsAndFiltersCard(int total, int confirmed, int pending, int cancelled, int completed, int waitlist, int totalConfirmedParticipants) {
     return Card(
       margin: const EdgeInsets.all(16),
       child: Padding(
@@ -108,9 +113,9 @@ class _ActivityParticipantsScreenState extends State<ActivityParticipantsScreen>
             ),
             const SizedBox(height: 4),
             Text(
-              'Available: ${widget.activity.capacity - confirmed}',
+              'Available: ${widget.activity.capacity - totalConfirmedParticipants}',
               style: TextStyle(
-                color: widget.activity.capacity - confirmed > 0 ? Colors.green : Colors.red,
+                color: widget.activity.capacity - totalConfirmedParticipants > 0 ? Colors.green : Colors.red,
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),
@@ -218,37 +223,56 @@ class _ActivityParticipantsScreenState extends State<ActivityParticipantsScreen>
 
         if (userId == null) return const SizedBox.shrink();
 
-        // Read user info directly from booking document (denormalized)
-        final userName = bookingData['userName'] as String? ?? 'User ${userId.substring(0, 8)}';
-        final userEmail = bookingData['userEmail'] as String? ?? '';
-
-        // Apply search filter
-        if (_searchQuery.isNotEmpty) {
-          final searchLower = _searchQuery.toLowerCase();
-          if (!userName.toLowerCase().contains(searchLower) &&
-              !userEmail.toLowerCase().contains(searchLower) &&
-              !bookingDoc.id.toLowerCase().contains(searchLower)) {
-            return const SizedBox.shrink();
-          }
-        }
-
         final status = BookingStatus.values.firstWhere(
           (s) => s.value == bookingData['status'],
           orElse: () => BookingStatus.pending,
         );
         final bookingDate = (bookingData['bookingDate'] as Timestamp?)?.toDate();
         final totalPrice = (bookingData['totalPrice'] ?? 0.0).toDouble();
+        final participantCount = bookingData['participantCount'] as int? ?? 1;
 
-        return _ParticipantCard(
-          bookingId: bookingDoc.id,
-          userName: userName,
-          userEmail: userEmail,
-          status: status,
-          bookingDate: bookingDate,
-          totalPrice: totalPrice,
-          confirmationNumber: bookingData['confirmationNumber'] ?? bookingDoc.id,
-          onStatusChanged: (newStatus) => _updateBookingStatus(bookingDoc.id, newStatus),
-          onDelete: () => _deleteBooking(bookingDoc.id),
+        // Fetch user data from users collection in real-time
+        return FutureBuilder<DocumentSnapshot>(
+          future: _firestore.collection('users').doc(userId).get(),
+          builder: (context, userSnapshot) {
+            String userName = 'Loading...';
+            String userEmail = '';
+
+            if (userSnapshot.hasData && userSnapshot.data != null && userSnapshot.data!.exists) {
+              final userData = userSnapshot.data!.data() as Map<String, dynamic>?;
+              if (userData != null) {
+                // Prioritize displayName over name field
+                userName = userData['displayName'] as String? ?? userData['name'] as String? ?? 'Unknown User';
+                userEmail = userData['email'] as String? ?? '';
+              }
+            } else if (userSnapshot.connectionState == ConnectionState.done) {
+              // User not found in database
+              userName = 'Unknown User';
+            }
+
+            // Apply search filter
+            if (_searchQuery.isNotEmpty && userSnapshot.connectionState == ConnectionState.done) {
+              final searchLower = _searchQuery.toLowerCase();
+              if (!userName.toLowerCase().contains(searchLower) &&
+                  !userEmail.toLowerCase().contains(searchLower) &&
+                  !bookingDoc.id.toLowerCase().contains(searchLower)) {
+                return const SizedBox.shrink();
+              }
+            }
+
+            return _ParticipantCard(
+              bookingId: bookingDoc.id,
+              userName: userName,
+              userEmail: userEmail,
+              status: status,
+              bookingDate: bookingDate,
+              totalPrice: totalPrice,
+              participantCount: participantCount,
+              confirmationNumber: bookingData['confirmationNumber'] ?? bookingDoc.id,
+              onStatusChanged: (newStatus) => _updateBookingStatus(bookingDoc.id, newStatus),
+              onDelete: () => _deleteBooking(bookingDoc.id),
+            );
+          },
         );
       },
     );
@@ -303,15 +327,46 @@ class _ActivityParticipantsScreenState extends State<ActivityParticipantsScreen>
 
     if (confirmed == true) {
       try {
-        await _firestore.collection('bookings').doc(bookingId).delete();
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Booking deleted successfully'),
-              backgroundColor: Colors.green,
-            ),
-          );
+        // Get booking data first to update activity capacity
+        final bookingDoc = await _firestore.collection('bookings').doc(bookingId).get();
+        
+        if (bookingDoc.exists) {
+          final bookingData = bookingDoc.data() as Map<String, dynamic>;
+          final activityId = bookingData['activityId'] as String?;
+          final participantCount = bookingData['participantCount'] as int? ?? 1;
+          final status = bookingData['status'] as String?;
+          
+          // Delete the booking
+          await _firestore.collection('bookings').doc(bookingId).delete();
+          
+          // If booking was confirmed, restore capacity
+          if (status == 'confirmed' && activityId != null) {
+            final activityRef = _firestore.collection('activities').doc(activityId);
+            final activityDoc = await activityRef.get();
+            
+            if (activityDoc.exists) {
+              final activityData = activityDoc.data() as Map<String, dynamic>;
+              final currentBookedCount = activityData['bookedCount'] as int? ?? 0;
+              final capacity = activityData['capacity'] as int? ?? 0;
+              
+              final newBookedCount = (currentBookedCount - participantCount).clamp(0, capacity);
+              final newSpotsLeft = capacity - newBookedCount;
+              
+              await activityRef.update({
+                'bookedCount': newBookedCount,
+                'spotsLeft': newSpotsLeft,
+              });
+            }
+          }
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Booking deleted successfully'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
         }
       } catch (e) {
         if (mounted) {
@@ -375,6 +430,7 @@ class _ParticipantCard extends StatelessWidget {
   final BookingStatus status;
   final DateTime? bookingDate;
   final double totalPrice;
+  final int participantCount;
   final String confirmationNumber;
   final Function(BookingStatus) onStatusChanged;
   final VoidCallback onDelete;
@@ -386,6 +442,7 @@ class _ParticipantCard extends StatelessWidget {
     required this.status,
     required this.bookingDate,
     required this.totalPrice,
+    required this.participantCount,
     required this.confirmationNumber,
     required this.onStatusChanged,
     required this.onDelete,
@@ -451,6 +508,7 @@ class _ParticipantCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _InfoRow(icon: Icons.confirmation_number, label: 'Confirmation', value: confirmationNumber),
+                _InfoRow(icon: Icons.people, label: 'Participants', value: participantCount.toString()),
                 _InfoRow(
                   icon: Icons.calendar_today,
                   label: 'Booked',

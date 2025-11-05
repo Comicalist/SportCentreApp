@@ -8,7 +8,7 @@ import '../../models/booking.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/booking_provider.dart';
 import '../../screens/auth/login_screen.dart';
-import '../../services/booking_service.dart';
+// import '../../services/booking_service.dart'; // Commented out - used by _completeBooking function
 import '../../services/notification_service.dart';
 import '../../utils/colors.dart';
 import '../../widgets/notifications/notifications_drawer.dart';
@@ -644,13 +644,13 @@ class _BookingsScreenState extends State<BookingsScreen> {
             if (booking.pointsEarned > 0 &&
                 booking.status == BookingStatus.completed) ...[
               const SizedBox(height: 8),
-              const Row(
+              Row(
                 children: [
-                  Icon(Icons.star, size: 16, color: Colors.orange),
-                  SizedBox(width: 4),
+                  const Icon(Icons.star, size: 16, color: Colors.orange),
+                  const SizedBox(width: 4),
                   Text(
-                    '+ points earned',
-                    style: TextStyle(
+                    '+${booking.pointsEarned} points earned',
+                    style: const TextStyle(
                       fontSize: 14,
                       color: Colors.orange,
                       fontWeight: FontWeight.w500,
@@ -693,26 +693,6 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 8),
-              
-              /// Testing functionality for booking completion workflow
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => _completeBooking(booking),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: Text(
-                    'Complete Booking (+${booking.pointsEarned} pts)',
-                  ),
-                ),
               ),
             ],
           ],
@@ -825,74 +805,75 @@ class _BookingsScreenState extends State<BookingsScreen> {
   }
 
   /// Processes booking completion with points credit workflow
-  void _completeBooking(Booking booking) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Complete Booking'),
-        content: Text(
-          'Mark "${booking.activityTitle}" as completed and credit ${booking.pointsEarned} points?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.of(context).pop();
-              try {
-                final success = await BookingService.completeBooking(
-                  booking.id,
-                );
-                if (!mounted) return;
-                if (success) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Booking completed! ${booking.pointsEarned} points credited',
-                        ),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
-                } else {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Failed to complete booking. Please try again.',
-                        ),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              } catch (e) {
-                if (!mounted) return;
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Error: ${e.toString().replaceAll('Exception: ', '')}',
-                      ),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Complete & Credit Points'),
-          ),
-        ],
-      ),
-    );
-  }
+  /// Currently disabled - logic preserved for future use
+  // void _completeBooking(Booking booking) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: const Text('Complete Booking'),
+  //       content: Text(
+  //         'Mark "${booking.activityTitle}" as completed and credit ${booking.pointsEarned} points?',
+  //       ),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.of(context).pop(),
+  //           child: const Text('Cancel'),
+  //         ),
+  //         ElevatedButton(
+  //           onPressed: () async {
+  //             Navigator.of(context).pop();
+  //             try {
+  //               final success = await BookingService.completeBooking(
+  //                 booking.id,
+  //               );
+  //               if (!mounted) return;
+  //               if (success) {
+  //                 if (context.mounted) {
+  //                   ScaffoldMessenger.of(context).showSnackBar(
+  //                     SnackBar(
+  //                       content: Text(
+  //                         'Booking completed! ${booking.pointsEarned} points credited',
+  //                       ),
+  //                       backgroundColor: Colors.green,
+  //                     ),
+  //                   );
+  //                 }
+  //               } else {
+  //                 if (context.mounted) {
+  //                   ScaffoldMessenger.of(context).showSnackBar(
+  //                     const SnackBar(
+  //                       content: Text(
+  //                         'Failed to complete booking. Please try again.',
+  //                       ),
+  //                       backgroundColor: Colors.red,
+  //                     ),
+  //                   );
+  //                 }
+  //               }
+  //             } catch (e) {
+  //               if (!mounted) return;
+  //               if (context.mounted) {
+  //                 ScaffoldMessenger.of(context).showSnackBar(
+  //                   SnackBar(
+  //                     content: Text(
+  //                       'Error: ${e.toString().replaceAll('Exception: ', '')}',
+  //                     ),
+  //                     backgroundColor: Colors.red,
+  //                   ),
+  //                 );
+  //               }
+  //             }
+  //           },
+  //           style: ElevatedButton.styleFrom(
+  //             backgroundColor: Colors.green,
+  //             foregroundColor: Colors.white,
+  //           ),
+  //           child: const Text('Complete & Credit Points'),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   /// Handles booking cancellation with confirmation workflow
   void _cancelBooking(Booking booking) {

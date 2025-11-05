@@ -90,9 +90,12 @@ service cloud.firestore {
     // ========== USERS ==========
     match /users/{userId} {
       // Users can read their own data, admins can read all
+      // Club owners can read basic user info for their activity participants
       allow read: if request.auth != null && (
         request.auth.uid == userId ||
-        isAdmin()
+        isAdmin() ||
+        // Club owners can read user profiles (needed for participant management)
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isClubOwner == true
       );
       
       // Users can update their own profile data
@@ -169,9 +172,17 @@ service cloud.firestore {
         isAdmin()
       );
       
-      // Delete: Only admin or booking owner
+      // Delete: Booking owner, club owner of the activity, OR admin
       allow delete: if request.auth != null && (
         request.auth.uid == resource.data.userId ||
+        // Club owner can delete if clubId is present and owned
+        (resource.data.clubId != null && ownsClub(resource.data.clubId)) ||
+        // Fallback: allow club owner if they own the club of the related activity
+        (
+          resource.data.activityId != null &&
+          get(/databases/$(database)/documents/activities/$(resource.data.activityId)).data.clubId != null &&
+          ownsClub(get(/databases/$(database)/documents/activities/$(resource.data.activityId)).data.clubId)
+        ) ||
         isAdmin()
       );
     }
