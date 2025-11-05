@@ -8,9 +8,9 @@ class ActivityParticipantsScreen extends StatefulWidget {
   final Activity activity;
 
   const ActivityParticipantsScreen({
-    Key? key,
+    super.key,
     required this.activity,
-  }) : super(key: key);
+  });
 
   @override
   State<ActivityParticipantsScreen> createState() => _ActivityParticipantsScreenState();
@@ -404,7 +404,7 @@ class _StatFilterChip extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Chip(
         avatar: CircleAvatar(
-          backgroundColor: isSelected ? color : color.withOpacity(0.5),
+          backgroundColor: isSelected ? color : color.withValues(alpha: 0.5),
           child: Text(
             value.toString(),
             style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
@@ -416,7 +416,7 @@ class _StatFilterChip extends StatelessWidget {
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
         ),
-        backgroundColor: isSelected ? color.withOpacity(0.2) : color.withOpacity(0.1),
+        backgroundColor: isSelected ? color.withValues(alpha: 0.2) : color.withValues(alpha: 0.1),
         side: isSelected ? BorderSide(color: color, width: 2) : null,
       ),
     );
@@ -469,7 +469,7 @@ class _ParticipantCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       child: ExpansionTile(
         leading: CircleAvatar(
-          backgroundColor: _getStatusColor(status).withOpacity(0.2),
+          backgroundColor: _getStatusColor(status).withValues(alpha: 0.2),
           child: Text(
             userName.isNotEmpty ? userName[0].toUpperCase() : '?',
             style: TextStyle(color: _getStatusColor(status), fontWeight: FontWeight.bold),
@@ -487,7 +487,7 @@ class _ParticipantCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: _getStatusColor(status).withOpacity(0.2),
+                color: _getStatusColor(status).withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
