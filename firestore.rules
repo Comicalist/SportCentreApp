@@ -1,0 +1,251 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Helper function to check if user owns the club
+    function ownsClub(clubId) {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/clubs/$(clubId)).data.ownerId == request.auth.uid;
+    }
+    
+    // ========== ACTIVITIES ==========
+    match /activities/{activityId} {
+      // Everyone can read activities (public access for browsing)
+      allow read: if true;
+      
+      // Create: Only club owners for their approved clubs OR admins
+      allow create: if request.auth != null && (
+        isAdmin() ||
+        (request.resource.data.clubId != null &&
+         get(/databases/$(database)/documents/clubs/$(request.resource.data.clubId)).data.ownerId == request.auth.uid &&
+         get(/databases/$(database)/documents/clubs/$(request.resource.data.clubId)).data.isApproved == true)
+      );
+      
+      // Update: Club owners, admins, OR authenticated users (for booking capacity updates)
+      allow update: if request.auth != null && (
+        isAdmin() ||
+        (resource.data.clubId != null && 
+         get(/databases/$(database)/documents/clubs/$(resource.data.clubId)).data.ownerId == request.auth.uid) ||
+        // Allow capacity updates during booking (authenticated users)
+        request.auth.uid != null
+      );
+      
+      // Delete: Only club owners who own the activity's club OR admins
+      // TEMPORARY: More permissive for debugging
+      allow delete: if request.auth != null;
+    }
+    
+    // ========== CLUBS ==========
+    match /clubs/{clubId} {
+      // Everyone can read clubs
+      allow read: if true;
+      
+      // Anyone authenticated can create a club (for approval)
+      allow create: if request.auth != null &&
+        request.resource.data.ownerId == request.auth.uid;
+      
+      // Only admin or owner can update
+      allow update: if request.auth != null && (
+        isAdmin() ||
+        resource.data.ownerId == request.auth.uid
+      );
+      
+      // Only admin or owner can delete
+      allow delete: if request.auth != null && (
+        isAdmin() ||
+        resource.data.ownerId == request.auth.uid
+      );
+    }
+    
+    // ========== FACILITIES ==========
+    match /facilities/{facilityId} {
+      // Everyone can read facilities
+      allow read: if true;
+      
+      // Create: Only club owners for their clubs OR admins
+      allow create: if request.auth != null && (
+        isAdmin() ||
+        ownsClub(request.resource.data.clubId)
+      );
+      
+      // Update: Only club owners who own the facility's club OR admins
+      allow update: if request.auth != null && (
+        isAdmin() ||
+        ownsClub(resource.data.clubId)
+      );
+      
+      // Delete: Only club owners who own the facility's club OR admins
+      allow delete: if request.auth != null && (
+        isAdmin() ||
+        ownsClub(resource.data.clubId)
+      );
+    }
+    
+    // ========== USERS ==========
+    match /users/{userId} {
+      // Users can read their own data, admins can read all
+      // Club owners can read basic user info for their activity participants
+      allow read: if request.auth != null && (
+        request.auth.uid == userId ||
+        isAdmin() ||
+        // Club owners can read user profiles (needed for participant management)
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isClubOwner == true
+      );
+      
+      // Users can update their own profile data
+      // Allow updates to points fields during booking/redemption
+      allow update: if request.auth != null && request.auth.uid == userId;
+      
+      // Allow user creation (during registration)
+      allow create: if request.auth != null && request.auth.uid == userId;
+      
+      // Subcollections
+      match /bookings/{bookingId} {
+        // Users can read and write their own bookings
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      match /rewards_ledger/{ledgerId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        // Allow users to write their own reward ledger entries during booking
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // User's purchased voucher instances
+      match /user_vouchers/{voucherId} {
+        // Users can read their own purchased vouchers
+        allow read: if request.auth != null && request.auth.uid == userId;
+        
+        // Allow creation during purchase transaction
+        allow create: if request.auth != null && request.auth.uid == userId;
+        
+        // Allow updates when using voucher for booking
+        allow update: if request.auth != null && request.auth.uid == userId;
+        
+        // Users cannot delete vouchers
+        allow delete: if false;
+      }
+    }
+    
+    // ========== BOOKINGS ==========
+    match /bookings/{bookingId} {
+      // Create: Authenticated users (userId must match)
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.userId;
+      
+      // Read: User who made the booking OR club owner of the activity's club OR admin
+      allow read: if request.auth != null && (
+        // Booking owner can always read
+        request.auth.uid == resource.data.userId ||
+        // Club owner can read if clubId is present and owned
+        (resource.data.clubId != null && ownsClub(resource.data.clubId)) ||
+        // Fallback: allow club owner if they own the club of the related activity
+        (
+          resource.data.activityId != null &&
+          // fetch activity (activities are public read) and resolve its clubId
+          get(/databases/$(database)/documents/activities/$(resource.data.activityId)).data.clubId != null &&
+          ownsClub(get(/databases/$(database)/documents/activities/$(resource.data.activityId)).data.clubId)
+        ) ||
+        // Admins
+        isAdmin()
+      );
+      
+      // Update: User who made the booking OR club owner OR admin
+      allow update: if request.auth != null && (
+        // Booking owner can update
+        request.auth.uid == resource.data.userId ||
+        // Club owner can update if clubId is present and owned
+        (resource.data.clubId != null && ownsClub(resource.data.clubId)) ||
+        // Fallback: allow club owner if they own the club of the related activity
+        (
+          resource.data.activityId != null &&
+          get(/databases/$(database)/documents/activities/$(resource.data.activityId)).data.clubId != null &&
+          ownsClub(get(/databases/$(database)/documents/activities/$(resource.data.activityId)).data.clubId)
+        ) ||
+        // Admins
+        isAdmin()
+      );
+      
+      // Delete: Booking owner, club owner of the activity, OR admin
+      allow delete: if request.auth != null && (
+        request.auth.uid == resource.data.userId ||
+        // Club owner can delete if clubId is present and owned
+        (resource.data.clubId != null && ownsClub(resource.data.clubId)) ||
+        // Fallback: allow club owner if they own the club of the related activity
+        (
+          resource.data.activityId != null &&
+          get(/databases/$(database)/documents/activities/$(resource.data.activityId)).data.clubId != null &&
+          ownsClub(get(/databases/$(database)/documents/activities/$(resource.data.activityId)).data.clubId)
+        ) ||
+        isAdmin()
+      );
+    }
+    
+    // ========== REWARDS & VOUCHERS ==========
+    match /rewards/{rewardId} {
+      // Everyone can read rewards catalog
+      allow read: if true;
+      
+      // Only admin can manage rewards
+      allow write: if isAdmin();
+    }
+    
+    // ========== VOUCHERS ==========
+    // Voucher templates that can be purchased multiple times
+    match /vouchers/{voucherId} {
+      // Everyone can read voucher templates (marketplace)
+      allow read: if true;
+      
+      // Only club owners can create vouchers for their clubs OR admins
+      allow create: if request.auth != null && (
+        isAdmin() ||
+        ownsClub(request.resource.data.clubId)
+      );
+      
+      // Only club owners can update their vouchers OR admins
+      allow update: if request.auth != null && (
+        isAdmin() ||
+        ownsClub(resource.data.clubId)
+      );
+      
+      // Only club owners can delete their vouchers OR admins
+      allow delete: if request.auth != null && (
+        isAdmin() ||
+        ownsClub(resource.data.clubId)
+      );
+    }
+    
+    // ========== NOTIFICATIONS ==========
+    match /notifications/{notificationId} {
+      // Users can only read their own notifications
+      allow read: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+      
+      // Users can update (mark as read) and delete their own notifications
+      allow update, delete: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+      
+      // Users can create test notifications for themselves (for debugging)
+      // Cloud Functions can create any notifications
+      allow create: if request.auth != null && 
+        request.resource.data.userId == request.auth.uid;
+    }
+    
+    // ========== PENDING NOTIFICATIONS ==========
+    match /pendingNotifications/{notificationId} {
+      // Users can create test pending notifications for themselves (for debugging)
+      allow create: if request.auth != null && 
+        request.resource.data.userId == request.auth.uid;
+      
+      // Cloud Functions can read/write all pending notifications
+      // Users cannot read pending notifications
+      allow read, update, delete: if false;
+    }
+  }
+}

@@ -1,0 +1,173 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../models/club.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/club_service.dart';
+
+/// Club registration interface for new club owners requiring admin approval
+/// before activation and public listing in the platform
+class AddClubScreen extends StatefulWidget {
+  const AddClubScreen({super.key});
+
+  @override
+  State<AddClubScreen> createState() => _AddClubScreenState();
+}
+
+class _AddClubScreenState extends State<AddClubScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _locationController = TextEditingController();
+  bool _isLoading = false;
+
+  final ClubService _clubService = ClubService();
+
+  @override
+  Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final ownerId = authProvider.appUser!.uid;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Add New Club'),
+        backgroundColor: Colors.orange,
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    /// Admin approval process notification for club owners
+                    Card(
+                      color: Colors.blue[50],
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info, color: Colors.blue[700]),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Your club will be reviewed by an admin before being published.',
+                                style: TextStyle(
+                                  color: Colors.blue[700],
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Club Name',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Enter club name'
+                          : null,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _locationController,
+                      decoration: const InputDecoration(
+                        labelText: 'Location',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Enter location'
+                          : null,
+                    ),
+                    const SizedBox(height: 24),
+
+                    /// Club submission for admin review and approval
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isLoading
+                            ? null
+                            : () => _submitForApproval(ownerId),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Text('Submit for Approval'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+
+  /// Submits club application for admin review with inactive status pending approval
+  Future<void> _submitForApproval(String ownerId) async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    final club = Club(
+      id: '',
+      name: _nameController.text.trim(),
+      location: _locationController.text.trim(),
+      ownerId: ownerId,
+      isActive: false,
+      createdAt: DateTime.now(),
+    );
+
+    try {
+      await _clubService.submitClubForApproval(club: club);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Club submitted for approval!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error submitting club: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _locationController.dispose();
+    super.dispose();
+  }
+}

@@ -1,0 +1,307 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import '../../../services/activity_service.dart';
+import '../../../utils/constants.dart';
+
+/// Advanced filtering system for activity discovery and booking optimization
+/// Provides hierarchical filtering with club-facility dependencies and availability constraints
+class AdvancedFilters extends StatelessWidget {
+  const AdvancedFilters({
+    super.key,
+    required this.isExpanded,
+    required this.selectedClub,
+    required this.selectedDate,
+    required this.selectedTimeCategory,
+    required this.selectedFacility,
+    required this.onlyAvailable,
+    required this.onClubChanged,
+    required this.onDateChanged,
+    required this.onTimeCategoryChanged,
+    required this.onFacilityChanged,
+    required this.onAvailabilityChanged,
+    required this.onClearFilters,
+  });
+  
+  final bool isExpanded;
+  final String? selectedClub;
+  final DateTime? selectedDate;
+  final String? selectedTimeCategory;
+  final String? selectedFacility;
+  final bool onlyAvailable;
+  final Function(String?) onClubChanged;
+  final Function(DateTime?) onDateChanged;
+  final Function(String?) onTimeCategoryChanged;
+  final Function(String?) onFacilityChanged;
+  final Function(bool) onAvailabilityChanged;
+  final VoidCallback onClearFilters;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      height: isExpanded ? null : 0,
+      child: isExpanded
+          ? _buildFilterContent(context)
+          : const SizedBox.shrink(),
+    );
+  }
+
+  /// Main filter content with hierarchical organization
+  /// Arranges filters in logical groups for optimal user workflow
+  Widget _buildFilterContent(BuildContext context) {
+    return Column(
+      children: [
+        const SizedBox(height: 16),
+
+        // Primary location and timing filters
+        Row(
+          children: [
+            Expanded(
+              child: _buildStreamDropdown(
+                label: 'Club',
+                value: selectedClub,
+                stream: ActivityService.getAvailableClubsStream(),
+                onChanged: onClubChanged,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: _buildDatePicker(context)),
+          ],
+        ),
+
+        const SizedBox(height: 12),
+
+        // Secondary filters with facility dependency
+        Row(
+          children: [
+            Expanded(
+              child: _buildDropdown(
+                label: 'Time',
+                value: selectedTimeCategory,
+                items: AppConstants.timeCategories,
+                onChanged: onTimeCategoryChanged,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: selectedClub != null
+                  ? _buildStreamDropdown(
+                      label: 'Facility',
+                      value: selectedFacility,
+                      stream:
+                          ActivityService.getAvailableFacilitiesStreamByClub(
+                            selectedClub!,
+                          ),
+                      onChanged: onFacilityChanged,
+                    )
+                  : _buildDisabledDropdown(
+                      label: 'Facility',
+                      hint: 'Select a club first',
+                    ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 12),
+
+        // Availability constraint and filter management
+        Row(
+          children: [
+            Expanded(
+              child: Row(
+                children: [
+                  Checkbox(
+                    value: onlyAvailable,
+                    onChanged: (value) => onAvailabilityChanged(value ?? false),
+                    activeColor: Colors.teal,
+                  ),
+                  const Text('Only show available'),
+                ],
+              ),
+            ),
+            TextButton.icon(
+              onPressed: onClearFilters,
+              icon: const Icon(Icons.clear, size: 16),
+              label: const Text('Clear filters'),
+              style: TextButton.styleFrom(foregroundColor: Colors.grey[600]),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// Static dropdown for predefined categories like time slots
+  Widget _buildDropdown({
+    required String label,
+    required String? value,
+    required List<String> items,
+    required Function(String?) onChanged,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppConstants.filterBorderRadius),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          hint: Text(label, style: TextStyle(color: Colors.grey[600])),
+          isExpanded: true,
+          items: [
+            // Default "All" option for inclusive filtering
+            DropdownMenuItem<String>(
+              child: Text(
+                'All ${label == "Time" ? "Times" : "Facilities"}',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ),
+            ...items.map(
+              (item) =>
+                  DropdownMenuItem<String>(value: item, child: Text(item)),
+            ),
+          ],
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+
+  /// Dynamic dropdown with real-time data streaming
+  /// Updates automatically when underlying data changes
+  Widget _buildStreamDropdown({
+    required String label,
+    required String? value,
+    required Stream<List<String>> stream,
+    required Function(String?) onChanged,
+  }) {
+    return StreamBuilder<List<String>>(
+      stream: stream,
+      builder: (context, snapshot) {
+        final items = snapshot.data ?? [];
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(
+              AppConstants.filterBorderRadius,
+            ),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              // Validate selected value against current data
+              value: items.contains(value) ? value : null,
+              hint: Text(label, style: TextStyle(color: Colors.grey[600])),
+              isExpanded: true,
+              items: [
+                // Default "All" option for comprehensive filtering
+                DropdownMenuItem<String>(
+                  child: Text(
+                    'All ${label == "Club" ? "Clubs" : "Facilities"}',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ),
+                ...items.map(
+                  (item) =>
+                      DropdownMenuItem<String>(value: item, child: Text(item)),
+                ),
+              ],
+              onChanged: onChanged,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Date selection with booking-appropriate range constraints
+  Widget _buildDatePicker(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppConstants.filterBorderRadius),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppConstants.filterBorderRadius),
+        onTap: () => _showDatePicker(context),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          child: Row(
+            children: [
+              Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  selectedDate != null
+                      ? DateFormat('MMM dd, yyyy').format(selectedDate!)
+                      : 'Select date',
+                  style: TextStyle(
+                    color: selectedDate != null
+                        ? Colors.black87
+                        : Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              // Clear date selection option
+              if (selectedDate != null)
+                InkWell(
+                  onTap: () => onDateChanged(null),
+                  child: Icon(Icons.clear, size: 16, color: Colors.grey[600]),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Date picker with business-appropriate constraints
+  /// Restricts selection to future dates within booking window
+  Future<void> _showDatePicker(BuildContext context) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate ?? DateTime.now(),
+      firstDate: DateTime.now(), // No past bookings
+      lastDate: DateTime.now().add(const Duration(days: 365)), // 1-year horizon
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(
+              context,
+            ).colorScheme.copyWith(primary: Colors.teal),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != selectedDate) {
+      onDateChanged(picked);
+    }
+  }
+
+  /// Disabled facility dropdown when no club is selected
+  /// Enforces hierarchical filter dependency for data integrity
+  Widget _buildDisabledDropdown({required String label, required String hint}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(AppConstants.filterBorderRadius),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      child: Row(
+        children: [
+          Icon(Icons.location_city, size: 16, color: Colors.grey[400]),
+          const SizedBox(width: 8),
+          Text(hint, style: TextStyle(color: Colors.grey[500], fontSize: 14)),
+        ],
+      ),
+    );
+  }
+}
