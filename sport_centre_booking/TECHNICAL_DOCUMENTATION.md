@@ -1,5 +1,80 @@
 # Sport Centre Booking App - Technical Documentation
 
+## Table of Contents
+
+1. [Overview](#1-overview)
+
+   - [Purpose](#purpose)
+   - [Links](#links)
+   - [Main Features](#main-features)
+   - [Target Users](#target-users)
+   - [Technology Stack Summary](#technology-stack-summary)
+
+2. [Architecture & Design](#2-architecture--design)
+
+   - [System Overview](#system-overview)
+   - [Main Components](#main-components)
+   - [Design Patterns](#design-patterns)
+
+3. [Data Model](#3-data-model)
+
+   - [Core Entities and Relationships](#core-entities-and-relationships)
+   - [Firestore Collections Schema](#firestore-collections-schema)
+   - [Data Flow](#data-flow)
+
+4. [Installation & Setup](#4-installation--setup)
+
+   - [Prerequisites](#prerequisites)
+   - [Step-by-Step Setup](#step-by-step-setup)
+   - [Initial Data Setup](#initial-data-setup)
+
+5. [API Documentation](#5-api-documentation)
+
+   - [Firebase Authentication Endpoints](#firebase-authentication-endpoints)
+   - [Firestore API Operations](#firestore-api-operations)
+   - [Example API Responses](#example-api-responses)
+
+6. [Configuration & Deployment](#6-configuration--deployment)
+
+   - [Environment Structure](#environment-structure)
+   - [Build Commands](#build-commands)
+   - [Secrets Management](#secrets-management)
+
+7. [Codebase Structure](#7-codebase-structure)
+
+   - [Folder Layout](#folder-layout)
+   - [Naming Conventions](#naming-conventions)
+
+8. [Business Logic & Core Features](#8-business-logic--core-features)
+
+   - [Activity Booking Workflow](#activity-booking-workflow)
+   - [Real-time Capacity Management](#real-time-capacity-management)
+   - [Club Owner Activity Management](#club-owner-activity-management)
+   - [Club Owner Booking Management](#club-owner-booking-management)
+   - [Admin Oversight Features](#admin-oversight-features)
+   - [Notification & Reminder System](#notification--reminder-system)
+   - [Voucher & Discount System](#voucher--discount-system)
+   - [Development & Testing Infrastructure](#development--testing-infrastructure)
+
+9. [Security & Privacy](#9-security--privacy)
+
+   - [Authentication & Authorization](#authentication--authorization)
+   - [Firestore Security Rules](#firestore-security-rules)
+   - [Data Protection](#data-protection)
+   - [Secure Coding Practices](#secure-coding-practices)
+
+10. [Maintenance & Monitoring](#10-maintenance--monitoring)
+
+    - [Logging & Monitoring](#logging--monitoring)
+    - [Firebase Monitoring](#firebase-monitoring)
+    - [Error Tracking](#error-tracking)
+
+11. [Contributors & Contact](#12-contributors--contact)
+    - [Main Contributors](#main-contributors)
+    - [Documentation Maintenance](#documentation-maintenance)
+
+---
+
 ## 1. Overview
 
 ### Purpose
@@ -7,7 +82,8 @@
 The Sport Centre Booking App is a comprehensive Flutter application designed for public access to sport centre facilities and activities. It enables users to browse, book, and manage sports activities while providing club owners and administrators with powerful management tools.
 
 ### Links
-- 
+
+-
 
 ### Main Features
 
@@ -36,6 +112,85 @@ The Sport Centre Booking App is a comprehensive Flutter application designed for
 - **Notifications**: Firebase Cloud Functions with NodeMailer
 - **Image Handling**: Firebase Storage with local image picker
 - **Calendar**: table_calendar package for booking visualization
+
+### Sample User Credentials
+
+The following test accounts are available for development and testing:
+
+#### Super Admin Account
+
+- **Email**: `admin@sportcentre.ch`
+- **Password**: `Aa!12345`
+- **Role**: System Administrator
+- **Access**: Full system access, club approval, user management
+
+#### Club Owner Accounts
+
+- **Sarah Weber - FitnessPlus Zürich**
+
+  - Email: `sarah.weber@fitnessplus.ch`
+  - Password: `Aa!12345`
+  - Role: Club Owner
+  - Club: FitnessPlus Zürich (Fitness & Training)
+
+- **Marco Rossi - Aquatica Basel**
+
+  - Email: `marco.rossi@aquatica.ch`
+  - Password: `Aa!12345`
+  - Role: Club Owner
+  - Club: Aquatica Basel (Swimming & Wellness)
+
+- **Anna Schneider - ZenFlow Bern**
+  - Email: `anna.schneider@zenflow.ch`
+  - Password: `Aa!12345`
+  - Role: Club Owner
+  - Club: ZenFlow Wellness Bern (Yoga & Meditation)
+
+#### Regular User Accounts
+
+- **Lucas Zimmermann**
+
+  - Email: `lucas.zimmermann@bluemail.ch`
+  - Password: `Aa!12345`
+
+- **Elena Fischer**
+
+  - Email: `elena.fischer@sunrise.ch`
+  - Password: `Aa!12345`
+
+- **Julia Keller**
+
+  - Email: `julia.keller@hotmail.ch`
+  - Password: `Aa!12345`
+
+- **Thomas Meyer**
+
+  - Email: `thomas.meyer@gmx.ch`
+  - Password: `Aa!12345`
+
+- **David Brunner**
+
+  - Email: `david.brunner@outlook.ch`
+  - Password: `Aa!12345`
+
+- **Nina Huber**
+
+  - Email: `nina.huber@protonmail.ch`
+  - Password: `Aa!12345`
+
+- **Stefan Bauer**
+  - Email: `stefan.bauer@icloud.ch`
+  - Password: `Aa!12345`
+
+### Sample Data Overview
+
+The seeded database includes:
+
+- **3 Swiss Sport Clubs** in Zürich, Basel, and Bern
+- **7 Facilities** across the clubs (gyms, pools, studios)
+- **80+ Activities** scheduled over 2 months
+- **60+ Realistic Bookings** with different statuses
+- **Voucher System** with club-specific discounts
 
 ## 2. Architecture & Design
 
@@ -123,44 +278,51 @@ BlockBooking (*) ────── (1) Facility
   "uid": "firebase-user-id",
   "email": "nina.huber@protonmail.ch",
   "displayName": "Nina Huber",
-  
+
   // Account lifecycle
   "createdAt": Timestamp,
   "lastLoginAt": Timestamp,
   "isActive": true,
-  
+
   // Role-based access control
   "role": "user",                       // "user" | "admin"
-  "isClubOwner": false,                
-  
+  "isClubOwner": false,
+
   // Points and rewards system
-  "totalPoints": 0,                     
+  "totalPoints": 0,
   "availablePoints": 3525,              // Current spendable points
-  "lifetimePointsEarned": 0,         
-  
+  "lifetimePointsEarned": 0,
+
   // Membership system
-  "isMember": false,                 
-  "membershipType": null,          
-  "membershipExpiry": null           
+  "isMember": false,
+  "membershipType": null,
+  "membershipExpiry": null
+
+   // Notifications
+  "notificationPreferences": {
+    "method": "inApp", // "email" | "inApp"
+    "reminderHoursBefore": 2
+  }
 }
 ```
 
 #### Bookings Subcollection of User (`/users/{userId}/bookings/{bookingId}`)
+
 ```javascript
 {
   "activityId": "R5wfYrqrc5ywEyscbJE4",      // Reference to the activity
-  "bookingDate": Timestamp,                
-  "bookingId": "3KnjEK2NnhEpRbcIrg3h",   
-  "createdAt": Timestamp,                   
+  "bookingDate": Timestamp,
+  "bookingId": "3KnjEK2NnhEpRbcIrg3h",
+  "createdAt": Timestamp,
   "status": "confirmed",                     // "confirmed" | "cancelled" | "completed" | "waitlist"
-  
+
   // Additional fields (inferred from main bookings collection)
   "activityTitle": "CrossFit Bootcamp",     // Activity name for display
-  "participantCount": 1,               
-  "totalPrice": 25.00,                  
-  "pointsEarned": 45,                 
-  "pointsUsed": 0,                       
-  "isMemberBooking": false,                
+  "participantCount": 1,
+  "totalPrice": 25.00,
+  "pointsEarned": 45,
+  "pointsUsed": 0,
+  "isMemberBooking": false,
   "confirmationNumber": "ABC123DEF"         // Booking reference number
 }
 ```
@@ -170,16 +332,16 @@ BlockBooking (*) ────── (1) Facility
 ```javascript
 {
   "activityId": "R5wfYrqrc5ywEyscbJE4",     // Source activity reference
-  "activityTitle": "CrossFit Bootcamp",    
-  "amount": 45,                    
-  "awardedBy": "Xb7TUTqcxuQHagyhFm5ZtQlMaK42", 
-  "bookingId": "3KnjEK2NnhEpRbcIrg3h",  
-  "createdAt": Timestamp,             
+  "activityTitle": "CrossFit Bootcamp",
+  "amount": 45,
+  "awardedBy": "Xb7TUTqcxuQHagyhFm5ZtQlMaK42",
+  "bookingId": "3KnjEK2NnhEpRbcIrg3h",
+  "createdAt": Timestamp,
   "type": "earn"                          // "earn" | "redeem"
 }
 ```
 
-#### Activities Collection (`/activities/{activityId}`)
+### Activities Collection (`/activities/{activityId}`)
 
 ```javascript
 {
@@ -209,7 +371,7 @@ BlockBooking (*) ────── (1) Facility
 }
 ```
 
-#### Bookings Collection (`/bookings/{bookingId}`)
+### Bookings Collection (`/bookings/{bookingId}`)
 
 ```javascript
 {
@@ -241,37 +403,122 @@ BlockBooking (*) ────── (1) Facility
 }
 ```
 
-#### Clubs Collection (`/clubs/{clubId}`)
+### Clubs Collection (`/clubs/{clubId}`)
 
 ```javascript
 {
-  "id": "club-unique-id",
-  "name": "Downtown Fitness Center",
-  "description": "Modern fitness facility...",
-  "address": "123 Main St, City, State",
-  "phone": "+1234567890",
-  "email": "info@downtownfitness.com",
-  "website": "https://downtownfitness.com",
-  "ownerId": "club-owner-uid",
-  "isApproved": true,
+  "name": "ZenFlow Wellness Bern",
+  "ownerId": "YrnaGTNVZ3jNMm7LpoZRLPGfG2",
+  "location": "Kramgasse 88, 3011 Bern",
   "isActive": true,
-  "imageUrl": "https://storage.googleapis.com/...",
-  "openingHours": {
-    "monday": {"open": "06:00", "close": "22:00"},
-    "tuesday": {"open": "06:00", "close": "22:00"}
-  },
-  "amenities": ["parking", "locker rooms", "wifi"],
+  "isApproved": true,
   "createdAt": Timestamp,
-  "updatedAt": Timestamp
+  "blockedTimes": []
 }
 ```
 
+### Facility Collection (`/facility/{facilityId}`)
+
+```javascript
+{
+  "clubId": "VdEABmPpX4UwzBLKNIG",
+  "title": "Olympisches Schwimmbecken",
+  "description": "50-meter Olympic standard pool for serious swimmers and competitions",
+  "maxCapacity": 40,
+  "imageUrl": "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=300&h=200&fit=crop",
+  "isActive": true,
+  "createdAt": "2025-08-21T19:27:20.583Z",
+  "updatedAt": "2025-11-05T18:27:20.583Z",
+  "blockedTimes": []
+}
+```
+
+### Notifications Collection (/notifications/{notificationId})
+
+```javascript
+{
+  "userId": "user-reference-id",
+  "type": "bookingReminder", // "bookingReminder" | "bookingCancellation"
+  "title": "Booking Reminder",
+  "body": "Your yoga class starts in 2 hours at Studio A",
+  "timestamp": Timestamp,
+  "isRead": false,
+  "bookingId": "booking-reference-id",
+  "activityName": "Morning Yoga Class"
+}
+```
+
+### Vouchers Collection (`/vouchers/{voucherId}`)
+
+```javascript
+{
+  "clubId": "club-reference-id",
+  "createdBy": "club-owner-uid",
+  "title": "5 CHF Fitness Voucher",
+  "description": "Discount voucher for fitness activities. Valid for 1 year from purchase.",
+  "type": "fitness", // "fitness" | "stuff"
+  "amount": 5.00,
+  "pointsCost": 500,
+  "isActive": true,
+  "clubName": "Downtown Fitness Center",
+  "createdAt": Timestamp,
+  "updatedAt": Timestamp,
+
+  // Purchase lifecycle (null until purchased)
+  "purchasedBy": "user-id",
+  "purchasedAt": Timestamp,
+  "expiresAt": Timestamp, // 1 year from purchase
+
+  // Usage lifecycle (null until used)
+  "usedAt": Timestamp,
+  "usedForBooking": "booking-reference-id",
+
+  // Security
+  "code": "SC-V-2025-1234"
+}
+```
+
+### Participant (View Model - Not a Collection)
+
+The `Participant` class is a composite model that merges:
+
+Booking data from `/bookings/{bookingId}`
+User data from `/users/{userId}`
+Purpose: Provides club owners and admins with a unified view of activity participants without needing separate database queries.
+
+Data Source: Created dynamically by calling `Participant.fromFirestore(bookingDoc, userData)` where:
+
+- `bookingDoc` comes from the bookings collection
+- `userData` comes from the users collection
+
 ### Data Flow
 
-1. **User Registration**: Creates user document with default points and preferences
-2. **Activity Creation**: Club owners create activities linked to approved clubs and facilities
-3. **Booking Process**: Creates booking, updates activity capacity, awards points to user
-4. **Real-time Updates**: Firestore snapshots update UI automatically across all connected clients
+1. **User Registration**: Creates user document with default points and notification preferences
+2. **Club Registration**: Club owners create clubs (pending admin approval) with facilities
+3. **Activity Creation**: Club owners create activities linked to approved clubs and facilities
+4. **Booking Process**: Creates booking in both main collection and user subcollection, updates activity capacity
+5. **Activity Completion**: Club owners mark participants as completed, awards points to users, creates rewards ledger entry
+6. **Voucher Lifecycle**: Users purchase vouchers with points → redeem during booking → voucher marked as used
+7. **Notification Flow**: System sends booking reminders and updates based on user preferences
+8. **Real-time Updates**: Firestore snapshots update UI automatically across all connected clients
+
+#### Key Workflows:
+
+**Points Economy Flow:**
+
+- Activity completion → Points awarded → User purchases vouchers → Voucher used for booking discount
+
+**Club Owner Management Flow:**
+
+- Create club → Admin approval → Add facilities → Create activities → Manage participants → Mark completions
+
+**Booking Lifecycle:**
+
+- Browse activities → Authentication check → Booking creation → Confirmation → Activity attendance → Completion (points awarded)
+
+**Admin Oversight Flow:**
+
+- Approve clubs → Monitor activities → Manage users → System analytics → Data seeding
 
 ## 4. Installation & Setup
 
@@ -289,7 +536,7 @@ BlockBooking (*) ────── (1) Facility
 #### 1. Clone and Install Dependencies
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/Comicalist/SportCentreApp.git
 cd sport_centre_booking
 flutter pub get
 ```
@@ -321,14 +568,6 @@ FIREBASE_PROJECT_ID=sport-centre-booking-b96ce
 FIREBASE_API_KEY=AIzaSyDXo9zB1VQ239vCgzWpwhwcuwEfV5YwNMU
 FIREBASE_AUTH_DOMAIN=sportcentreapp.firebaseapp.com
 FIREBASE_STORAGE_BUCKET=sportcentreapp.firebasestorage.app
-
-# Email Service (for Cloud Functions)
-EMAIL_USER=your-gmail@gmail.com
-EMAIL_PASSWORD=your-app-password
-
-# Development Settings
-DEBUG_MODE=true
-LOG_LEVEL=debug
 ```
 
 #### 4. Firebase Rules Configuration
@@ -336,12 +575,6 @@ LOG_LEVEL=debug
 ```bash
 # Deploy Firestore rules
 firebase deploy --only firestore:rules
-
-# Deploy Cloud Functions
-cd functions
-npm install
-cd ..
-firebase deploy --only functions
 ```
 
 #### 5. Run the Application
@@ -505,29 +738,9 @@ firebase deploy --only functions
 firebase deploy --only firestore:rules
 ```
 
-### CI/CD Pipeline (GitHub Actions)
-
-```yaml
-name: Deploy to Firebase
-on:
-  push:
-    branches: [main]
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: subosito/flutter-action@v2
-      - run: flutter pub get
-      - run: flutter test
-      - run: flutter build web
-      - uses: FirebaseExtended/action-hosting-deploy@v0
-```
-
 ### Secrets Management
 
 - Firebase configuration keys stored in environment variables
-- Email service credentials in Firebase Functions environment
 - API keys managed through Firebase project settings
 - Sensitive data encrypted in Firebase security rules
 
@@ -539,49 +752,56 @@ jobs:
 lib/
 ├── main.dart                           # App entry point & configuration
 ├── firebase_options.dart               # Firebase configuration
+├── config/                             # Configuration files
+│   └── firebase_config.dart            # Firebase settings
 ├── models/                             # Data models
 │   ├── activity.dart                   # Activity entity
+│   ├── app_notification.dart           # Notification model
+│   ├── app_user.dart                   # User profile entity
 │   ├── booking.dart                    # Booking entity
-│   ├── user_profile.dart               # User profile entity
 │   ├── club.dart                       # Club entity
 │   ├── facility.dart                   # Facility entity
+│   ├── notification_preferences.dart   # User notification settings
 │   ├── participant.dart                # Participant view model
 │   └── voucher.dart                    # Voucher/rewards entity
 ├── services/                           # Business logic & Firebase integration
-│   ├── auth_service.dart               # Authentication operations
 │   ├── activity_service.dart           # Activity CRUD operations
+│   ├── auth_service.dart               # Authentication operations
+│   ├── blocking_service.dart           # Time blocking management
 │   ├── booking_service.dart            # Booking management
 │   ├── club_service.dart               # Club management
+│   ├── facility_service.dart           # Facility management
+│   ├── image_upload_service.dart       # File upload handling
+│   ├── notification_service.dart       # Notification management
 │   ├── participant_service.dart        # Admin participant management
-│   ├── user_service.dart               # User profile operations
-│   └── image_upload_service.dart       # File upload handling
+│   └── voucher_service.dart            # Voucher operations
 ├── providers/                          # State management
 │   ├── auth_provider.dart              # Authentication state
 │   └── booking_provider.dart           # Booking state & flow
 ├── screens/                            # UI screens
-│   ├── home/                           # Public activity browsing
+│   ├── admin/                          # Admin panel
 │   ├── auth/                           # Login/register/verification
 │   ├── booking/                        # Booking management
-│   ├── profile/                        # User profile
-│   ├── rewards/                        # Points and vouchers
-│   ├── admin/                          # Admin panel
 │   ├── club_owner/                     # Club management
-│   └── facilities/                     # Facility management
+│   ├── facilities/                     # Facility management
+│   ├── home/                           # Public activity browsing
+│   ├── profile/                        # User profile
+│   └── rewards.dart                    # Points and vouchers
 ├── widgets/                            # Reusable UI components
-│   ├── auth/                           # Authentication widgets
 │   ├── activity/                       # Activity display components
+│   ├── auth/                           # Authentication widgets
+│   ├── common/                         # Shared UI components
 │   ├── navigation/                     # Navigation components
-│   └── notifications/                  # Notification widgets
+│   ├── notifications/                  # Notification widgets
+│   └── profile/                        # Profile-related widgets
 └── utils/                              # Helper functions & constants
-    ├── constants.dart                  # App-wide constants
+    ├── activity_helpers.dart           # Activity utility functions
     ├── colors.dart                     # Color scheme
-    ├── activity_seeder.dart            # Data seeding utilities
-    └── debug_clubs.dart                # Development debugging tools
-
-functions/                              # Firebase Cloud Functions
-├── index.js                           # Main functions file
-├── package.json                       # Node.js dependencies
-└── migrate_user_preferences.js        # Database migration script
+    ├── constants.dart                  # App-wide constants
+    ├── debug_clubs.dart                # Development debugging tools
+    ├── sample_data_seeder.dart         # Data seeding utilities
+    ├── update_bookings_with_user_info.dart # Migration script
+    └── validation_utils.dart           # Input validation helpers
 
 firestore.rules                        # Database security rules
 firestore.indexes.json                 # Database indexes
@@ -596,23 +816,6 @@ firebase.json                          # Firebase project configuration
 - **Constants**: UPPER_SNAKE_CASE (e.g., `MAX_CAPACITY`)
 - **Private members**: Leading underscore (e.g., `_firestore`)
 
-### Key Scripts
-
-```bash
-# Development
-flutter run -d chrome
-flutter test
-flutter analyze
-
-# Data management
-firebase firestore:delete --all-collections  # Clear database
-# Use in-app admin seeding tools for test data
-
-# Deployment
-firebase deploy
-flutter build web --release
-```
-
 ## 8. Business Logic & Core Features
 
 ### Activity Booking Workflow
@@ -623,24 +826,6 @@ flutter build web --release
 4. **Payment processing**: Calculate pricing with member discounts and points redemption
 5. **Booking confirmation**: Create booking record, update activity capacity, send notifications
 6. **Points award**: Add points to user account based on activity completion
-
-### Points & Rewards System
-
-```dart
-class PointValues {
-  static const int activityCompletion = 25;
-  static const int firstTimeBonus = 50;
-  static const int weeklyStreak = 15;
-  static const int monthlyStreak = 100;
-  static const double pointsToMoney = 0.01; // CHF 0.01 per point
-}
-```
-
-### Member vs Guest Pricing
-
-- **Members**: Reduced rates on all activities, enhanced point earning multipliers
-- **Guests**: Standard rates, basic point earning, promotional access to select activities
-- **Dynamic pricing**: Activities can have different member/guest pricing structures
 
 ### Real-time Capacity Management
 
@@ -673,6 +858,30 @@ class PointValues {
 - System analytics and reporting capabilities
 - Data seeding tools for testing and development
 
+### Notification & Reminder System
+
+- **Booking Reminders**: Automated reminders sent based on user preferences (2 hours before by default)
+- **Status Updates**: Real-time notifications for booking confirmations, cancellations, and completions
+- **Delivery Methods**: In-app notifications and email notifications via Cloud Functions
+- **Testing Infrastructure**: Debug panel for testing notification workflows in development
+- **Cron Jobs**: Scheduled functions for periodic reminder processing
+
+### Voucher & Discount System
+
+- **Voucher Types**: Fitness vouchers and merchandise/stuff vouchers
+- **Conversion Rate**: 100 points = 1 CHF (as seen in voucher_management_screen.dart)
+- **Voucher Lifecycle**: Purchase with points → Active voucher → Booking discount → Used/Expired
+- **Club-specific Vouchers**: Each club can create their own voucher offerings
+- **Booking Integration**: Vouchers can be applied during booking to reduce total cost
+
+### Development & Testing Infrastructure
+
+- **Swiss-localized Data**: Comprehensive seeding with CHF pricing and Swiss locations
+- **Multi-role Testing**: Automated creation of admin, club owner, and member accounts
+- **Realistic Scenarios**: 80+ activities across 2 months with proper scheduling
+- **Credential Management**: Secure test account generation with role-based access
+- **Migration Tools**: Scripts for updating existing data structures during development
+
 ## 9. Security & Privacy
 
 ### Authentication & Authorization
@@ -682,36 +891,13 @@ class PointValues {
 - **JWT tokens**: Automatic token management through Firebase SDK
 - **Session management**: Secure session handling with automatic token refresh
 
-### Firestore Security Rules - link file?
+### Firestore Security Rules
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Users can read/write their own data
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      allow read: if request.auth != null && isAdmin(request.auth.uid);
-    }
+The complete Firestore security rules are defined in [firestore.rules](firestore.rules). Key security features include:
 
-    // Activities are publicly readable, club owners can create/edit
-    match /activities/{activityId} {
-      allow read: if true;
-      allow create, update: if request.auth != null &&
-        (isClubOwner(request.auth.uid) || isAdmin(request.auth.uid));
-      allow delete: if request.auth != null &&
-        (resource.data.createdBy == request.auth.uid || isAdmin(request.auth.uid));
-    }
-
-    // Bookings are user-specific with admin override
-    match /bookings/{bookingId} {
-      allow read, write: if request.auth != null &&
-        request.auth.uid == resource.data.userId;
-      allow read, write: if request.auth != null && isAdmin(request.auth.uid);
-    }
-  }
-}
-```
+- **Role-based access control**: Users, club owners, and administrators with different permissions
+- **Resource ownership**: Users can only access their own data unless they have elevated permissions
+- **Club owner authorization**: Club owners can manage activities and participants for their clubs only
 
 ### Data Protection
 
@@ -727,75 +913,7 @@ service cloud.firestore {
 - **XSS protection**: Flutter framework provides automatic XSS protection
 - **Secure file uploads**: Image uploads validated for file type and size limits
 
-## 10. Testing
-
-### Test Strategy
-
-- **Unit Tests**: Model serialization, business logic validation, utility functions
-- **Widget Tests**: UI component behavior, user interaction flows
-- **Integration Tests**: End-to-end booking workflows, Firebase integration
-- **Manual Testing**: Cross-platform compatibility, performance validation
-
-### Testing Frameworks
-
-```dart
-dependencies:
-  flutter_test:
-    sdk: flutter
-  firebase_core: ^3.6.0
-  fake_cloud_firestore: ^2.4.1  # Firestore testing
-  firebase_auth_mocks: ^0.8.0   # Auth testing
-```
-
-### Running Tests
-
-```bash
-# Unit tests
-flutter test
-
-# Widget tests
-flutter test test/widget_test.dart
-
-# Integration tests
-flutter drive --target=test_driver/app.dart
-
-# Test coverage
-flutter test --coverage
-genhtml coverage/lcov.info -o coverage/html
-```
-
-### Example Test Case
-
-```dart
-// test/models/activity_test.dart
-import 'package:flutter_test/flutter_test.dart';
-import 'package:sport_centre_booking/models/activity.dart';
-
-void main() {
-  group('Activity Model Tests', () {
-    test('Activity serialization to/from JSON', () {
-      final activity = Activity(
-        id: 'test-123',
-        title: 'Test Yoga',
-        category: 'wellness',
-        price: 15.00,
-        capacity: 12,
-        bookedCount: 5,
-      );
-
-      final json = activity.toJson();
-      final recreated = Activity.fromJson(json);
-
-      expect(recreated.id, equals(activity.id));
-      expect(recreated.title, equals(activity.title));
-      expect(recreated.isAvailable, isTrue);
-      expect(recreated.spotsRemaining, equals(7));
-    });
-  });
-}
-```
-
-## 11. Maintenance & Monitoring
+## 10. Maintenance & Monitoring
 
 ### Logging & Monitoring
 
@@ -845,46 +963,20 @@ Widget build(BuildContext context) {
 }
 ```
 
-### Known Issues & Limitations
-
-1. **Offline functionality**: Limited offline capabilities, requires internet for most operations
-2. **Large dataset performance**: UI pagination needed for clubs with 1000+ activities
-3. **Image optimization**: Large images may impact performance on slower connections
-4. **Concurrent booking conflicts**: Rare edge cases with simultaneous bookings for last available spot
-
-### Update Process
-
-1. **Development testing**: Feature development in local environment
-2. **Staging deployment**: Firebase staging project for QA validation
-3. **Production deployment**: Automated deployment through CI/CD pipeline
-4. **Rollback procedure**: Firebase provides instant rollback capabilities for critical issues
-
 ## 12. Contributors & Contact
 
 ### Main Contributors
 
-- **Lead Developer**: Primary architect and Flutter development
-- **Firebase Integration**: Backend services and Cloud Functions implementation
-- **UI/UX Design**: Material Design 3 implementation and user experience optimization
-
-### Maintainers
-
-- **Technical Lead**: Overall architecture decisions and code review
-- **DevOps Engineer**: Firebase configuration and deployment pipeline
-- **Product Manager**: Feature prioritization and business requirements
-
-### Support Contact
-
-- **Technical Support**: For development and integration questions
-- **Business Inquiries**: For feature requests and commercial licensing
-- **Bug Reports**: GitHub issues or direct email for critical problems
+- Léon Ehrwein
+- Jehu Enberg
+- Yohann Charbonnet
+- Tu Nguyen
+- Nadja Lötscher
 
 ### Documentation Maintenance
 
-- **Last Updated**: January 2024
+- **Last Updated**: November 2025
 - **Version**: 1.0.5
-- **Review Schedule**: Quarterly updates with major releases
-- **Contribution Guidelines**: Follow Flutter style guide and include comprehensive tests
 
 ---
 

@@ -58,4 +58,4 @@ A comprehensive Flutter application for booking sports activities and managing f
 ---
 
 **Built with ❤️ using Flutter and Firebase**
-by Léon Ehrwein, Yohann Charbonnet, Jehu Enberg, Tu Nguyen and Nadja Lötscher
+by Léon Ehrwein, Jehu Enberg, Yohann Charbonnet, Tu Nguyen and Nadja Lötscher
