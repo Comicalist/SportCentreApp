@@ -437,16 +437,6 @@ class AdminPanel extends StatelessWidget {
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () {
-              final credentialsText = ComprehensiveSeeder.getCredentialsText();
-              Clipboard.setData(ClipboardData(text: credentialsText));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('All credentials copied to clipboard!')),
-              );
-            },
-            child: const Text('Copy All'),
-          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Done'),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:sport_centre_booking/services/booking_service.dart';
 import '../../models/booking.dart';
 import '../../models/activity.dart';
 
@@ -280,6 +281,22 @@ class _ActivityParticipantsScreenState extends State<ActivityParticipantsScreen>
 
   Future<void> _updateBookingStatus(String bookingId, BookingStatus newStatus) async {
     try {
+      // Special handling for completed status - use service method to award points
+      if (newStatus == BookingStatus.completed) {
+        await BookingService.markUserBookingCompleted(bookingId);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Status updated to ${newStatus.displayName} and points awarded'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+        return; // Early return - the service method handles everything
+      }
+
+      // For other status changes, continue with existing logic
       // Get booking data first to handle capacity updates
       final bookingDoc = await _firestore.collection('bookings').doc(bookingId).get();
       
@@ -568,7 +585,7 @@ class _ParticipantCard extends StatelessWidget {
                       ? '${bookingDate!.day}/${bookingDate!.month}/${bookingDate!.year}'
                       : 'N/A',
                 ),
-                _InfoRow(icon: Icons.attach_money, label: 'Price', value: '\${totalPrice.toStringAsFixed(2)} CHF'),
+                _InfoRow(icon: Icons.attach_money, label: 'Price', value: '${totalPrice.toStringAsFixed(2)} CHF'),
                 const Divider(height: 24),
                 const Text('Change Status:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                 const SizedBox(height: 8),
