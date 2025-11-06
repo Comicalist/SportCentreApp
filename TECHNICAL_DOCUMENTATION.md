@@ -9,6 +9,7 @@
    - [Main Features](#main-features)
    - [Target Users](#target-users)
    - [Technology Stack Summary](#technology-stack-summary)
+   - [Sample User Credentials](#sample-user-credentials)
 
 2. [Architecture & Design](#2-architecture--design)
 
@@ -83,7 +84,9 @@ The Sport Centre Booking App is a comprehensive Flutter application designed for
 
 ### Links
 
-- 
+- [Project on GitHub](https://github.com/Comicalist/SportCentreApp)
+- [Firebase Console](https://console.firebase.google.com/u/0/project/sportcentreapp/overview)
+- [Closed Beta on Google Play](https://play.google.com/apps/internaltest/4701168419770952808) 
 
 ### Main Features
 
