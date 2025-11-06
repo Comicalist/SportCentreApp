@@ -369,7 +369,6 @@ class BookingProvider extends ChangeNotifier {
 
   /// Check for booking time conflicts (placeholder for future implementation)
   Future<bool> canBookActivity(DateTime startTime, DateTime endTime) async {
-    // TODO: Implement conflict checking logic
   return true;
   }
 

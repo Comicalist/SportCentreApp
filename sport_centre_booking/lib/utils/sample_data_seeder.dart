@@ -6,7 +6,6 @@ import '../models/app_user.dart';
 import '../models/club.dart';
 import '../models/facility.dart';
 import '../models/voucher.dart';
-import '../models/app_notification.dart';
 import 'dart:math';
 
 class ComprehensiveSeeder {
@@ -20,48 +19,28 @@ class ComprehensiveSeeder {
   /// Main seeder method - creates a complete Swiss sport centre ecosystem
   static Future<Map<String, dynamic>> seedCompleteDatabase({bool clearExisting = false}) async {
     try {
-      print('🇨🇭 Starting comprehensive Swiss sport centre seeding...');
       _createdCredentials.clear();
       
-      // Skip clearing - using existing users
-      print('ℹ️ Using existing user accounts - skipping database clearing');
-      
       // Phase 1: Foundation Data
-      print('👥 Setting up existing users with Swiss profiles...');
       final users = await _setupExistingUsers();
-      print('✅ Updated ${users.length} user profiles');
       
       if (users.isEmpty) {
         throw Exception('No users found with the expected email addresses');
       }
       
-      print('🏢 Creating clubs...');
       final clubs = await _seedSwissClubs(users);
-      print('✅ Created ${clubs.length} Swiss sport clubs');
       
-      print('🏟️ Creating facilities...');
       final facilities = await _seedSwissFacilities(clubs);
-      print('✅ Created ${facilities.length} facilities');
       
       // Phase 2: Operational Data  
-      print('🏃 Creating activities...');
       final activities = await _seedSwissActivities(clubs, facilities, users); // Pass users here
-      print('✅ Created ${activities.length} activities');
       
-      print('🎫 Creating vouchers...');
       final vouchers = await _seedVouchers(clubs, users);
-      print('✅ Created ${vouchers.length} vouchers');
       
       // Phase 3: Behavioral Data
-      print('📅 Creating bookings...');
       await _seedRealisticBookings(users, activities, vouchers);
-      print('✅ Created realistic booking patterns');
       
-      print('🔔 Creating notifications...');
       await _seedNotifications(users);
-      print('✅ Created notifications');
-      
-      print('🎉 Swiss sport centre ecosystem seeded successfully!');
       
       return {
         'success': true,
@@ -74,9 +53,7 @@ class ComprehensiveSeeder {
           'vouchers': vouchers.length,
         }
       };
-    } catch (e, stackTrace) {
-      print('❌ Seeding failed: $e');
-      print('Stack trace: $stackTrace');
+    } catch (e) {
       return {
         'success': false,
         'error': e.toString(),
@@ -87,7 +64,6 @@ class ComprehensiveSeeder {
 
   /// Setup existing users with Swiss sport profiles (admin-only operation)
   static Future<List<AppUser>> _setupExistingUsers() async {
-    print('👥 Setting up existing users with Swiss profiles...');
     final List<AppUser> users = [];
     
     // Pre-defined user data that matches the created Firebase Auth accounts
@@ -217,7 +193,6 @@ class ComprehensiveSeeder {
 
     for (final profileData in profilesData) {
       try {
-        print('Looking up user: ${profileData['email']}');
         
         // Try to find existing user in Firestore first
         String? uid;
@@ -228,7 +203,6 @@ class ComprehensiveSeeder {
             
         if (firestoreQuery.docs.isNotEmpty) {
           uid = firestoreQuery.docs.first.id;
-          print('Found existing Firestore user: $uid');
           
           // Only update if this is the admin user (who has permissions)
           if (profileData['email'] == 'admin@sportcentre.ch') {
@@ -254,7 +228,6 @@ class ComprehensiveSeeder {
             );
 
             await _firestore.collection('users').doc(uid).set(user.toJson(), SetOptions(merge: true));
-            print('Updated Firestore profile for: ${user.email}');
             users.add(user);
           } else {
             // For non-admin users, create AppUser object with existing data but don't update Firestore
@@ -281,7 +254,6 @@ class ComprehensiveSeeder {
             );
             
             users.add(user);
-            print('Using existing profile: ${user.email}');
           }
         } else {
           // Try to find in Firebase Auth (fallback)
@@ -289,14 +261,11 @@ class ComprehensiveSeeder {
             final authUsers = await _auth.fetchSignInMethodsForEmail(profileData['email']);
             if (authUsers.isNotEmpty) {
               // User exists in Auth but not in Firestore - skip for now since we can't update
-              print('User exists in Auth but not accessible in Firestore: ${profileData['email']}');
               continue;
             } else {
-              print('User not found in Auth: ${profileData['email']}');
               continue;
             }
           } catch (e) {
-            print('Error checking Auth for ${profileData['email']}: $e');
             continue;
           }
         }
@@ -312,15 +281,12 @@ class ComprehensiveSeeder {
                   'Member (${profileData['membershipType']})',
         });
         
-        print('✅ Using profile: ${profileData['email']}');
         
       } catch (e) {
-        print('❌ Failed to process ${profileData['email']}: $e');
         // Continue with other users even if one fails
       }
     }
 
-    print('✅ Processed ${users.length} user profiles');
     return users;
   }
 
@@ -383,13 +349,11 @@ class ComprehensiveSeeder {
         final docRef = await _firestore.collection('clubs').add(club.toMap());
         final savedClub = club.copyWith(id: docRef.id);
         clubs.add(savedClub);
-        print('Created club: ${club.name}');
       }
 
       return clubs;
     } catch (e) {
-      print('❌ Error creating clubs: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -478,13 +442,11 @@ class ComprehensiveSeeder {
         final docRef = await _firestore.collection('facilities').add(facility.toJson());
         final savedFacility = facility.copyWith(id: docRef.id);
         facilities.add(savedFacility);
-        print('Created facility: ${facility.title}');
       }
 
       return facilities;
     } catch (e) {
-      print('❌ Error creating facilities: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -599,7 +561,6 @@ class ComprehensiveSeeder {
         ).toList();
         
         if (suitableFacilities.isEmpty) {
-          print('No suitable facility found for ${template['name']} - using first available');
           if (clubFacilities.isNotEmpty) {
             suitableFacilities.add(clubFacilities.first);
           } else {
@@ -669,8 +630,7 @@ class ComprehensiveSeeder {
 
       return activities;
     } catch (e) {
-      print('❌ Error creating activities: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -776,7 +736,6 @@ class ComprehensiveSeeder {
 
       return vouchers;
     } catch (e) {
-      print('❌ Error creating vouchers: $e');
       return [];
     }
   }
@@ -812,7 +771,6 @@ class ComprehensiveSeeder {
         }
       }
     } catch (e) {
-      print('❌ Error creating bookings: $e');
     }
   }
 
@@ -876,7 +834,6 @@ class ComprehensiveSeeder {
         });
       }
     } catch (e) {
-      print('❌ Error creating booking: $e');
     }
   }
 
@@ -901,7 +858,6 @@ class ComprehensiveSeeder {
         await _firestore.collection('notifications').add(notification);
       }
     } catch (e) {
-      print('❌ Error creating notifications: $e');
     }
   }
 
@@ -949,46 +905,4 @@ class ComprehensiveSeeder {
     }
   }
 
-  /// Display credentials in a formatted way
-  static void printCredentials() {
-    print('\n' + '='*60);
-    print('🔑 SWISS SPORT CENTRE USER ACCOUNTS');
-    print('='*60);
-    
-    for (var cred in _createdCredentials) {
-      print('${cred['type']}: ${cred['name']}');
-      print('  📧 Email: ${cred['email']}');
-      print('  🔐 Password: ${cred['password']}');
-      print('');
-    }
-    
-    print('='*60);
-    print('💡 Use these accounts to test different user roles');
-    print('🇨🇭 All clubs are located in major Swiss cities');
-    print('💰 Activities priced in CHF with member discounts');
-    print('📅 2 months of activities with realistic scheduling');
-    print('='*60 + '\n');
-  }
-
-  /// Get credentials as a formatted string for UI display
-  static String getCredentialsText() {
-    if (_createdCredentials.isEmpty) {
-      return 'No user accounts found. Please ensure the expected email addresses exist in Firebase Auth.';
-    }
-    
-    StringBuffer buffer = StringBuffer();
-    buffer.writeln('🔑 SWISS SPORT CENTRE USER ACCOUNTS\n');
-    
-    for (var cred in _createdCredentials) {
-      buffer.writeln('${cred['type']}: ${cred['name']}');
-      buffer.writeln('📧 ${cred['email']}');
-      buffer.writeln('🔐 ${cred['password']}\n');
-    }
-    
-    buffer.writeln('💡 Use these accounts to test different user roles');
-    buffer.writeln('🇨🇭 Swiss sport centres in Zürich, Basel, and Bern');
-    buffer.writeln('💰 CHF pricing with member discounts');
-    buffer.writeln('📅 2 months of realistic activity scheduling');
-    return buffer.toString();
-  }
 }

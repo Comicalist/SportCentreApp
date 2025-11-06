@@ -585,7 +585,7 @@ class _ParticipantCard extends StatelessWidget {
                       ? '${bookingDate!.day}/${bookingDate!.month}/${bookingDate!.year}'
                       : 'N/A',
                 ),
-                _InfoRow(icon: Icons.attach_money, label: 'Price', value: '\${totalPrice.toStringAsFixed(2)} CHF'),
+                _InfoRow(icon: Icons.attach_money, label: 'Price', value: '${totalPrice.toStringAsFixed(2)} CHF'),
                 const Divider(height: 24),
                 const Text('Change Status:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                 const SizedBox(height: 8),

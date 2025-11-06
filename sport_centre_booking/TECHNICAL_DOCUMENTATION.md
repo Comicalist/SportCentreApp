@@ -83,7 +83,7 @@ The Sport Centre Booking App is a comprehensive Flutter application designed for
 
 ### Links
 
--
+- 
 
 ### Main Features
 
@@ -252,21 +252,225 @@ The application follows a layered architecture pattern with clear separation of 
 
 ### Core Entities and Relationships
 
-```
-User (1) ────────── (*) Booking (*) ────────── (1) Activity
-  │                                               │
-  │                                               │
-  └─── (*) Notification                           │
-                                                  │
-Club (1) ────────── (*) Facility (1) ─────────────┘
-  │
-  └─── (1) ClubOwner (User)
+```mermaid
+erDiagram
+    %% Core User Management
+    Users {
+        string uid PK "Firebase Auth UID"
+        string email UK "Email address"
+        string displayName "Full name"
+        timestamp createdAt
+        timestamp lastLoginAt
+        string role "user | admin"
+        boolean isActive
+        boolean isClubOwner
+        int totalPoints
+        int availablePoints "Spendable points"
+        int lifetimePointsEarned
+        boolean isMember
+        string membershipType "basic | standard | premium"
+        timestamp membershipExpiry
+    }
 
-Voucher (*) ────────── (1) User
-  │
-  └─── Redemption History
+    %% Club Management
+    Clubs {
+        string id PK
+        string name
+        string ownerId FK
+        string location
+        boolean isActive
+        boolean isApproved "Admin approval required"
+        timestamp createdAt
+        json blockedTimes "Array of blocked time slots"
+    }
 
-BlockBooking (*) ────── (1) Facility
+    %% Facility Infrastructure
+    Facilities {
+        string id PK
+        string clubId FK
+        string title "Facility name"
+        string description
+        int maxCapacity
+        string imageUrl
+        boolean isActive
+        timestamp createdAt
+        timestamp updatedAt
+        json blockedTimes "Array of blocked time slots"
+    }
+
+    %% Activity Catalog
+    Activities {
+        string id PK
+        string clubId FK
+        string facilityId FK
+        string clubName "Denormalized"
+        string facilityName "Denormalized"
+        string name
+        string description
+        string category "Wellness | Fitness | Kids | Workshops"
+        timestamp date
+        string time "HH:mm format"
+        int duration "Minutes"
+        string timeCategory "Morning | Afternoon | Evening"
+        int capacity
+        int bookedCount
+        double guestPrice
+        double memberPrice
+        int pointsReward
+        boolean allowVouchers
+        json requirements "Array of requirements"
+        string imageUrl
+        timestamp createdAt
+        timestamp updatedAt
+        string createdBy FK
+    }
+
+    %% Booking System - Main Collection
+    Bookings {
+        string id PK
+        string activityId FK
+        string userId FK
+        string activityTitle "Denormalized"
+        timestamp activityDate
+        string activityTime
+        timestamp bookingDate
+        string status "pending | confirmed | cancelled | completed | waitlist"
+        string clubId FK "Denormalized"
+        string clubName "Denormalized"
+        string facilityId FK "Denormalized"
+        string facilityName "Denormalized"
+        int participantCount
+        double totalPrice
+        double amountPaid
+        int pointsEarned
+        int pointsUsed
+        boolean isMemberBooking
+        string confirmationNumber UK
+        timestamp createdAt
+        string timeSlotId
+        string cancellationReason
+        timestamp cancelledAt
+        string voucherId FK
+        double voucherDiscount
+    }
+
+    %% User Subcollections
+    UserBookings {
+        string id PK
+        string userId FK "Parent collection"
+        string activityId FK
+        string bookingId FK
+        string activityTitle
+        timestamp bookingDate
+        timestamp createdAt
+        string status "confirmed | cancelled | completed | waitlist"
+        int participantCount
+        double totalPrice
+        int pointsEarned
+        int pointsUsed
+        boolean isMemberBooking
+        string confirmationNumber
+    }
+
+    UserRewardsLedger {
+        string id PK
+        string userId FK "Parent collection"
+        string activityId FK
+        string activityTitle
+        string bookingId FK
+        int amount "Points amount"
+        string type "earn | redeem"
+        string awardedBy FK "Club owner or system"
+        timestamp createdAt
+    }
+
+    %% Voucher System
+    Vouchers {
+        string id PK
+        string clubId FK
+        string createdBy FK
+        string title
+        string description
+        string type "fitness | stuff"
+        double amount "CHF value"
+        int pointsCost "Points required"
+        boolean isActive
+        string clubName "Denormalized"
+        timestamp createdAt
+        timestamp updatedAt
+        string purchasedBy FK
+        timestamp purchasedAt
+        timestamp expiresAt "1 year from purchase"
+        timestamp usedAt
+        string usedForBooking FK
+        string code UK "Security code"
+    }
+
+    %% Notification System
+    Notifications {
+        string id PK
+        string userId FK
+        string type "bookingReminder | bookingCancellation | activityUpdate"
+        string title
+        string body
+        timestamp timestamp
+        boolean isRead
+        string bookingId FK
+        string activityId FK
+        string activityName
+    }
+
+    %% Participant View Model (Composite)
+    Participants {
+        string id PK "Derived from bookingId"
+        string userId FK
+        string userName "From Users collection"
+        string userEmail "From Users collection"
+        string activityId FK
+        string activityTitle
+        timestamp activityDate
+        string activityTime
+        timestamp bookingDate
+        string status
+        int participantCount
+        double amountPaid
+        int pointsEarned
+        boolean isMemberBooking
+        string confirmationNumber
+        string phoneNumber "Optional from Users"
+        string notes "Optional"
+    }
+
+    %% Relationships
+    Users ||--o{ Clubs : "owns (isClubOwner)"
+    Users ||--o{ Activities : "creates"
+    Users ||--o{ Bookings : "makes"
+    Users ||--|| UserBookings : "has subcollection"
+    Users ||--|| UserRewardsLedger : "has subcollection"
+    Users ||--o{ Vouchers : "purchases"
+    Users ||--o{ Notifications : "receives"
+
+    Clubs ||--o{ Facilities : "contains"
+    Clubs ||--o{ Activities : "hosts"
+    Clubs ||--o{ Vouchers : "offers"
+
+    Facilities ||--o{ Activities : "hosts"
+
+    Activities ||--o{ Bookings : "receives"
+    Activities ||--o{ Participants : "has (view)"
+
+    Bookings ||--|| UserBookings : "synced to subcollection"
+    Bookings ||--o| UserRewardsLedger : "generates points entry"
+    Bookings ||--o| Vouchers : "can use"
+
+    %% Notes on Data Architecture
+    %% 1. Users collection is the primary user store
+    %% 2. UserBookings and UserRewardsLedger are subcollections for user-specific queries
+    %% 3. Bookings is the main collection for cross-user booking management
+    %% 4. Participants is a composite view model, not a stored collection
+    %% 5. Denormalized fields (clubName, facilityName, etc.) improve query performance
+    %% 6. Points flow: Activities → Bookings → UserRewardsLedger → User.availablePoints
+    %% 7. Voucher lifecycle: Created → Purchased → Used/Expired
 ```
 
 ### Firestore Collections Schema
