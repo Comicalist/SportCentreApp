@@ -44,7 +44,6 @@ A comprehensive Flutter application for booking sports activities and managing f
 ## Documentation
 
 - [Technical Documentation](TECHNICAL_DOCUMENTATION.md) - Architecture, Service methods, data models and implementation details
-- [User Guide](USER_GUIDE.md) - End-user instructions
 
 ## Contributing
 
