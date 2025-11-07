@@ -1184,7 +1184,3 @@ Widget build(BuildContext context) {
 
 - **Last Updated**: November 2025
 - **Version**: 1.0.5
-
----
-
-This technical documentation provides a comprehensive overview of the Sport Centre Booking App architecture, implementation details, and operational procedures. The application successfully combines modern Flutter development practices with Firebase backend services to deliver a scalable, real-time booking platform for sports and fitness activities.
